@@ -43,6 +43,7 @@
       </select>
       <input type="text" id="searchClientId" placeholder="بحث بكود العميل" />
       <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
+      <input type="text" id="searchCommittee" placeholder="بحث برقم اللجنة" />
       <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #2ecc71; color: white; border: none; border-radius: 4px;">تطبيق الفلاتر</button>
     </div>
 
@@ -96,10 +97,8 @@
     }
 
     function renderFilters() {
-      // جلب الفروع حسب الصلاحيات
       let branches = [];
       if (userRole === 'admin' || userRole === 'followup_supervisor') {
-        // جلب كل الفروع الفريدة من البيانات
         branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v && v.trim()))];
       } else if (userBranches) {
         branches = userBranches;
@@ -113,7 +112,6 @@
         branchSelect.appendChild(opt);
       });
 
-      // باقي الفلاتر
       const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
       const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
       const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
@@ -145,6 +143,7 @@
       const officer = document.getElementById('filterOfficer').value;
       const clientId = document.getElementById('searchClientId').value.trim();
       const nationalId = document.getElementById('searchNationalId').value.trim();
+      const committee = document.getElementById('searchCommittee').value.trim();
 
       let filtered = allData.filter(row => {
         if (branch && row["الفرع"] !== branch) return false;
@@ -154,6 +153,7 @@
         if (officer && row["اسم الاخصائى"] !== officer) return false;
         if (clientId && !row["كود_العميل"]?.includes(clientId)) return false;
         if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
+        if (committee && !row["رقم اللجنة"]?.includes(committee)) return false; // ← فلتر رقم اللجنة
         return true;
       });
 
@@ -172,6 +172,7 @@
             <tr>
               <th>#</th>
               <th>رقم بطاقة العميل</th>
+              <th>كود العميل</th>        <!-- جديد -->
               <th>اسم العميل</th>
               <th>الاسم من الإي سكور</th>
               <th>المشروع</th>
@@ -179,6 +180,7 @@
               <th>اسم الضامن</th>
               <th>المبلغ</th>
               <th>الأخصائي</th>
+              <th>تم التحويل</th>        <!-- جديد -->
               <th>المراجعة</th>
               <th>المتابعة</th>
               <th>الإدارة</th>
@@ -194,6 +196,7 @@
           <tr>
             <td>${idx + 1}</td>
             <td>${row["رقم البطاقة العميل"] || '—'}</td>
+            <td>${row["كود_العميل"] || '—'}</td>           <!-- جديد -->
             <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
             <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
             <td>${row["المشروع"] || '—'}</td>
@@ -201,6 +204,7 @@
             <td>${row["اسم_الضامن"] || '—'}</td>
             <td>${row["المبلغ المطلوب"] || '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
+            <td>${row["تم التحويل"] ? 'نعم' : 'لا'}</td>  <!-- جديد -->
             <td>${row["المراجعة الداخلية"] || '—'}</td>
             <td>${row["مسؤول المتابعة"] || '—'}</td>
             <td>${row["الادارة"] || '—'}</td>
@@ -208,7 +212,7 @@
             <td><button class="expand-btn" onclick="toggleDetail(${idx}, event)">+</button></td>
           </tr>
           <tr class="detail-row" id="detail-${idx}" style="display:none;">
-            <td colspan="14">
+            <td colspan="16">
               <strong>بيانات تفصيلية:</strong><br>
               عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
               عدد الأقساط: ${row["عدد الاقساط"] || '—'}<br>

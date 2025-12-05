@@ -228,7 +228,13 @@
     }
 
     async function saveReview() {
-      const id = document.getElementById('editRecordId').value;
+      const id = parseInt(document.getElementById('editRecordId').value);
+      
+      if (isNaN(id)) {
+        alert("خطأ: لم يتم تحديد السجل بشكل صحيح");
+        return;
+      }
+
       const updates = {
         "القائم بالزياره": document.getElementById('editVisitor').value.trim() || null,
         "المراجعة الداخلية": document.getElementById('editReviewStatus').value,

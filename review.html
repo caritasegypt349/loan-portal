@@ -33,7 +33,7 @@
     .modal label { display: block; margin: 10px 0 5px; font-weight: bold; }
     .modal input, .modal textarea, .modal select { width: 100%; padding: 8px; margin-bottom: 10px; }
     .modal button { width: auto; margin: 5px; padding: 8px 16px; }
-    .detail-row td { padding: 15px; background: #f8f9fa; }
+    .detail-row td { padding: 15px; background: #f8f9fa; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -92,7 +92,6 @@
 
     let allData = [];
     let userBranches = [];
-    const detailStates = {};
 
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
@@ -228,13 +227,7 @@
     }
 
     async function saveReview() {
-      const id = parseInt(document.getElementById('editRecordId').value);
-      
-      if (isNaN(id)) {
-        alert("خطأ: لم يتم تحديد السجل بشكل صحيح");
-        return;
-      }
-
+      const id = document.getElementById('editRecordId').value;
       const updates = {
         "القائم بالزياره": document.getElementById('editVisitor').value.trim() || null,
         "المراجعة الداخلية": document.getElementById('editReviewStatus').value,
@@ -273,24 +266,24 @@
       let detailRow = document.getElementById(detailRowId);
 
       if (detailRow) {
-        if (detailStates[recordId]) {
-          detailRow.style.display = 'none';
-          detailStates[recordId] = false;
-          event.target.textContent = '+';
-        } else {
+        if (detailRow.style.display === 'none') {
           detailRow.style.display = 'table-row';
-          detailStates[recordId] = true;
           event.target.textContent = '−';
+        } else {
+          detailRow.style.display = 'none';
+          event.target.textContent = '+';
         }
         return;
       }
 
       const index = allData.findIndex(r => r.id == recordId);
-      const tbody = document.getElementById('tableBody');
-      const newRow = document.createElement('tr');
-      newRow.id = detailRowId;
-      newRow.className = 'detail-row';
-      newRow.innerHTML = `
+      const tableBody = document.getElementById('tableBody');
+      if (!tableBody) return;
+
+      const detailRowEl = document.createElement('tr');
+      detailRowEl.id = detailRowId;
+      detailRowEl.className = 'detail-row';
+      detailRowEl.innerHTML = `
         <td colspan="7">
           <strong>بيانات تفصيلية:</strong><br>
           عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
@@ -323,16 +316,23 @@
           التقييم الرقمي: ${row["تقييم_رقمى_الضامن"] || '—'}<br>
         </td>
       `;
-      tbody.insertBefore(newRow, tbody.children[index + 1]);
-      detailStates[recordId] = true;
+
+      const originalRow = tableBody.children[index];
+      if (originalRow) {
+        tableBody.insertBefore(detailRowEl, originalRow.nextSibling);
+      } else {
+        tableBody.appendChild(detailRowEl);
+      }
+
       event.target.textContent = '−';
     }
 
     window.onclick = function(event) {
       const modal = document.getElementById('editModal');
       if (event.target == modal) closeModal();
-    }
+    };
 
+    // بدء التحميل
     init().catch(err => {
       document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
     });

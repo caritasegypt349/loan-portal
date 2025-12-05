@@ -25,7 +25,7 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    h2 {
+    h2, h3 {
       text-align: center;
       color: #2c3e50;
       margin-top: 0;
@@ -67,10 +67,11 @@
     .error { background: #f8d7da; color: #721c24; }
     .preview-section { margin-top: 20px; }
     .preview-item {
-      margin-bottom: 10px;
-      padding: 8px;
+      margin-bottom: 8px;
+      padding: 6px;
       background: #f8f9fa;
       border-radius: 4px;
+      font-size: 14px;
     }
     .preview-label {
       font-weight: bold;
@@ -85,57 +86,53 @@
     <div class="panel">
       <h2>إدخال البيانات</h2>
       <form id="entryForm">
-        <!-- بيانات العميل -->
-        <div class="form-section">
-          <div class="form-group">
-            <label class="required">رقم البطاقة العميل</label>
-            <input type="text" id="national_id" maxlength="14" minlength="14" required />
-          </div>
-          <div class="form-group">
-            <label class="required">رقم بطاقة الضامن</label>
-            <input type="text" id="guarantor_id" maxlength="14" minlength="14" required />
-          </div>
-          <div class="form-group">
-            <label class="required">عدد أيام التأخير</label>
-            <input type="number" id="days_delayed" value="0" min="0" required />
-          </div>
-          <div class="form-group">
-            <label class="required">المشروع</label>
-            <input type="text" id="project" required />
-          </div>
-          <div class="form-group">
-            <label class="required">المبلغ المطلوب</label>
-            <input type="number" id="requested_amount" min="1" required />
-          </div>
-          <div class="form-group">
-            <label class="required">عدد الأقساط</label>
-            <input type="number" id="installments" min="1" required />
-          </div>
-          <div class="form-group">
-            <label class="required">اسم الأخصائي</label>
-            <input type="text" id="officer" required />
-          </div>
-          <div class="form-group">
-            <label class="required">المنطقة</label>
-            <input type="text" id="region" required />
-          </div>
-          <div class="form-group">
-            <label class="required">الفرع</label>
-            <input type="text" id="branch" required />
-          </div>
-          <div class="form-group">
-            <label class="required">رقم اللجنة</label>
-            <input type="text" id="committee_number" required />
-          </div>
-          <div class="form-group">
-            <label>القائم بالزيارة</label>
-            <input type="text" id="visitor" />
-          </div>
-          <!-- سيتم تعبئته تلقائيًا -->
-          <div class="form-group">
-            <label class="required">اسم القائم بالإدخال</label>
-            <input type="text" id="entry_by" readonly />
-          </div>
+        <div class="form-group">
+          <label class="required">رقم البطاقة العميل (14 رقمًا)</label>
+          <input type="text" id="national_id" maxlength="14" minlength="14" required />
+        </div>
+        <div class="form-group">
+          <label class="required">رقم بطاقة الضامن (14 رقمًا)</label>
+          <input type="text" id="guarantor_id" maxlength="14" minlength="14" required />
+        </div>
+        <div class="form-group">
+          <label class="required">عدد أيام التأخير</label>
+          <input type="number" id="days_delayed" value="0" min="0" required />
+        </div>
+        <div class="form-group">
+          <label class="required">المشروع</label>
+          <input type="text" id="project" required />
+        </div>
+        <div class="form-group">
+          <label class="required">المبلغ المطلوب</label>
+          <input type="number" id="requested_amount" min="1" required />
+        </div>
+        <div class="form-group">
+          <label class="required">عدد الأقساط</label>
+          <input type="number" id="installments" min="1" required />
+        </div>
+        <div class="form-group">
+          <label class="required">اسم الأخصائي</label>
+          <input type="text" id="officer" required />
+        </div>
+        <div class="form-group">
+          <label class="required">المنطقة</label>
+          <input type="text" id="region" required />
+        </div>
+        <div class="form-group">
+          <label class="required">الفرع</label>
+          <input type="text" id="branch" required />
+        </div>
+        <div class="form-group">
+          <label class="required">رقم اللجنة</label>
+          <input type="text" id="committee_number" required />
+        </div>
+        <div class="form-group">
+          <label>القائم بالزيارة</label>
+          <input type="text" id="visitor" />
+        </div>
+        <div class="form-group">
+          <label class="required">اسم القائم بالإدخال</label>
+          <input type="text" id="entry_by" readonly />
         </div>
         <button type="submit">حفظ العملية</button>
         <div id="message"></div>
@@ -145,11 +142,13 @@
     <!-- منطقة العرض -->
     <div class="panel">
       <h2>معاينة البيانات</h2>
-      <div id="clientPreview" class="preview-section">
+      
+      <div class="preview-section">
         <h3>بيانات العميل</h3>
         <div id="clientData">سيتم عرض البيانات عند إدخال الرقم</div>
       </div>
-      <div id="guarantorPreview" class="preview-section">
+      
+      <div class="preview-section">
         <h3>بيانات الضامن</h3>
         <div id="guarantorData">سيتم عرض البيانات عند إدخال الرقم</div>
       </div>
@@ -168,60 +167,101 @@
       document.getElementById('entry_by').value = user;
     };
 
-    // عرض بيانات العميل عند الكتابة
+    // عرض بيانات العميل عند فقدان التركيز (blur)
     document.getElementById('national_id').addEventListener('blur', async () => {
       const nid = document.getElementById('national_id').value.trim();
-      const clientDiv = document.getElementById('clientData');
+      const div = document.getElementById('clientData');
       if (!nid) {
-        clientDiv.innerHTML = "أدخل رقم بطاقة العميل";
+        div.innerHTML = "أدخل رقم بطاقة العميل";
         return;
       }
+
       try {
-        const { data, error } = await supabase
+        // جلب بيانات من loans
+        const { data: loanData, error: loanError } = await supabase
           .from('loans')
-          .select('*')
+          .select('اسم العميل عربى, تاريخ القرض, اخصائى القرض, كود العميل, النشاط الثانى, "الفرع الحالى للعميل"')
           .eq('الرقم القومى', nid)
           .single();
-        if (error || !data) {
-          clientDiv.innerHTML = `<div class="preview-item">رقم البطاقة: ${nid} (لا توجد بيانات)</div>`;
-          return;
+
+        // جلب بيانات من assessments
+        const { data: assessData, error: assessError } = await supabase
+          .from('assessments')
+          .select('الاسم, "السم المرسل من الاى سكور", "نتيجة التقييم", "سبب 2", "التقييم الرقمى", "احداثيات الموقع"')
+          .eq('رقم_البطاقة', nid)
+          .single();
+
+        let html = '';
+        if (loanError && assessError) {
+          html = `<div class="preview-item">رقم البطاقة: ${nid} (لا توجد بيانات)</div>`;
+        } else {
+          // بيانات القرض
+          if (!loanError && loanData) {
+            html += `<div class="preview-item"><span class="preview-label">اسم العميل:</span> ${loanData["اسم العميل عربى"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">تاريخ القرض:</span> ${loanData["تاريخ القرض"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">أخصائي القرض:</span> ${loanData["اخصائى القرض"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">كود العميل:</span> ${loanData["كود العميل"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">النشاط الثانى:</span> ${loanData["النشاط الثانى"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">الفرع الحالى:</span> ${loanData["الفرع الحالى للعميل"] || '—'}</div>`;
+          } else {
+            html += `<div class="preview-item">بيانات القرض: غير متوفرة</div>`;
+          }
+
+          html += `<hr style="margin: 10px 0;">`;
+
+          // بيانات التقييم
+          if (!assessError && assessData) {
+            html += `<div class="preview-item"><span class="preview-label">الاسم (تقييم):</span> ${assessData["الاسم"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">الاسم من الإي سكور:</span> ${assessData["السم المرسل من الاى سكور"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">نتيجة التقييم:</span> ${assessData["نتيجة التقييم"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">سبب 2:</span> ${assessData["سبب  2"] || assessData["سبب 2"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">التقييم الرقمى:</span> ${assessData["التقييم الرقمى"] || '—'}</div>`;
+            html += `<div class="preview-item"><span class="preview-label">احداثيات الموقع:</span> ${assessData["احداثيات الموقع"] || '—'}</div>`;
+          } else {
+            html += `<div class="preview-item">بيانات التقييم: غير متوفرة</div>`;
+          }
         }
-        let html = `<div class="preview-item"><span class="preview-label">الاسم:</span> ${data["اسم العميل عربى"] || '—'}</div>`;
-        html += `<div class="preview-item"><span class="preview-label">الفروع:</span> ${data["الفرع الحالى للعميل"] || '—'}</div>`;
-        html += `<div class="preview-item"><span class="preview-label">المبلغ:</span> ${data["مبلغ القرض"] || '—'}</div>`;
-        clientDiv.innerHTML = html;
+        div.innerHTML = html;
       } catch (err) {
-        clientDiv.innerHTML = "خطأ في التحميل";
+        div.innerHTML = "حدث خطأ أثناء تحميل بيانات العميل";
+        console.error(err);
       }
     });
 
     // عرض بيانات الضامن
     document.getElementById('guarantor_id').addEventListener('blur', async () => {
       const gid = document.getElementById('guarantor_id').value.trim();
-      const guarantorDiv = document.getElementById('guarantorData');
+      const div = document.getElementById('guarantorData');
       if (!gid) {
-        guarantorDiv.innerHTML = "أدخل رقم بطاقة الضامن";
+        div.innerHTML = "أدخل رقم بطاقة الضامن";
         return;
       }
+
       try {
         const { data, error } = await supabase
           .from('assessments')
-          .select('*')
+          .select('الاسم, "السم المرسل من الاى سكور", "التقييم الرقمى", "نتيجة التقييم", "سبب 2"')
           .eq('رقم_البطاقة', gid)
           .single();
-        if (error || !data) {
-          guarantorDiv.innerHTML = `<div class="preview-item">رقم البطاقة: ${gid} (لا توجد بيانات)</div>`;
-          return;
+
+        let html = '';
+        if (error) {
+          html = `<div class="preview-item">رقم بطاقة الضامن: ${gid} (لا توجد بيانات)</div>`;
+        } else {
+          html += `<div class="preview-item"><span class="preview-label">الاسم:</span> ${data["الاسم"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">الاسم من الإي سكور:</span> ${data["السم المرسل من الاى سكور"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">التقييم الرقمى:</span> ${data["التقييم الرقمى"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">نتيجة التقييم:</span> ${data["نتيجة التقييم"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">سبب 2:</span> ${data["سبب  2"] || data["سبب 2"] || '—'}</div>`;
         }
-        let html = `<div class="preview-item"><span class="preview-label">الاسم:</span> ${data["الاسم"] || '—'}</div>`;
-        html += `<div class="preview-item"><span class="preview-label">التقييم:</span> ${data["نتيجة التقييم"] || '—'}</div>`;
-        guarantorDiv.innerHTML = html;
+        div.innerHTML = html;
       } catch (err) {
-        guarantorDiv.innerHTML = "خطأ في التحميل";
+        div.innerHTML = "حدث خطأ أثناء تحميل بيانات الضامن";
+        console.error(err);
       }
     });
 
-    // حفظ البيانات
+    // حفظ البيانات (كما في النسخة السابقة)
     document.getElementById('entryForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('message');

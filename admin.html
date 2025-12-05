@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>لوحة الإدارة - نظام القروض</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
+    .container { max-width: 1800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #e74c3c; margin-top: 0; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+    select, input, button { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 13px; }
+    th { background-color: #f2f2f2; }
+    .edit-btn { 
+      background: #e74c3c; 
+      color: white; 
+      border: none; 
+      padding: 4px 8px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      margin: 2px;
+    }
+    .detail-btn {
+      background: #3498db;
+    }
+    .loading { text-align: center; padding: 40px; color: #777; }
+    .error { color: #e74c3c; text-align: center; padding: 20px; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal-content { background: white; margin: 5% auto; padding: 20px; width: 800px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
+    .modal label { display: block; margin: 10px 0 5px; font-weight: bold; }
+    .modal input, .modal textarea, .modal select { width: 100%; padding: 8px; margin-bottom: 10px; }
+    .modal button { width: auto; margin: 5px; padding: 8px 16px; }
+    .detail-row td { padding: 15px; background: #f8f9fa; font-size: 12px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>لوحة الإدارة</h2>
+
+    <div class="filters">
+      <select id="filterBranch">
+        <option value="">الفرع (الكل)</option>
+      </select>
+      <select id="filterOfficer">
+        <option value="">اسم الأخصائي (الكل)</option>
+      </select>
+      <select id="filterReview">
+        <option value="">المراجعة الداخلية (الكل)</option>
+      </select>
+      <select id="filterSupervisor">
+        <option value="">مسؤول المتابعة (الكل)</option>
+      </select>
+      <select id="filterAdmin">
+        <option value="">الإدارة (الكل)</option>
+      </select>
+      <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
+      <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #2ecc71; color: white;">تطبيق الفلاتر</button>
+    </div>
+
+    <div id="tableContainer">
+      <div class="loading">جارٍ تحميل البيانات...</div>
+    </div>
+  </div>
+
+  <!-- نموذج التعديل الكامل -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h3>تعديل كل بيانات العملية</h3>
+      <input type="hidden" id="editRecordId" />
+      
+      <div class="form-grid">
+        <!-- العمود الأول -->
+        <div>
+          <label>رقم بطاقة العميل</label>
+          <input type="text" id="editNationalId" maxlength="14" />
+          
+          <label>رقم بطاقة الضامن</label>
+          <input type="text" id="editGuarantorId" maxlength="14" />
+          
+          <label>المشروع</label>
+          <input type="text" id="editProject" />
+          
+          <label>المبلغ المطلوب</label>
+          <input type="number" id="editAmount" />
+          
+          <label>عدد الأقساط</label>
+          <input type="number" id="editInstallments" />
+          
+          <label>اسم الأخصائي</label>
+          <input type="text" id="editOfficer" />
+          
+          <label>المنطقة</label>
+          <input type="text" id="editRegion" />
+          
+          <label>الفرع</label>
+          <input type="text" id="editBranch" />
+          
+          <label>رقم اللجنة</label>
+          <input type="text" id="editCommittee" />
+        </div>
+        
+        <!-- العمود الثاني -->
+        <div>
+          <label>القائم بالزيارة</label>
+          <input type="text" id="editVisitor" />
+          
+          <label>اسم القائم بالإدخال</label>
+          <input type="text" id="editEntryBy" />
+          
+          <label>المراجعة الداخلية</label>
+          <select id="editReview">
+            <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+            <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+            <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+          </select>
+          
+          <label>مسؤول المتابعة</label>
+          <select id="editSupervisor">
+            <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+            <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+            <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+          </select>
+          
+          <label>الإدارة</label>
+          <select id="editAdmin">
+            <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+            <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+            <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+          </select>
+          
+          <label>ملاحظات المراجعة</label>
+          <textarea id="editReviewNotes" rows="2"></textarea>
+          
+          <label>تعليق المتابعة</label>
+          <textarea id="editSupervisorComment" rows="2"></textarea>
+          
+          <label>ملاحظات الإدارة</label>
+          <textarea id="editAdminNotes" rows="2"></textarea>
+        </div>
+      </div>
+      
+      <button onclick="saveAdmin()" style="background:#27ae60;color:white;">حفظ الكل</button>
+      <button onclick="closeModal()" style="background:#e74c3c;color:white;">إغلاق</button>
+    </div>
+  </div>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+    );
+
+    let allData = [];
+
+    async function init() {
+      const userId = localStorage.getItem('loggedInUserId');
+      if (!userId) {
+        alert("الرجاء تسجيل الدخول أولًا!");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const {  user, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !user || user.role !== 'admin') {
+        alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
+        window.location.href = "index.html";
+        return;
+      }
+      await loadData();
+    }
+
+    async function loadData() {
+      const { data, error } = await supabase
+        .from('operations_with_details')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      allData = data;
+      renderFilters();
+      applyFilters();
+    }
+
+    function renderFilters() {
+      const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v))];
+      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
+      const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v))];
+      const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v))];
+      const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v))];
+
+      const selects = [
+        { id: 'filterBranch', data: branches },
+        { id: 'filterOfficer', data: officers },
+        { id: 'filterReview', data: reviews },
+        { id: 'filterSupervisor', data: supervisors },
+        { id: 'filterAdmin', data: admins }
+      ];
+
+      selects.forEach(item => {
+        const select = document.getElementById(item.id);
+        select.innerHTML = `<option value="">${select.querySelector('option').textContent}</option>`;
+        item.data.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          select.appendChild(opt);
+        });
+      });
+    }
+
+    function applyFilters() {
+      document.querySelectorAll('[id^="detail-row-"]').forEach(el => el.remove());
+
+      const branch = document.getElementById('filterBranch').value;
+      const officer = document.getElementById('filterOfficer').value;
+      const review = document.getElementById('filterReview').value;
+      const supervisor = document.getElementById('filterSupervisor').value;
+      const admin = document.getElementById('filterAdmin').value;
+      const nationalId = document.getElementById('searchNationalId').value.trim();
+
+      let filtered = allData.filter(row => {
+        if (branch && row["الفرع"] !== branch) return false;
+        if (officer && row["اسم الاخصائى"] !== officer) return false;
+        if (review && row["المراجعة الداخلية"] !== review) return false;
+        if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
+        if (admin && row["الادارة"] !== admin) return false;
+        if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    function renderTable(data) {
+      if (!data || data.length === 0) {
+        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>رقم بطاقة العميل</th>
+              <th>اسم العميل</th>
+              <th>المشروع</th>
+              <th>الأخصائي</th>
+              <th>الفرع</th>
+              <th>المراجعة</th>
+              <th>المتابعة</th>
+              <th>الإدارة</th>
+              <th>الإجراء</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+      `;
+
+      data.forEach(row => {
+        html += `
+          <tr>
+            <td>${row["رقم البطاقة العميل"] || '—'}</td>
+            <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
+            <td>${row["المشروع"] || '—'}</td>
+            <td>${row["اسم الاخصائى"] || '—'}</td>
+            <td>${row["الفرع"] || '—'}</td>
+            <td>${row["المراجعة الداخلية"] || '—'}</td>
+            <td>${row["مسؤول المتابعة"] || '—'}</td>
+            <td>${row["الادارة"] || '—'}</td>
+            <td>
+              <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل الكل</button>
+              <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id}, event)">+</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('tableContainer').innerHTML = html;
+    }
+
+    function openEditModal(recordId) {
+      const record = allData.find(r => r.id == recordId);
+      if (!record) return;
+
+      // ملء جميع الحقول
+      document.getElementById('editRecordId').value = record.id;
+      document.getElementById('editNationalId').value = record["رقم البطاقة العميل"] || '';
+      document.getElementById('editGuarantorId').value = record["رقم بطاقة الضامن"] || '';
+      document.getElementById('editProject').value = record["المشروع"] || '';
+      document.getElementById('editAmount').value = record["المبلغ المطلوب"] || '';
+      document.getElementById('editInstallments').value = record["عدد الاقساط"] || '';
+      document.getElementById('editOfficer').value = record["اسم الاخصائى"] || '';
+      document.getElementById('editRegion').value = record["المنطقه"] || '';
+      document.getElementById('editBranch').value = record["الفرع"] || '';
+      document.getElementById('editCommittee').value = record["رقم اللجنة"] || '';
+      document.getElementById('editVisitor').value = record["القائم بالزياره"] || '';
+      document.getElementById('editEntryBy').value = record["اسم القائم بالادخال"] || '';
+      document.getElementById('editReview').value = record["المراجعة الداخلية"] || 'لم تتم المراجعة';
+      document.getElementById('editSupervisor').value = record["مسؤول المتابعة"] || 'لم تتم المراجعة';
+      document.getElementById('editAdmin').value = record["الادارة"] || 'لم تتم المراجعة';
+      document.getElementById('editReviewNotes').value = record["ملاحظات المراجعة الداخلية"] || '';
+      document.getElementById('editSupervisorComment').value = record["تعليق مسؤول المتابعة"] || '';
+      document.getElementById('editAdminNotes').value = record["ملاحظات الادارة"] || '';
+
+      document.getElementById('editModal').style.display = 'block';
+    }
+
+    async function saveAdmin() {
+      const idValue = document.getElementById('editRecordId').value;
+      const id = parseInt(idValue);
+      
+      if (isNaN(id) || !idValue) {
+        alert("خطأ: لم يتم تحديد السجل بشكل صحيح");
+        return;
+      }
+
+      const updates = {
+        "رقم البطاقة العميل": document.getElementById('editNationalId').value.trim(),
+        "رقم بطاقة الضامن": document.getElementById('editGuarantorId').value.trim(),
+        "المشروع": document.getElementById('editProject').value.trim(),
+        "المبلغ المطلوب": parseFloat(document.getElementById('editAmount').value) || null,
+        "عدد الاقساط": parseInt(document.getElementById('editInstallments').value) || null,
+        "اسم الاخصائى": document.getElementById('editOfficer').value.trim(),
+        "المنطقه": document.getElementById('editRegion').value.trim(),
+        "الفرع": document.getElementById('editBranch').value.trim(),
+        "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
+        "القائم بالزياره": document.getElementById('editVisitor').value.trim() || null,
+        "اسم القائم بالادخال": document.getElementById('editEntryBy').value.trim(),
+        "المراجعة الداخلية": document.getElementById('editReview').value,
+        "مسؤول المتابعة": document.getElementById('editSupervisor').value,
+        "الادارة": document.getElementById('editAdmin').value,
+        "ملاحظات المراجعة الداخلية": document.getElementById('editReviewNotes').value.trim() || null,
+        "تعليق مسؤول المتابعة": document.getElementById('editSupervisorComment').value.trim() || null,
+        "ملاحظات الادارة": document.getElementById('editAdminNotes').value.trim() || null
+      };
+
+      const { error } = await supabase
+        .from('operations')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) {
+        alert("حدث خطأ أثناء الحفظ: " + error.message);
+        return;
+      }
+
+      const idx = allData.findIndex(r => r.id == id);
+      if (idx !== -1) {
+        allData[idx] = { ...allData[idx], ...updates };
+      }
+
+      closeModal();
+      applyFilters();
+      alert("تم الحفظ بنجاح!");
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    function toggleDetail(recordId, event) {
+      const row = allData.find(r => r.id == recordId);
+      if (!row) return;
+
+      const detailRowId = `detail-row-${recordId}`;
+      let detailRow = document.getElementById(detailRowId);
+
+      if (detailRow) {
+        if (detailRow.style.display === 'none') {
+          detailRow.style.display = 'table-row';
+          event.target.textContent = '−';
+        } else {
+          detailRow.style.display = 'none';
+          event.target.textContent = '+';
+        }
+        return;
+      }
+
+      const index = allData.findIndex(r => r.id == recordId);
+      const tableBody = document.getElementById('tableBody');
+      if (!tableBody) return;
+
+      const detailRowEl = document.createElement('tr');
+      detailRowEl.id = detailRowId;
+      detailRowEl.className = 'detail-row';
+      detailRowEl.innerHTML = `
+        <td colspan="9">
+          <strong>بيانات تفصيلية:</strong><br>
+          عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
+          الفرع: ${row["الفرع"] || '—'}<br>
+          القائم بالزيارة: ${row["القائم بالزياره"] || '—'}<br>
+          اسم القائم بالإدخال: ${row["اسم القائم بالادخال"] || '—'}<br>
+          ملاحظات المراجعة: ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
+          تعليق المتابعة: ${row["تعليق مسؤول المتابعة"] || '—'}<br>
+          ملاحظات الإدارة: ${row["ملاحظات الادارة"] || '—'}<br>
+          تم التحويل: ${row["تم التحويل"] ? 'نعم' : 'لا'}<br>
+          التاريخ: ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br><br>
+
+          <strong>بيانات العميل من القروض:</strong><br>
+          تاريخ القرض: ${row["تاريخ_القرض"] || '—'}<br>
+          أخصائي القرض: ${row["اخصائى_القرض"] || '—'}<br>
+          كود العميل: ${row["كود_العميل"] || '—'}<br>
+          النشاط الثانى: ${row["النشاط_الثانى"] || '—'}<br>
+          الفرع من القروض: ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
+
+          <strong>بيانات العميل من التقييم:</strong><br>
+          نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
+          التقييم الرقمي: ${row["التقييم_الرقمى"] || '—'}<br>
+          الإحداثيات: ${row["احداثيات الموقع"] || '—'}<br><br>
+
+          <strong>بيانات الضامن:</strong><br>
+          الاسم من الإي سكور: ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
+          نتيجة التقييم: ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
+          التقييم الرقمي: ${row["تقييم_رقمى_الضامن"] || '—'}<br>
+        </td>
+      `;
+
+      const originalRow = tableBody.children[index];
+      if (originalRow) {
+        tableBody.insertBefore(detailRowEl, originalRow.nextSibling);
+      } else {
+        tableBody.appendChild(detailRowEl);
+      }
+
+      event.target.textContent = '−';
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('editModal');
+      if (event.target == modal) closeModal();
+    };
+
+    init().catch(err => {
+      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
+    });
+  </script>
+</body>
+</html>

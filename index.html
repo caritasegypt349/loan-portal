@@ -94,12 +94,11 @@
 </head>
 <body>
   <div class="container">
-    <!-- نموذج تسجيل الدخول -->
     <div id="loginSection">
       <h2>تسجيل الدخول إلى نظام القروض</h2>
       <div class="form-group">
         <label for="username">اسم المستخدم (البريد الإلكتروني)</label>
-        <input type="email" id="username" placeholder="مثال: ahmed@test.com" autocomplete="username" />
+        <input type="email" id="username" placeholder="مثال: mina" autocomplete="username" />
       </div>
       <div class="form-group">
         <label for="password">كلمة السر</label>
@@ -109,7 +108,6 @@
       <div id="errorMessage" class="error"></div>
     </div>
 
-    <!-- لوحة التحكم بعد الدخول -->
     <div id="dashboardSection" style="display:none;" class="dashboard">
       <div class="welcome">مرحباً، <span id="userFullName"></span>!</div>
       <div class="btn-grid" id="pageButtons"></div>
@@ -117,7 +115,6 @@
   </div>
 
   <script>
-    // إعدادات Supabase
     const supabaseUrl = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
@@ -135,21 +132,22 @@
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('full_name, role, branches')
+          .select('id, full_name, role, branches')
           .eq('id', email)
           .eq('password_hash', password)
           .single();
 
         if (error || !data) {
-          errorDiv.textContent = "اسم المستخدم أو كلمة السر غير صحيحة";
+          errorDiv.textContent = "بيانات الدخول غير صحيحة";
           return;
         }
 
-        // إخفاء نموذج الدخول
-        document.getElementById('loginSection').style.display = 'none';
-        // عرض لوحة التحكم
-        document.getElementById('userFullName').textContent = data.full_name;
+        // ✅ التخزين الآمن: id + الاسم
+        localStorage.setItem('loggedInUserId', data.id);
         localStorage.setItem('loggedInUser', data.full_name);
+
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('userFullName').textContent = data.full_name;
         renderPageButtons(data.role);
         document.getElementById('dashboardSection').style.display = 'block';
 
@@ -163,7 +161,6 @@
       const buttonsDiv = document.getElementById('pageButtons');
       buttonsDiv.innerHTML = '';
 
-      // تحديد الصفحات حسب الدور
       const rolePages = {
         'data_entry': [{ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" }],
         'financing_officer': [

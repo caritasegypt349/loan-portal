@@ -82,16 +82,15 @@
 </head>
 <body>
   <div class="container">
-    <!-- منطقة الإدخال -->
     <div class="panel">
       <h2>إدخال البيانات</h2>
       <form id="entryForm">
         <div class="form-group">
-          <label class="required">رقم البطاقة العميل (14 رقمًا)</label>
+          <label class="required">رقم البطاقة العميل</label>
           <input type="text" id="national_id" maxlength="14" minlength="14" required />
         </div>
         <div class="form-group">
-          <label class="required">رقم بطاقة الضامن (14 رقمًا)</label>
+          <label class="required">رقم بطاقة الضامن</label>
           <input type="text" id="guarantor_id" maxlength="14" minlength="14" required />
         </div>
         <div class="form-group">
@@ -119,10 +118,9 @@
           <input type="text" id="region" required />
         </div>
 
-        <!-- حقل الفرع سيتم إنشاؤه هنا -->
         <div class="form-group" id="branchFieldContainer">
           <label class="required">الفرع</label>
-          <div style="color:red;">لم يتم تحميل بيانات المستخدم</div>
+          <div style="color: red;">جارٍ التحميل...</div>
         </div>
 
         <div class="form-group">
@@ -142,15 +140,12 @@
       </form>
     </div>
 
-    <!-- منطقة العرض -->
     <div class="panel">
       <h2>معاينة البيانات</h2>
-      
       <div class="preview-section">
         <h3>بيانات العميل</h3>
         <div id="clientData">أدخل رقم بطاقة العميل لعرض البيانات</div>
       </div>
-      
       <div class="preview-section">
         <h3>بيانات الضامن</h3>
         <div id="guarantorData">أدخل رقم بطاقة الضامن لعرض البيانات</div>
@@ -164,10 +159,11 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
     );
 
-    // تهيئة الصفحة عند التحميل
-    async function initializePage() {
+    window.onload = async () => {
+      const userId = localStorage.getItem('loggedInUserId');
       const userFullName = localStorage.getItem('loggedInUser');
-      if (!userFullName) {
+      
+      if (!userId || !userFullName) {
         alert("الرجاء تسجيل الدخول أولًا!");
         window.location.href = "index.html";
         return;
@@ -175,26 +171,22 @@
 
       document.getElementById('entry_by_display').value = userFullName;
 
-      // جلب بيانات المستخدم من Supabase
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('branches, full_name')
-          .eq('full_name', userFullName)
+          .select('branches')
+          .eq('id', userId)
           .single();
 
-        if (error || !data) {
-          console.error("خطأ في جلب بيانات المستخدم:", error);
-          document.getElementById('branchFieldContainer').innerHTML = '<div style="color:red;">خطأ: لم يتم العثور على بيانات المستخدم</div>';
+        if (error || !data || !data.branches) {
+          document.getElementById('branchFieldContainer').innerHTML = '<div style="color:red;">لا توجد فروع مرتبطة بحسابك</div>';
           return;
         }
 
-        const branches = data.branches || [];
+        const branches = data.branches;
         const container = document.getElementById('branchFieldContainer');
 
-        if (branches.length === 0) {
-          container.innerHTML = '<div style="color:red;">لا توجد فروع مرتبطة بحسابك</div>';
-        } else if (branches.length === 1) {
+        if (branches.length === 1) {
           container.innerHTML = `
             <label class="required">الفرع</label>
             <input type="text" id="branch" value="${branches[0]}" readonly style="background:#f0f0f0;" />
@@ -211,13 +203,11 @@
         }
       } catch (err) {
         console.error("خطأ:", err);
-        document.getElementById('branchFieldContainer').innerHTML = '<div style="color:red;">حدث خطأ أثناء تحميل البيانات</div>';
+        document.getElementById('branchFieldContainer').innerHTML = '<div style="color:red;">خطأ في تحميل الفروع</div>';
       }
-    }
+    };
 
-    window.onload = initializePage;
-
-    // --- عرض بيانات العميل ---
+    // --- عرض بيانات العميل والضامن (نفس الكود السابق بدون تغيير) ---
     document.getElementById('national_id').addEventListener('blur', async () => {
       const nid = document.getElementById('national_id').value.trim();
       const div = document.getElementById('clientData');
@@ -233,8 +223,6 @@
         ]);
 
         let html = '';
-
-        // بيانات القروض
         if (!loanRes.error && loanRes.data) {
           const l = loanRes.data;
           html += `<div class="preview-item"><span class="preview-label">اسم العميل:</span> ${l["اسم العميل عربى"] || '—'}</div>`;
@@ -249,7 +237,6 @@
 
         html += `<hr style="margin: 10px 0;">`;
 
-        // بيانات التقييم
         if (!assessRes.error && assessRes.data) {
           const a = assessRes.data;
           html += `<div class="preview-item"><span class="preview-label">الاسم (تقييم):</span> ${a["الاسم"] || '—'}</div>`;
@@ -261,7 +248,6 @@
         } else {
           html += `<div class="preview-item">بيانات التقييم: غير متوفرة</div>`;
         }
-
         div.innerHTML = html;
       } catch (err) {
         div.innerHTML = "حدث خطأ أثناء تحميل بيانات العميل";
@@ -269,7 +255,6 @@
       }
     });
 
-    // --- عرض بيانات الضامن ---
     document.getElementById('guarantor_id').addEventListener('blur', async () => {
       const gid = document.getElementById('guarantor_id').value.trim();
       const div = document.getElementById('guarantorData');
@@ -327,7 +312,6 @@
         "created_by": document.getElementById('entry_by_display').value.trim()
       };
 
-      // التحقق من القيم المطلوبة
       if (!/^\d{14}$/.test(data["رقم البطاقة العميل"]) || !/^\d{14}$/.test(data["رقم بطاقة الضامن"])) {
         msg.innerHTML = '<div class="error">يجب أن يكون رقم البطاقة 14 رقمًا</div>';
         return;
@@ -344,8 +328,6 @@
         document.getElementById('entryForm').reset();
         document.getElementById('clientData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
         document.getElementById('guarantorData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
-        // إعادة تحميل بيانات الفرع
-        window.onload();
       } catch (err) {
         msg.innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
       }

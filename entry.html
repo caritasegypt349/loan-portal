@@ -118,10 +118,13 @@
           <label class="required">المنطقة</label>
           <input type="text" id="region" required />
         </div>
-        <div class="form-group">
+
+        <!-- الفرع: سيتم إنشاؤه ديناميكيًّا -->
+        <div class="form-group" id="branchFieldContainer">
           <label class="required">الفرع</label>
-          <input type="text" id="branch" required />
+          <div>جارٍ التحميل...</div>
         </div>
+
         <div class="form-group">
           <label class="required">رقم اللجنة</label>
           <input type="text" id="committee_number" required />
@@ -132,7 +135,7 @@
         </div>
         <div class="form-group">
           <label class="required">اسم القائم بالإدخال</label>
-          <input type="text" id="entry_by" readonly />
+          <input type="text" id="entry_by_display" readonly style="background:#f0f0f0;" />
         </div>
         <button type="submit">حفظ العملية</button>
         <div id="message"></div>
@@ -161,13 +164,65 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
     );
 
-    // تحميل اسم المستخدم من localStorage
-    window.onload = () => {
-      const user = localStorage.getItem('loggedInUser') || 'غير معروف';
-      document.getElementById('entry_by').value = user;
+    // قائمة الفروع الكاملة للإدارة
+    const ALL_BRANCHES = [
+      "فرع ابو المطامير",
+      "فرع اسيوط",
+      "فرع الاسكندرية",
+      "فرع الاقصر",
+      "فرع المنيا",
+      "فرع دمياط",
+      "فرع سوهاج"
+    ];
+
+    // تحميل بيانات المستخدم وتهيئة حقول الفرع والاسم
+    window.onload = async () => {
+      const userStr = localStorage.getItem('loggedInUser');
+      if (!userStr) {
+        alert("يجب تسجيل الدخول أولاً!");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      document.getElementById('entry_by_display').value = user.fullName;
+
+      const container = document.getElementById('branchFieldContainer');
+
+      if (user.role === 'admin') {
+        // الإدارة: تظهر كل الفروع
+        let options = ALL_BRANCHES.map(b => `<option value="${b}">${b}</option>`).join('');
+        container.innerHTML = `
+          <label class="required">الفرع</label>
+          <select id="branch" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
+            <option value="">اختر الفرع</option>
+            ${options}
+          </select>
+        `;
+      } else {
+        // باقي الأدوار: تظهر فقط فروعهم
+        const branches = user.branches || [];
+        if (branches.length === 0) {
+          container.innerHTML = '<div>لا توجد فروع مخصصة لهذا الحساب</div>';
+        } else if (branches.length === 1) {
+          container.innerHTML = `
+            <label class="required">الفرع</label>
+            <input type="text" id="branch" value="${branches[0]}" readonly style="background:#f0f0f0;" />
+          `;
+        } else {
+          let options = branches.map(b => `<option value="${b}">${b}</option>`).join('');
+          container.innerHTML = `
+            <label class="required">الفرع</label>
+            <select id="branch" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
+              <option value="">اختر الفرع</option>
+              ${options}
+            </select>
+          `;
+        }
+      }
     };
 
-    // عرض بيانات العميل عند فقدان التركيز (blur)
+    // === وظائف عرض بيانات العميل والضامن (كما في الكود السابق) ===
     document.getElementById('national_id').addEventListener('blur', async () => {
       const nid = document.getElementById('national_id').value.trim();
       const div = document.getElementById('clientData');
@@ -177,14 +232,12 @@
       }
 
       try {
-        // جلب بيانات من loans
         const { data: loanData, error: loanError } = await supabase
           .from('loans')
           .select('اسم العميل عربى, تاريخ القرض, اخصائى القرض, كود العميل, النشاط الثانى, "الفرع الحالى للعميل"')
           .eq('الرقم القومى', nid)
           .single();
 
-        // جلب بيانات من assessments
         const { data: assessData, error: assessError } = await supabase
           .from('assessments')
           .select('الاسم, "السم المرسل من الاى سكور", "نتيجة التقييم", "سبب 2", "التقييم الرقمى", "احداثيات الموقع"')
@@ -195,7 +248,6 @@
         if (loanError && assessError) {
           html = `<div class="preview-item">رقم البطاقة: ${nid} (لا توجد بيانات)</div>`;
         } else {
-          // بيانات القرض
           if (!loanError && loanData) {
             html += `<div class="preview-item"><span class="preview-label">اسم العميل:</span> ${loanData["اسم العميل عربى"] || '—'}</div>`;
             html += `<div class="preview-item"><span class="preview-label">تاريخ القرض:</span> ${loanData["تاريخ القرض"] || '—'}</div>`;
@@ -209,7 +261,6 @@
 
           html += `<hr style="margin: 10px 0;">`;
 
-          // بيانات التقييم
           if (!assessError && assessData) {
             html += `<div class="preview-item"><span class="preview-label">الاسم (تقييم):</span> ${assessData["الاسم"] || '—'}</div>`;
             html += `<div class="preview-item"><span class="preview-label">الاسم من الإي سكور:</span> ${assessData["السم المرسل من الاى سكور"] || '—'}</div>`;
@@ -228,7 +279,6 @@
       }
     });
 
-    // عرض بيانات الضامن
     document.getElementById('guarantor_id').addEventListener('blur', async () => {
       const gid = document.getElementById('guarantor_id').value.trim();
       const div = document.getElementById('guarantorData');
@@ -261,7 +311,7 @@
       }
     });
 
-    // حفظ البيانات (كما في النسخة السابقة)
+    // === حفظ البيانات ===
     document.getElementById('entryForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('message');
@@ -278,16 +328,21 @@
         "الفرع": document.getElementById('branch').value.trim(),
         "رقم اللجنة": document.getElementById('committee_number').value.trim(),
         "القائم بالزياره": document.getElementById('visitor').value.trim() || null,
-        "اسم القائم بالادخال": document.getElementById('entry_by').value.trim(),
+        "اسم القائم بالادخال": document.getElementById('entry_by_display').value.trim(),
         "المراجعة الداخلية": "لم تتم المراجعة",
         "مسؤول المتابعة": "لم تتم المراجعة",
         "الادارة": "لم تتم المراجعة",
         "تم التحويل": false,
-        "created_by": document.getElementById('entry_by').value.trim()
+        "created_by": document.getElementById('entry_by_display').value.trim()
       };
 
       if (!/^\d{14}$/.test(data["رقم البطاقة العميل"]) || !/^\d{14}$/.test(data["رقم بطاقة الضامن"])) {
         msg.innerHTML = '<div class="error">يجب أن يكون رقم البطاقة 14 رقمًا</div>';
+        return;
+      }
+
+      if (!data["الفرع"]) {
+        msg.innerHTML = '<div class="error">الرجاء اختيار الفرع</div>';
         return;
       }
 
@@ -296,8 +351,8 @@
         if (error) throw error;
         msg.innerHTML = '<div class="success">تم الحفظ بنجاح!</div>';
         document.getElementById('entryForm').reset();
-        document.getElementById('clientData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
-        document.getElementById('guarantorData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
+        // إعادة تحميل حقل الفرع
+        window.onload();
       } catch (err) {
         msg.innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
       }

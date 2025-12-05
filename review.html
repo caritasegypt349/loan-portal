@@ -117,14 +117,25 @@
     }
 
     async function loadData() {
-      // تحميل من operations table مباشرة (مش من VIEW)
-      let query = supabase.from('operations').select('*');
+      // تحميل من operations table مع البيانات الإضافية من VIEW
+      let query = supabase.from('operations').select('*, operations_with_details!inner(*)');
       if (userBranches) {
         query = query.in('الفرع', userBranches);
       }
       const { data, error } = await query.order('created_at', { ascending: false });
-      if (error) throw error;
-      allData = data;
+      if (error) {
+        // إذا الـ join ما اشتغل، حمل بدون JOIN
+        console.warn('JOIN failed, loading without details:', error);
+        let simpleQuery = supabase.from('operations').select('*');
+        if (userBranches) {
+          simpleQuery = simpleQuery.in('الفرع', userBranches);
+        }
+        const { data: simpleData, error: simpleError } = await simpleQuery.order('created_at', { ascending: false });
+        if (simpleError) throw simpleError;
+        allData = simpleData;
+      } else {
+        allData = data;
+      }
       renderFilters();
       applyFilters();
     }

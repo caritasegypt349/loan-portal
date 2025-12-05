@@ -165,38 +165,57 @@
     );
 
     // تهيئة الصفحة عند التحميل
-    window.onload = () => {
-      const userStr = localStorage.getItem('loggedInUser');
-      if (!userStr) {
+    async function initializePage() {
+      const userFullName = localStorage.getItem('loggedInUser');
+      if (!userFullName) {
         alert("الرجاء تسجيل الدخول أولًا!");
         window.location.href = "index.html";
         return;
       }
 
-      const user = JSON.parse(userStr);
-      document.getElementById('entry_by_display').value = user.fullName || 'غير معروف';
+      document.getElementById('entry_by_display').value = userFullName;
 
-      const branches = user.branches || [];
-      const container = document.getElementById('branchFieldContainer');
+      // جلب بيانات المستخدم من Supabase
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('branches, full_name')
+          .eq('full_name', userFullName)
+          .single();
 
-      if (branches.length === 0) {
-        container.innerHTML = '<div style="color:red;">لا توجد فروع مرتبطة بحسابك</div>';
-      } else if (branches.length === 1) {
-        container.innerHTML = `
-          <label class="required">الفرع</label>
-          <input type="text" id="branch" value="${branches[0]}" readonly style="background:#f0f0f0;" />
-        `;
-      } else {
-        let options = branches.map(b => `<option value="${b}">${b}</option>`).join('');
-        container.innerHTML = `
-          <label class="required">الفرع</label>
-          <select id="branch" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
-            <option value="">اختر الفرع</option>
-            ${options}
-          </select>
-        `;
+        if (error || !data) {
+          console.error("خطأ في جلب بيانات المستخدم:", error);
+          document.getElementById('branchFieldContainer').innerHTML = '<div style="color:red;">خطأ: لم يتم العثور على بيانات المستخدم</div>';
+          return;
+        }
+
+        const branches = data.branches || [];
+        const container = document.getElementById('branchFieldContainer');
+
+        if (branches.length === 0) {
+          container.innerHTML = '<div style="color:red;">لا توجد فروع مرتبطة بحسابك</div>';
+        } else if (branches.length === 1) {
+          container.innerHTML = `
+            <label class="required">الفرع</label>
+            <input type="text" id="branch" value="${branches[0]}" readonly style="background:#f0f0f0;" />
+          `;
+        } else {
+          let options = branches.map(b => `<option value="${b}">${b}</option>`).join('');
+          container.innerHTML = `
+            <label class="required">الفرع</label>
+            <select id="branch" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
+              <option value="">اختر الفرع</option>
+              ${options}
+            </select>
+          `;
+        }
+      } catch (err) {
+        console.error("خطأ:", err);
+        document.getElementById('branchFieldContainer').innerHTML = '<div style="color:red;">حدث خطأ أثناء تحميل البيانات</div>';
       }
-    };
+    }
+
+    window.onload = initializePage;
 
     // --- عرض بيانات العميل ---
     document.getElementById('national_id').addEventListener('blur', async () => {

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>المراجعة الداخلية - نظام القروض</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
+    .container { max-width: 1800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #2c3e50; margin-top: 0; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+    select, input, button { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 13px; }
+    th { background-color: #f2f2f2; }
+    .edit-btn { background: #e67e22; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+    .loading { text-align: center; padding: 40px; color: #777; }
+    .error { color: #e74c3c; text-align: center; padding: 20px; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal-content { background: white; margin: 5% auto; padding: 20px; width: 500px; border-radius: 8px; }
+    .modal label { display: block; margin: 10px 0 5px; font-weight: bold; }
+    .modal input, .modal textarea, .modal select { width: 100%; padding: 8px; margin-bottom: 10px; }
+    .modal button { width: auto; margin: 5px; padding: 8px 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>المراجعة الداخلية</h2>
+
+    <!-- الفلاتر -->
+    <div class="filters">
+      <select id="filterBranch">
+        <option value="">الفرع (الكل)</option>
+      </select>
+      <select id="filterOfficer">
+        <option value="">اسم الأخصائي (الكل)</option>
+      </select>
+      <select id="filterReviewStatus">
+        <option value="لم تتم المراجعة" selected>لم تتم المراجعة</option>
+        <option value="تمت المراجعة مقبول">مقبول</option>
+        <option value="تمت المراجعة مرفوض">مرفوض</option>
+        <option value="">الكل</option>
+      </select>
+      <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
+      <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #2ecc71; color: white;">تطبيق الفلاتر</button>
+    </div>
+
+    <!-- الجدول -->
+    <div id="tableContainer">
+      <div class="loading">جارٍ تحميل البيانات...</div>
+    </div>
+  </div>
+
+  <!-- نموذج التعديل -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h3>تعديل المراجعة</h3>
+      <input type="hidden" id="editRecordId" />
+      <label>القائم بالزيارة</label>
+      <input type="text" id="editVisitor" />
+      <label>حالة المراجعة</label>
+      <select id="editReviewStatus">
+        <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+        <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+        <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+      </select>
+      <label>ملاحظات المراجعة</label>
+      <textarea id="editReviewNotes" rows="3"></textarea>
+      <button onclick="saveReview()" style="background:#27ae60;color:white;">حفظ</button>
+      <button onclick="closeModal()" style="background:#e74c3c;color:white;">إغلاق</button>
+    </div>
+  </div>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+    );
+
+    let allData = [];
+    let userBranches = [];
+
+    async function init() {
+      const userId = localStorage.getItem('loggedInUserId');
+      if (!userId) {
+        alert("الرجاء تسجيل الدخول أولًا!");
+        window.location.href = "index.html";
+        return;
+      }
+
+      // تأكد أن المستخدم مراجع داخلي
+      const {  user, error: userError } = await supabase
+        .from('users')
+        .select('role, branches')
+        .eq('id', userId)
+        .single();
+
+      if (userError || user.role !== 'internal_reviewer') {
+        alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
+        window.location.href = "index.html";
+        return;
+      }
+      userBranches = user.branches;
+      await loadData();
+    }
+
+    async function loadData() {
+      let query = supabase.from('operations_with_details').select('*');
+      if (userBranches) {
+        query = query.in('الفرع', userBranches);
+      }
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (error) throw error;
+      allData = data;
+      renderFilters();
+      applyFilters(); // تطبيق الفلتر الافتراضي: "لم تتم المراجعة"
+    }
+
+    function renderFilters() {
+      const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v))];
+      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
+
+      const branchSelect = document.getElementById('filterBranch');
+      branches.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        branchSelect.appendChild(opt);
+      });
+
+      const officerSelect = document.getElementById('filterOfficer');
+      officers.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        officerSelect.appendChild(opt);
+      });
+    }
+
+    function applyFilters() {
+      const branch = document.getElementById('filterBranch').value;
+      const officer = document.getElementById('filterOfficer').value;
+      const reviewStatus = document.getElementById('filterReviewStatus').value;
+      const nationalId = document.getElementById('searchNationalId').value.trim();
+
+      let filtered = allData.filter(row => {
+        if (branch && row["الفرع"] !== branch) return false;
+        if (officer && row["اسم الاخصائى"] !== officer) return false;
+        if (reviewStatus && row["المراجعة الداخلية"] !== reviewStatus) return false;
+        if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    function renderTable(data) {
+      if (!data || data.length === 0) {
+        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>رقم بطاقة العميل</th>
+              <th>اسم العميل</th>
+              <th>المشروع</th>
+              <th>الأخصائي</th>
+              <th>الفرع</th>
+              <th>المراجعة</th>
+              <th>الإجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      data.forEach(row => {
+        html += `
+          <tr>
+            <td>${row["رقم البطاقة العميل"] || '—'}</td>
+            <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
+            <td>${row["المشروع"] || '—'}</td>
+            <td>${row["اسم الاخصائى"] || '—'}</td>
+            <td>${row["الفرع"] || '—'}</td>
+            <td>${row["المراجعة الداخلية"] || '—'}</td>
+            <td><button class="edit-btn" onclick="openEditModal(${row.id})">تعديل</button></td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('tableContainer').innerHTML = html;
+    }
+
+    function openEditModal(recordId) {
+      const record = allData.find(r => r.id == recordId);
+      if (!record) return;
+
+      document.getElementById('editRecordId').value = record.id;
+      document.getElementById('editVisitor').value = record["القائم بالزياره"] || '';
+      document.getElementById('editReviewStatus').value = record["المراجعة الداخلية"] || 'لم تتم المراجعة';
+      document.getElementById('editReviewNotes').value = record["ملاحظات المراجعة الداخلية"] || '';
+
+      document.getElementById('editModal').style.display = 'block';
+    }
+
+    async function saveReview() {
+      const id = document.getElementById('editRecordId').value;
+      const updates = {
+        "القائم بالزياره": document.getElementById('editVisitor').value.trim() || null,
+        "المراجعة الداخلية": document.getElementById('editReviewStatus').value,
+        "ملاحظات المراجعة الداخلية": document.getElementById('editReviewNotes').value.trim() || null
+      };
+
+      const { error } = await supabase
+        .from('operations')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) {
+        alert("حدث خطأ أثناء الحفظ: " + error.message);
+        return;
+      }
+
+      // تحديث البيانات المحلية
+      const idx = allData.findIndex(r => r.id == id);
+      if (idx !== -1) {
+        allData[idx] = { ...allData[idx], ...updates };
+      }
+
+      closeModal();
+      applyFilters(); // تحديث العرض
+      alert("تم الحفظ بنجاح!");
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    // إغلاق النموذج عند النقر خارجه
+    window.onclick = function(event) {
+      const modal = document.getElementById('editModal');
+      if (event.target == modal) closeModal();
+    }
+
+    init().catch(err => {
+      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
+    });
+  </script>
+</body>
+</html>

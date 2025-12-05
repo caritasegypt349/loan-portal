@@ -149,6 +149,7 @@
         document.getElementById('loginSection').style.display = 'none';
         // عرض لوحة التحكم
         document.getElementById('userFullName').textContent = data.full_name;
+        localStorage.setItem('loggedInUser', data.full_name);
         renderPageButtons(data.role);
         document.getElementById('dashboardSection').style.display = 'block';
 

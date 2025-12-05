@@ -6,104 +6,229 @@
   <title>إدخال بيانات العملية</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 20px auto; padding: 20px; background: #f9f9f9; }
-    h2 { text-align: center; color: #2c3e50; }
-    .form-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; color: #34495e; }
-    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    button { background: #2980b9; color: white; padding: 12px 30px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; display: block; margin: 20px auto; }
-    button:hover { background: #1c6ea4; }
-    .message { margin-top: 15px; padding: 12px; border-radius: 4px; text-align: center; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .panel {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+      margin-top: 0;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #34495e;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #2980b9;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      display: block;
+      margin: 20px auto;
+    }
+    .message {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      text-align: center;
+    }
     .success { background: #d4edda; color: #155724; }
     .error { background: #f8d7da; color: #721c24; }
+    .preview-section { margin-top: 20px; }
+    .preview-item {
+      margin-bottom: 10px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    .preview-label {
+      font-weight: bold;
+      color: #2c3e50;
+    }
     .required::after { content: " *"; color: red; }
   </style>
 </head>
 <body>
-  <h2>شاشة إدخال بيانات العملية</h2>
-
-  <form id="fullEntryForm">
-    <!-- بيانات العميل -->
-    <div class="form-section">
-      <h3>بيانات العميل</h3>
-      <div class="form-group">
-        <label class="required">رقم البطاقة العميل (14 رقمًا)</label>
-        <input type="text" id="national_id" maxlength="14" minlength="14" required />
-      </div>
-      <div class="form-group">
-        <label class="required">عدد أيام التأخير</label>
-        <input type="number" id="days_delayed" value="0" min="0" required />
-      </div>
-      <div class="form-group">
-        <label class="required">المشروع</label>
-        <input type="text" id="project" required />
-      </div>
-      <div class="form-group">
-        <label class="required">المبلغ المطلوب</label>
-        <input type="number" id="requested_amount" min="1" required />
-      </div>
-      <div class="form-group">
-        <label class="required">عدد الأقساط</label>
-        <input type="number" id="installments" min="1" required />
-      </div>
-      <div class="form-group">
-        <label class="required">اسم الأخصائي</label>
-        <input type="text" id="officer" required />
-      </div>
-      <div class="form-group">
-        <label class="required">المنطقة</label>
-        <input type="text" id="region" required />
-      </div>
-      <div class="form-group">
-        <label class="required">الفرع</label>
-        <input type="text" id="branch" required />
-      </div>
+  <div class="container">
+    <!-- منطقة الإدخال -->
+    <div class="panel">
+      <h2>إدخال البيانات</h2>
+      <form id="entryForm">
+        <!-- بيانات العميل -->
+        <div class="form-section">
+          <div class="form-group">
+            <label class="required">رقم البطاقة العميل</label>
+            <input type="text" id="national_id" maxlength="14" minlength="14" required />
+          </div>
+          <div class="form-group">
+            <label class="required">رقم بطاقة الضامن</label>
+            <input type="text" id="guarantor_id" maxlength="14" minlength="14" required />
+          </div>
+          <div class="form-group">
+            <label class="required">عدد أيام التأخير</label>
+            <input type="number" id="days_delayed" value="0" min="0" required />
+          </div>
+          <div class="form-group">
+            <label class="required">المشروع</label>
+            <input type="text" id="project" required />
+          </div>
+          <div class="form-group">
+            <label class="required">المبلغ المطلوب</label>
+            <input type="number" id="requested_amount" min="1" required />
+          </div>
+          <div class="form-group">
+            <label class="required">عدد الأقساط</label>
+            <input type="number" id="installments" min="1" required />
+          </div>
+          <div class="form-group">
+            <label class="required">اسم الأخصائي</label>
+            <input type="text" id="officer" required />
+          </div>
+          <div class="form-group">
+            <label class="required">المنطقة</label>
+            <input type="text" id="region" required />
+          </div>
+          <div class="form-group">
+            <label class="required">الفرع</label>
+            <input type="text" id="branch" required />
+          </div>
+          <div class="form-group">
+            <label class="required">رقم اللجنة</label>
+            <input type="text" id="committee_number" required />
+          </div>
+          <div class="form-group">
+            <label>القائم بالزيارة</label>
+            <input type="text" id="visitor" />
+          </div>
+          <!-- سيتم تعبئته تلقائيًا -->
+          <div class="form-group">
+            <label class="required">اسم القائم بالإدخال</label>
+            <input type="text" id="entry_by" readonly />
+          </div>
+        </div>
+        <button type="submit">حفظ العملية</button>
+        <div id="message"></div>
+      </form>
     </div>
 
-    <!-- بيانات الضامن -->
-    <div class="form-section">
-      <h3>بيانات الضامن</h3>
-      <div class="form-group">
-        <label class="required">رقم بطاقة الضامن (14 رقمًا)</label>
-        <input type="text" id="guarantor_id" maxlength="14" minlength="14" required />
+    <!-- منطقة العرض -->
+    <div class="panel">
+      <h2>معاينة البيانات</h2>
+      <div id="clientPreview" class="preview-section">
+        <h3>بيانات العميل</h3>
+        <div id="clientData">سيتم عرض البيانات عند إدخال الرقم</div>
+      </div>
+      <div id="guarantorPreview" class="preview-section">
+        <h3>بيانات الضامن</h3>
+        <div id="guarantorData">سيتم عرض البيانات عند إدخال الرقم</div>
       </div>
     </div>
-
-    <!-- معلومات إضافية -->
-    <div class="form-section">
-      <h3>معلومات إضافية</h3>
-      <div class="form-group">
-        <label>القائم بالزيارة</label>
-        <input type="text" id="visitor" />
-      </div>
-      <div class="form-group">
-        <label class="required">اسم القائم بالإدخال</label>
-        <input type="text" id="entry_by" required />
-      </div>
-    </div>
-
-    <!-- باقي الحقول كما هي -->
-    <!-- (تم اختصارها هنا للإيجاز، لكن استخدم كامل الحقول من ملفك الأصلي) -->
-
-    <button type="submit">حفظ العملية</button>
-  </form>
-
-  <div id="message"></div>
+  </div>
 
   <script>
-    // ✅ تصحيح: استخدام window.supabase
     const supabase = window.supabase.createClient(
-      'https://akjyrmmqsnxdbkslxmvb.supabase.co', // ⚠️ بدون مسافات
+      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
     );
 
-    document.getElementById('fullEntryForm').addEventListener('submit', async (e) => {
+    // تحميل اسم المستخدم من localStorage
+    window.onload = () => {
+      const user = localStorage.getItem('loggedInUser') || 'غير معروف';
+      document.getElementById('entry_by').value = user;
+    };
+
+    // عرض بيانات العميل عند الكتابة
+    document.getElementById('national_id').addEventListener('blur', async () => {
+      const nid = document.getElementById('national_id').value.trim();
+      const clientDiv = document.getElementById('clientData');
+      if (!nid) {
+        clientDiv.innerHTML = "أدخل رقم بطاقة العميل";
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from('loans')
+          .select('*')
+          .eq('الرقم القومى', nid)
+          .single();
+        if (error || !data) {
+          clientDiv.innerHTML = `<div class="preview-item">رقم البطاقة: ${nid} (لا توجد بيانات)</div>`;
+          return;
+        }
+        let html = `<div class="preview-item"><span class="preview-label">الاسم:</span> ${data["اسم العميل عربى"] || '—'}</div>`;
+        html += `<div class="preview-item"><span class="preview-label">الفروع:</span> ${data["الفرع الحالى للعميل"] || '—'}</div>`;
+        html += `<div class="preview-item"><span class="preview-label">المبلغ:</span> ${data["مبلغ القرض"] || '—'}</div>`;
+        clientDiv.innerHTML = html;
+      } catch (err) {
+        clientDiv.innerHTML = "خطأ في التحميل";
+      }
+    });
+
+    // عرض بيانات الضامن
+    document.getElementById('guarantor_id').addEventListener('blur', async () => {
+      const gid = document.getElementById('guarantor_id').value.trim();
+      const guarantorDiv = document.getElementById('guarantorData');
+      if (!gid) {
+        guarantorDiv.innerHTML = "أدخل رقم بطاقة الضامن";
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from('assessments')
+          .select('*')
+          .eq('رقم_البطاقة', gid)
+          .single();
+        if (error || !data) {
+          guarantorDiv.innerHTML = `<div class="preview-item">رقم البطاقة: ${gid} (لا توجد بيانات)</div>`;
+          return;
+        }
+        let html = `<div class="preview-item"><span class="preview-label">الاسم:</span> ${data["الاسم"] || '—'}</div>`;
+        html += `<div class="preview-item"><span class="preview-label">التقييم:</span> ${data["نتيجة التقييم"] || '—'}</div>`;
+        guarantorDiv.innerHTML = html;
+      } catch (err) {
+        guarantorDiv.innerHTML = "خطأ في التحميل";
+      }
+    });
+
+    // حفظ البيانات
+    document.getElementById('entryForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('message');
 
       const data = {
         "رقم البطاقة العميل": document.getElementById('national_id').value.trim(),
+        "رقم بطاقة الضامن": document.getElementById('guarantor_id').value.trim(),
         "عدد ايام التاخير": parseInt(document.getElementById('days_delayed').value) || 0,
         "المشروع": document.getElementById('project').value.trim(),
         "المبلغ المطلوب": parseFloat(document.getElementById('requested_amount').value) || null,
@@ -111,7 +236,7 @@
         "اسم الاخصائى": document.getElementById('officer').value.trim(),
         "المنطقه": document.getElementById('region').value.trim(),
         "الفرع": document.getElementById('branch').value.trim(),
-        "رقم بطاقة الضامن": document.getElementById('guarantor_id').value.trim(),
+        "رقم اللجنة": document.getElementById('committee_number').value.trim(),
         "القائم بالزياره": document.getElementById('visitor').value.trim() || null,
         "اسم القائم بالادخال": document.getElementById('entry_by').value.trim(),
         "المراجعة الداخلية": "لم تتم المراجعة",
@@ -121,7 +246,6 @@
         "created_by": document.getElementById('entry_by').value.trim()
       };
 
-      // التحقق من الرقم القومي
       if (!/^\d{14}$/.test(data["رقم البطاقة العميل"]) || !/^\d{14}$/.test(data["رقم بطاقة الضامن"])) {
         msg.innerHTML = '<div class="error">يجب أن يكون رقم البطاقة 14 رقمًا</div>';
         return;
@@ -131,7 +255,9 @@
         const { error } = await supabase.from('operations').insert([data]);
         if (error) throw error;
         msg.innerHTML = '<div class="success">تم الحفظ بنجاح!</div>';
-        document.getElementById('fullEntryForm').reset();
+        document.getElementById('entryForm').reset();
+        document.getElementById('clientData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
+        document.getElementById('guarantorData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
       } catch (err) {
         msg.innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
       }

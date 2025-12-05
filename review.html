@@ -117,7 +117,8 @@
     }
 
     async function loadData() {
-      let query = supabase.from('operations_with_details').select('*');
+      // تحميل من operations table مباشرة (مش من VIEW)
+      let query = supabase.from('operations').select('*');
       if (userBranches) {
         query = query.in('الفرع', userBranches);
       }
@@ -227,7 +228,14 @@
     }
 
     async function saveReview() {
-      const id = document.getElementById('editRecordId').value;
+      const idValue = document.getElementById('editRecordId').value;
+      const id = parseInt(idValue);
+      
+      if (isNaN(id) || !idValue) {
+        alert("خطأ: لم يتم تحديد السجل بشكل صحيح");
+        return;
+      }
+
       const updates = {
         "القائم بالزياره": document.getElementById('editVisitor').value.trim() || null,
         "المراجعة الداخلية": document.getElementById('editReviewStatus').value,

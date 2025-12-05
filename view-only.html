@@ -26,6 +26,9 @@
 
     <!-- الفلاتر -->
     <div class="filters" id="filters">
+      <select id="filterBranch">
+        <option value="">الفرع (الكل)</option>
+      </select>
       <select id="filterReview">
         <option value="">المراجعة الداخلية (الكل)</option>
       </select>
@@ -59,7 +62,6 @@
     let userRole = '';
     let userBranches = [];
 
-    // تحميل بيانات المستخدم
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
       if (!userId) {
@@ -81,10 +83,9 @@
       await loadData();
     }
 
-    // تحميل البيانات من operations_with_details
     async function loadData() {
       let query = supabase.from('operations_with_details').select('*');
-      if (userRole !== 'admin' && userBranches) {
+      if (userRole !== 'admin' && userRole !== 'followup_supervisor' && userBranches) {
         query = query.in('الفرع', userBranches);
       }
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -94,48 +95,50 @@
       renderTable(allData);
     }
 
-    // ملء الفلاتر بالقيم الفريدة
     function renderFilters() {
+      // جلب الفروع حسب الصلاحيات
+      let branches = [];
+      if (userRole === 'admin' || userRole === 'followup_supervisor') {
+        // جلب كل الفروع الفريدة من البيانات
+        branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v && v.trim()))];
+      } else if (userBranches) {
+        branches = userBranches;
+      }
+
+      const branchSelect = document.getElementById('filterBranch');
+      branches.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        branchSelect.appendChild(opt);
+      });
+
+      // باقي الفلاتر
       const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
       const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
       const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
       const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
 
-      const reviewSelect = document.getElementById('filterReview');
-      reviews.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        reviewSelect.appendChild(opt);
-      });
+      const selects = [
+        { id: 'filterReview', data: reviews },
+        { id: 'filterSupervisor', data: supervisors },
+        { id: 'filterAdmin', data: admins },
+        { id: 'filterOfficer', data: officers }
+      ];
 
-      const supervisorSelect = document.getElementById('filterSupervisor');
-      supervisors.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        supervisorSelect.appendChild(opt);
-      });
-
-      const adminSelect = document.getElementById('filterAdmin');
-      admins.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        adminSelect.appendChild(opt);
-      });
-
-      const officerSelect = document.getElementById('filterOfficer');
-      officers.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        officerSelect.appendChild(opt);
+      selects.forEach(item => {
+        const select = document.getElementById(item.id);
+        item.data.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          select.appendChild(opt);
+        });
       });
     }
 
-    // تطبيق الفلاتر
     function applyFilters() {
+      const branch = document.getElementById('filterBranch').value;
       const review = document.getElementById('filterReview').value;
       const supervisor = document.getElementById('filterSupervisor').value;
       const admin = document.getElementById('filterAdmin').value;
@@ -144,6 +147,7 @@
       const nationalId = document.getElementById('searchNationalId').value.trim();
 
       let filtered = allData.filter(row => {
+        if (branch && row["الفرع"] !== branch) return false;
         if (review && row["المراجعة الداخلية"] !== review) return false;
         if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
         if (admin && row["الادارة"] !== admin) return false;
@@ -156,7 +160,6 @@
       renderTable(filtered);
     }
 
-    // عرض الجدول
     function renderTable(data) {
       if (!data || data.length === 0) {
         document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
@@ -202,7 +205,7 @@
             <td>${row["مسؤول المتابعة"] || '—'}</td>
             <td>${row["الادارة"] || '—'}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
-            <td><button class="expand-btn" onclick="toggleDetail(${idx})">+</button></td>
+            <td><button class="expand-btn" onclick="toggleDetail(${idx}, event)">+</button></td>
           </tr>
           <tr class="detail-row" id="detail-${idx}" style="display:none;">
             <td colspan="14">
@@ -244,8 +247,7 @@
       document.getElementById('tableContainer').innerHTML = html;
     }
 
-    // التبديل بين العرض التفصيلي
-    function toggleDetail(index) {
+    function toggleDetail(index, event) {
       const detailRow = document.getElementById(`detail-${index}`);
       const btn = event.target;
       if (detailRow.style.display === 'none') {
@@ -257,7 +259,6 @@
       }
     }
 
-    // بدء التحميل
     init().catch(err => {
       document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
     });

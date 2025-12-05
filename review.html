@@ -90,13 +90,13 @@
       }
 
       // تأكد أن المستخدم مراجع داخلي
-      const {  user, error: userError } = await supabase
+      const { data: user, error: userError } = await supabase
         .from('users')
         .select('role, branches')
         .eq('id', userId)
         .single();
 
-      if (userError || user.role !== 'internal_reviewer') {
+      if (userError || !user || user.role !== 'internal_reviewer') {
         alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
         window.location.href = "index.html";
         return;

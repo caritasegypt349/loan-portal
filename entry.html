@@ -119,10 +119,10 @@
           <input type="text" id="region" required />
         </div>
 
-        <!-- الفرع: سيتم إنشاؤه ديناميكيًّا -->
+        <!-- حقل الفرع سيتم إنشاؤه هنا -->
         <div class="form-group" id="branchFieldContainer">
           <label class="required">الفرع</label>
-          <div>جارٍ التحميل...</div>
+          <div style="color:red;">لم يتم تحميل بيانات المستخدم</div>
         </div>
 
         <div class="form-group">
@@ -148,12 +148,12 @@
       
       <div class="preview-section">
         <h3>بيانات العميل</h3>
-        <div id="clientData">سيتم عرض البيانات عند إدخال الرقم</div>
+        <div id="clientData">أدخل رقم بطاقة العميل لعرض البيانات</div>
       </div>
       
       <div class="preview-section">
         <h3>بيانات الضامن</h3>
-        <div id="guarantorData">سيتم عرض البيانات عند إدخال الرقم</div>
+        <div id="guarantorData">أدخل رقم بطاقة الضامن لعرض البيانات</div>
       </div>
     </div>
   </div>
@@ -164,34 +164,30 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
     );
 
-    // قائمة الفروع الكاملة للإدارة
-    const ALL_BRANCHES = [
-      "فرع ابو المطامير",
-      "فرع اسيوط",
-      "فرع الاسكندرية",
-      "فرع الاقصر",
-      "فرع المنيا",
-      "فرع دمياط",
-      "فرع سوهاج"
-    ];
-
-    // تحميل بيانات المستخدم وتهيئة حقول الفرع والاسم
-    window.onload = async () => {
+    // تهيئة الصفحة عند التحميل
+    window.onload = () => {
       const userStr = localStorage.getItem('loggedInUser');
       if (!userStr) {
-        alert("يجب تسجيل الدخول أولاً!");
+        alert("الرجاء تسجيل الدخول أولًا!");
         window.location.href = "index.html";
         return;
       }
 
       const user = JSON.parse(userStr);
-      document.getElementById('entry_by_display').value = user.fullName;
+      document.getElementById('entry_by_display').value = user.fullName || 'غير معروف';
 
+      const branches = user.branches || [];
       const container = document.getElementById('branchFieldContainer');
 
-      if (user.role === 'admin') {
-        // الإدارة: تظهر كل الفروع
-        let options = ALL_BRANCHES.map(b => `<option value="${b}">${b}</option>`).join('');
+      if (branches.length === 0) {
+        container.innerHTML = '<div style="color:red;">لا توجد فروع مرتبطة بحسابك</div>';
+      } else if (branches.length === 1) {
+        container.innerHTML = `
+          <label class="required">الفرع</label>
+          <input type="text" id="branch" value="${branches[0]}" readonly style="background:#f0f0f0;" />
+        `;
+      } else {
+        let options = branches.map(b => `<option value="${b}">${b}</option>`).join('');
         container.innerHTML = `
           <label class="required">الفرع</label>
           <select id="branch" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
@@ -199,79 +195,54 @@
             ${options}
           </select>
         `;
-      } else {
-        // باقي الأدوار: تظهر فقط فروعهم
-        const branches = user.branches || [];
-        if (branches.length === 0) {
-          container.innerHTML = '<div>لا توجد فروع مخصصة لهذا الحساب</div>';
-        } else if (branches.length === 1) {
-          container.innerHTML = `
-            <label class="required">الفرع</label>
-            <input type="text" id="branch" value="${branches[0]}" readonly style="background:#f0f0f0;" />
-          `;
-        } else {
-          let options = branches.map(b => `<option value="${b}">${b}</option>`).join('');
-          container.innerHTML = `
-            <label class="required">الفرع</label>
-            <select id="branch" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
-              <option value="">اختر الفرع</option>
-              ${options}
-            </select>
-          `;
-        }
       }
     };
 
-    // === وظائف عرض بيانات العميل والضامن (كما في الكود السابق) ===
+    // --- عرض بيانات العميل ---
     document.getElementById('national_id').addEventListener('blur', async () => {
       const nid = document.getElementById('national_id').value.trim();
       const div = document.getElementById('clientData');
       if (!nid) {
-        div.innerHTML = "أدخل رقم بطاقة العميل";
+        div.innerHTML = "أدخل رقم بطاقة العميل لعرض البيانات";
         return;
       }
 
       try {
-        const { data: loanData, error: loanError } = await supabase
-          .from('loans')
-          .select('اسم العميل عربى, تاريخ القرض, اخصائى القرض, كود العميل, النشاط الثانى, "الفرع الحالى للعميل"')
-          .eq('الرقم القومى', nid)
-          .single();
-
-        const { data: assessData, error: assessError } = await supabase
-          .from('assessments')
-          .select('الاسم, "السم المرسل من الاى سكور", "نتيجة التقييم", "سبب 2", "التقييم الرقمى", "احداثيات الموقع"')
-          .eq('رقم_البطاقة', nid)
-          .single();
+        const [loanRes, assessRes] = await Promise.all([
+          supabase.from('loans').select('اسم العميل عربى, تاريخ القرض, اخصائى القرض, كود العميل, النشاط الثانى, "الفرع الحالى للعميل"').eq('الرقم القومى', nid).single(),
+          supabase.from('assessments').select('الاسم, "السم المرسل من الاى سكور", "نتيجة التقييم", "سبب 2", "التقييم الرقمى", "احداثيات الموقع"').eq('رقم_البطاقة', nid).single()
+        ]);
 
         let html = '';
-        if (loanError && assessError) {
-          html = `<div class="preview-item">رقم البطاقة: ${nid} (لا توجد بيانات)</div>`;
+
+        // بيانات القروض
+        if (!loanRes.error && loanRes.data) {
+          const l = loanRes.data;
+          html += `<div class="preview-item"><span class="preview-label">اسم العميل:</span> ${l["اسم العميل عربى"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">تاريخ القرض:</span> ${l["تاريخ القرض"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">أخصائي القرض:</span> ${l["اخصائى القرض"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">كود العميل:</span> ${l["كود العميل"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">النشاط الثانى:</span> ${l["النشاط الثانى"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">الفرع الحالى:</span> ${l["الفرع الحالى للعميل"] || '—'}</div>`;
         } else {
-          if (!loanError && loanData) {
-            html += `<div class="preview-item"><span class="preview-label">اسم العميل:</span> ${loanData["اسم العميل عربى"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">تاريخ القرض:</span> ${loanData["تاريخ القرض"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">أخصائي القرض:</span> ${loanData["اخصائى القرض"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">كود العميل:</span> ${loanData["كود العميل"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">النشاط الثانى:</span> ${loanData["النشاط الثانى"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">الفرع الحالى:</span> ${loanData["الفرع الحالى للعميل"] || '—'}</div>`;
-          } else {
-            html += `<div class="preview-item">بيانات القرض: غير متوفرة</div>`;
-          }
-
-          html += `<hr style="margin: 10px 0;">`;
-
-          if (!assessError && assessData) {
-            html += `<div class="preview-item"><span class="preview-label">الاسم (تقييم):</span> ${assessData["الاسم"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">الاسم من الإي سكور:</span> ${assessData["السم المرسل من الاى سكور"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">نتيجة التقييم:</span> ${assessData["نتيجة التقييم"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">سبب 2:</span> ${assessData["سبب  2"] || assessData["سبب 2"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">التقييم الرقمى:</span> ${assessData["التقييم الرقمى"] || '—'}</div>`;
-            html += `<div class="preview-item"><span class="preview-label">احداثيات الموقع:</span> ${assessData["احداثيات الموقع"] || '—'}</div>`;
-          } else {
-            html += `<div class="preview-item">بيانات التقييم: غير متوفرة</div>`;
-          }
+          html += `<div class="preview-item">بيانات القرض: غير متوفرة</div>`;
         }
+
+        html += `<hr style="margin: 10px 0;">`;
+
+        // بيانات التقييم
+        if (!assessRes.error && assessRes.data) {
+          const a = assessRes.data;
+          html += `<div class="preview-item"><span class="preview-label">الاسم (تقييم):</span> ${a["الاسم"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">الاسم من الإي سكور:</span> ${a["السم المرسل من الاى سكور"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">نتيجة التقييم:</span> ${a["نتيجة التقييم"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">سبب 2:</span> ${a["سبب  2"] || a["سبب 2"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">التقييم الرقمى:</span> ${a["التقييم الرقمى"] || '—'}</div>`;
+          html += `<div class="preview-item"><span class="preview-label">احداثيات الموقع:</span> ${a["احداثيات الموقع"] || '—'}</div>`;
+        } else {
+          html += `<div class="preview-item">بيانات التقييم: غير متوفرة</div>`;
+        }
+
         div.innerHTML = html;
       } catch (err) {
         div.innerHTML = "حدث خطأ أثناء تحميل بيانات العميل";
@@ -279,11 +250,12 @@
       }
     });
 
+    // --- عرض بيانات الضامن ---
     document.getElementById('guarantor_id').addEventListener('blur', async () => {
       const gid = document.getElementById('guarantor_id').value.trim();
       const div = document.getElementById('guarantorData');
       if (!gid) {
-        div.innerHTML = "أدخل رقم بطاقة الضامن";
+        div.innerHTML = "أدخل رقم بطاقة الضامن لعرض البيانات";
         return;
       }
 
@@ -311,7 +283,7 @@
       }
     });
 
-    // === حفظ البيانات ===
+    // --- حفظ البيانات ---
     document.getElementById('entryForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('message');
@@ -325,7 +297,7 @@
         "عدد الاقساط": parseInt(document.getElementById('installments').value) || null,
         "اسم الاخصائى": document.getElementById('officer').value.trim(),
         "المنطقه": document.getElementById('region').value.trim(),
-        "الفرع": document.getElementById('branch').value.trim(),
+        "الفرع": document.getElementById('branch')?.value?.trim(),
         "رقم اللجنة": document.getElementById('committee_number').value.trim(),
         "القائم بالزياره": document.getElementById('visitor').value.trim() || null,
         "اسم القائم بالادخال": document.getElementById('entry_by_display').value.trim(),
@@ -336,11 +308,11 @@
         "created_by": document.getElementById('entry_by_display').value.trim()
       };
 
+      // التحقق من القيم المطلوبة
       if (!/^\d{14}$/.test(data["رقم البطاقة العميل"]) || !/^\d{14}$/.test(data["رقم بطاقة الضامن"])) {
         msg.innerHTML = '<div class="error">يجب أن يكون رقم البطاقة 14 رقمًا</div>';
         return;
       }
-
       if (!data["الفرع"]) {
         msg.innerHTML = '<div class="error">الرجاء اختيار الفرع</div>';
         return;
@@ -351,7 +323,9 @@
         if (error) throw error;
         msg.innerHTML = '<div class="success">تم الحفظ بنجاح!</div>';
         document.getElementById('entryForm').reset();
-        // إعادة تحميل حقل الفرع
+        document.getElementById('clientData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
+        document.getElementById('guarantorData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
+        // إعادة تحميل بيانات الفرع
         window.onload();
       } catch (err) {
         msg.innerHTML = `<div class="error">خطأ: ${err.message}</div>`;

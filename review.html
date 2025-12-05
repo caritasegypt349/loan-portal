@@ -14,7 +14,18 @@
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 13px; }
     th { background-color: #f2f2f2; }
-    .edit-btn { background: #e67e22; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+    .edit-btn { 
+      background: #e67e22; 
+      color: white; 
+      border: none; 
+      padding: 4px 8px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      margin: 2px;
+    }
+    .detail-btn {
+      background: #3498db;
+    }
     .loading { text-align: center; padding: 40px; color: #777; }
     .error { color: #e74c3c; text-align: center; padding: 20px; }
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
@@ -22,6 +33,7 @@
     .modal label { display: block; margin: 10px 0 5px; font-weight: bold; }
     .modal input, .modal textarea, .modal select { width: 100%; padding: 8px; margin-bottom: 10px; }
     .modal button { width: auto; margin: 5px; padding: 8px 16px; }
+    .detail-row td { padding: 15px; background: #f8f9fa; }
   </style>
 </head>
 <body>
@@ -80,6 +92,7 @@
 
     let allData = [];
     let userBranches = [];
+    const detailStates = {};
 
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
@@ -89,8 +102,7 @@
         return;
       }
 
-      // تأكد أن المستخدم مراجع داخلي
-      const { data: user, error: userError } = await supabase
+      const {  user, error: userError } = await supabase
         .from('users')
         .select('role, branches')
         .eq('id', userId)
@@ -114,7 +126,7 @@
       if (error) throw error;
       allData = data;
       renderFilters();
-      applyFilters(); // تطبيق الفلتر الافتراضي: "لم تتم المراجعة"
+      applyFilters();
     }
 
     function renderFilters() {
@@ -122,6 +134,7 @@
       const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
 
       const branchSelect = document.getElementById('filterBranch');
+      branchSelect.innerHTML = '<option value="">الفرع (الكل)</option>';
       branches.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v;
@@ -130,6 +143,7 @@
       });
 
       const officerSelect = document.getElementById('filterOfficer');
+      officerSelect.innerHTML = '<option value="">اسم الأخصائي (الكل)</option>';
       officers.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v;
@@ -139,6 +153,9 @@
     }
 
     function applyFilters() {
+      // إزالة الصفوف التفصيلية
+      document.querySelectorAll('[id^="detail-row-"]').forEach(el => el.remove());
+
       const branch = document.getElementById('filterBranch').value;
       const officer = document.getElementById('filterOfficer').value;
       const reviewStatus = document.getElementById('filterReviewStatus').value;
@@ -174,7 +191,7 @@
               <th>الإجراء</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="tableBody">
       `;
 
       data.forEach(row => {
@@ -186,7 +203,10 @@
             <td>${row["اسم الاخصائى"] || '—'}</td>
             <td>${row["الفرع"] || '—'}</td>
             <td>${row["المراجعة الداخلية"] || '—'}</td>
-            <td><button class="edit-btn" onclick="openEditModal(${row.id})">تعديل</button></td>
+            <td>
+              <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل</button>
+              <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id}, event)">+</button>
+            </td>
           </tr>
         `;
       });
@@ -225,14 +245,13 @@
         return;
       }
 
-      // تحديث البيانات المحلية
       const idx = allData.findIndex(r => r.id == id);
       if (idx !== -1) {
         allData[idx] = { ...allData[idx], ...updates };
       }
 
       closeModal();
-      applyFilters(); // تحديث العرض
+      applyFilters();
       alert("تم الحفظ بنجاح!");
     }
 
@@ -240,7 +259,69 @@
       document.getElementById('editModal').style.display = 'none';
     }
 
-    // إغلاق النموذج عند النقر خارجه
+    function toggleDetail(recordId, event) {
+      const row = allData.find(r => r.id == recordId);
+      if (!row) return;
+
+      const detailRowId = `detail-row-${recordId}`;
+      let detailRow = document.getElementById(detailRowId);
+
+      if (detailRow) {
+        if (detailStates[recordId]) {
+          detailRow.style.display = 'none';
+          detailStates[recordId] = false;
+          event.target.textContent = '+';
+        } else {
+          detailRow.style.display = 'table-row';
+          detailStates[recordId] = true;
+          event.target.textContent = '−';
+        }
+        return;
+      }
+
+      const index = allData.findIndex(r => r.id == recordId);
+      const tbody = document.getElementById('tableBody');
+      const newRow = document.createElement('tr');
+      newRow.id = detailRowId;
+      newRow.className = 'detail-row';
+      newRow.innerHTML = `
+        <td colspan="7">
+          <strong>بيانات تفصيلية:</strong><br>
+          عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
+          عدد الأقساط: ${row["عدد الاقساط"] || '—'}<br>
+          المنطقة: ${row["المنطقه"] || '—'}<br>
+          الفرع: ${row["الفرع"] || '—'}<br>
+          القائم بالزيارة: ${row["القائم بالزياره"] || '—'}<br>
+          اسم القائم بالإدخال: ${row["اسم القائم بالادخال"] || '—'}<br>
+          ملاحظات المراجعة: ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
+          تعليق المتابعة: ${row["تعليق مسؤول المتابعة"] || '—'}<br>
+          ملاحظات الإدارة: ${row["ملاحظات الادارة"] || '—'}<br>
+          تم التحويل: ${row["تم التحويل"] ? 'نعم' : 'لا'}<br>
+          التاريخ: ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br><br>
+
+          <strong>بيانات العميل من القروض:</strong><br>
+          تاريخ القرض: ${row["تاريخ_القرض"] || '—'}<br>
+          أخصائي القرض: ${row["اخصائى_القرض"] || '—'}<br>
+          كود العميل: ${row["كود_العميل"] || '—'}<br>
+          النشاط الثانى: ${row["النشاط_الثانى"] || '—'}<br>
+          الفرع من القروض: ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
+
+          <strong>بيانات العميل من التقييم:</strong><br>
+          نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
+          التقييم الرقمي: ${row["التقييم_الرقمى"] || '—'}<br>
+          الإحداثيات: ${row["احداثيات الموقع"] || '—'}<br><br>
+
+          <strong>بيانات الضامن:</strong><br>
+          الاسم من الإي سكور: ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
+          نتيجة التقييم: ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
+          التقييم الرقمي: ${row["تقييم_رقمى_الضامن"] || '—'}<br>
+        </td>
+      `;
+      tbody.insertBefore(newRow, tbody.children[index + 1]);
+      detailStates[recordId] = true;
+      event.target.textContent = '−';
+    }
+
     window.onclick = function(event) {
       const modal = document.getElementById('editModal');
       if (event.target == modal) closeModal();

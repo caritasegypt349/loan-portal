@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>عرض البيانات التفصيلي - نظام القروض</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
+    .container { max-width: 1800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #2c3e50; margin-top: 0; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+    select, input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 13px; }
+    th { background-color: #f2f2f2; }
+    .expand-btn { background: #3498db; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+    .detail-row { display: none; background: #f9f9f9; }
+    .loading { text-align: center; padding: 40px; color: #777; }
+    .error { color: #e74c3c; text-align: center; padding: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>عرض البيانات التفصيلي</h2>
+
+    <!-- الفلاتر -->
+    <div class="filters" id="filters">
+      <select id="filterReview">
+        <option value="">المراجعة الداخلية (الكل)</option>
+      </select>
+      <select id="filterSupervisor">
+        <option value="">مسؤول المتابعة (الكل)</option>
+      </select>
+      <select id="filterAdmin">
+        <option value="">الإدارة (الكل)</option>
+      </select>
+      <select id="filterOfficer">
+        <option value="">اسم الأخصائي (الكل)</option>
+      </select>
+      <input type="text" id="searchClientId" placeholder="بحث بكود العميل" />
+      <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
+      <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #2ecc71; color: white; border: none; border-radius: 4px;">تطبيق الفلاتر</button>
+    </div>
+
+    <!-- الجدول -->
+    <div id="tableContainer">
+      <div class="loading">جارٍ تحميل البيانات...</div>
+    </div>
+  </div>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+    );
+
+    let allData = [];
+    let userRole = '';
+    let userBranches = [];
+
+    // تحميل بيانات المستخدم
+    async function init() {
+      const userId = localStorage.getItem('loggedInUserId');
+      if (!userId) {
+        alert("الرجاء تسجيل الدخول أولًا!");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('role, branches')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      userRole = user.role;
+      userBranches = user.branches;
+
+      await loadData();
+    }
+
+    // تحميل البيانات من operations_with_details
+    async function loadData() {
+      let query = supabase.from('operations_with_details').select('*');
+      if (userRole !== 'admin' && userBranches) {
+        query = query.in('الفرع', userBranches);
+      }
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (error) throw error;
+      allData = data;
+      renderFilters();
+      renderTable(allData);
+    }
+
+    // ملء الفلاتر بالقيم الفريدة
+    function renderFilters() {
+      const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
+      const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
+      const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
+      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
+
+      const reviewSelect = document.getElementById('filterReview');
+      reviews.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        reviewSelect.appendChild(opt);
+      });
+
+      const supervisorSelect = document.getElementById('filterSupervisor');
+      supervisors.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        supervisorSelect.appendChild(opt);
+      });
+
+      const adminSelect = document.getElementById('filterAdmin');
+      admins.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        adminSelect.appendChild(opt);
+      });
+
+      const officerSelect = document.getElementById('filterOfficer');
+      officers.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        officerSelect.appendChild(opt);
+      });
+    }
+
+    // تطبيق الفلاتر
+    function applyFilters() {
+      const review = document.getElementById('filterReview').value;
+      const supervisor = document.getElementById('filterSupervisor').value;
+      const admin = document.getElementById('filterAdmin').value;
+      const officer = document.getElementById('filterOfficer').value;
+      const clientId = document.getElementById('searchClientId').value.trim();
+      const nationalId = document.getElementById('searchNationalId').value.trim();
+
+      let filtered = allData.filter(row => {
+        if (review && row["المراجعة الداخلية"] !== review) return false;
+        if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
+        if (admin && row["الادارة"] !== admin) return false;
+        if (officer && row["اسم الاخصائى"] !== officer) return false;
+        if (clientId && !row["كود_العميل"]?.includes(clientId)) return false;
+        if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    // عرض الجدول
+    function renderTable(data) {
+      if (!data || data.length === 0) {
+        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>رقم بطاقة العميل</th>
+              <th>اسم العميل</th>
+              <th>الاسم من الإي سكور</th>
+              <th>المشروع</th>
+              <th>رقم بطاقة الضامن</th>
+              <th>اسم الضامن</th>
+              <th>المبلغ</th>
+              <th>الأخصائي</th>
+              <th>المراجعة</th>
+              <th>المتابعة</th>
+              <th>الإدارة</th>
+              <th>رقم اللجنة</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+      `;
+
+      data.forEach((row, idx) => {
+        html += `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${row["رقم البطاقة العميل"] || '—'}</td>
+            <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
+            <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
+            <td>${row["المشروع"] || '—'}</td>
+            <td>${row["رقم بطاقة الضامن"] || '—'}</td>
+            <td>${row["اسم_الضامن"] || '—'}</td>
+            <td>${row["المبلغ المطلوب"] || '—'}</td>
+            <td>${row["اسم الاخصائى"] || '—'}</td>
+            <td>${row["المراجعة الداخلية"] || '—'}</td>
+            <td>${row["مسؤول المتابعة"] || '—'}</td>
+            <td>${row["الادارة"] || '—'}</td>
+            <td>${row["رقم اللجنة"] || '—'}</td>
+            <td><button class="expand-btn" onclick="toggleDetail(${idx})">+</button></td>
+          </tr>
+          <tr class="detail-row" id="detail-${idx}" style="display:none;">
+            <td colspan="14">
+              <strong>بيانات تفصيلية:</strong><br>
+              عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
+              عدد الأقساط: ${row["عدد الاقساط"] || '—'}<br>
+              المنطقة: ${row["المنطقه"] || '—'}<br>
+              الفرع: ${row["الفرع"] || '—'}<br>
+              القائم بالزيارة: ${row["القائم بالزياره"] || '—'}<br>
+              اسم القائم بالإدخال: ${row["اسم القائم بالادخال"] || '—'}<br>
+              ملاحظات المراجعة: ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
+              تعليق المتابعة: ${row["تعليق مسؤول المتابعة"] || '—'}<br>
+              ملاحظات الإدارة: ${row["ملاحظات الادارة"] || '—'}<br>
+              تم التحويل: ${row["تم التحويل"] ? 'نعم' : 'لا'}<br>
+              التاريخ: ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br><br>
+
+              <strong>بيانات العميل من القروض:</strong><br>
+              تاريخ القرض: ${row["تاريخ_القرض"] || '—'}<br>
+              أخصائي القرض: ${row["اخصائى_القرض"] || '—'}<br>
+              كود العميل: ${row["كود_العميل"] || '—'}<br>
+              النشاط الثانى: ${row["النشاط_الثانى"] || '—'}<br>
+              الفرع من القروض: ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
+
+              <strong>بيانات العميل من التقييم:</strong><br>
+              نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
+              التقييم الرقمي: ${row["التقييم_الرقمى"] || '—'}<br>
+              الإحداثيات: ${row["احداثيات الموقع"] || '—'}<br><br>
+
+              <strong>بيانات الضامن:</strong><br>
+              الاسم من الإي سكور: ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
+              نتيجة التقييم: ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
+              التقييم الرقمي: ${row["تقييم_رقمى_الضامن"] || '—'}<br>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('tableContainer').innerHTML = html;
+    }
+
+    // التبديل بين العرض التفصيلي
+    function toggleDetail(index) {
+      const detailRow = document.getElementById(`detail-${index}`);
+      const btn = event.target;
+      if (detailRow.style.display === 'none') {
+        detailRow.style.display = 'table-row';
+        btn.textContent = '−';
+      } else {
+        detailRow.style.display = 'none';
+        btn.textContent = '+';
+      }
+    }
+
+    // بدء التحميل
+    init().catch(err => {
+      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
+    });
+  </script>
+</body>
+</html>

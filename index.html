@@ -90,6 +90,7 @@
     .page-btn.supervise { background: #34495e; }
     .page-btn.admin { background: #e74c3c; }
     .page-btn.financing { background: #1abc9c; }
+    .page-btn.view { background: #9b59b6; }
   </style>
 </head>
 <body>
@@ -97,8 +98,8 @@
     <div id="loginSection">
       <h2>تسجيل الدخول إلى نظام القروض</h2>
       <div class="form-group">
-        <label for="username">اسم المستخدم (البريد الإلكتروني)</label>
-        <input type="email" id="username" placeholder="مثال: mina" autocomplete="username" />
+        <label for="username">اسم المستخدم</label>
+        <input type="text" id="username" placeholder="مثال: Mona" autocomplete="username" />
       </div>
       <div class="form-group">
         <label for="password">كلمة السر</label>
@@ -125,7 +126,7 @@
       const errorDiv = document.getElementById('errorMessage');
 
       if (!email || !password) {
-        errorDiv.textContent = "الرجاء إدخال البريد وكلمة السر";
+        errorDiv.textContent = "الرجاء إدخال اسم المستخدم وكلمة السر";
         return;
       }
 
@@ -142,7 +143,6 @@
           return;
         }
 
-        // ✅ التخزين الآمن: id + الاسم
         localStorage.setItem('loggedInUserId', data.id);
         localStorage.setItem('loggedInUser', data.full_name);
 
@@ -161,30 +161,35 @@
       const buttonsDiv = document.getElementById('pageButtons');
       buttonsDiv.innerHTML = '';
 
-      const rolePages = {
-        'data_entry': [{ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" }],
-        'financing_officer': [
-          { label: "إدخال بيانات", url: "entry.html", cls: "page-btn" },
-          { label: "إدارة التمويل", url: "financing.html", cls: "page-btn financing" }
-        ],
-        'team_leader': [
-          { label: "عرض فريق العمل", url: "team-view.html", cls: "page-btn team" }
-        ],
-        'internal_reviewer': [
-          { label: "المراجعة الداخلية", url: "review.html", cls: "page-btn review" }
-        ],
-        'followup_supervisor': [
-          { label: "متابعة العمليات", url: "supervise.html", cls: "page-btn supervise" }
-        ],
-        'admin': [
-          { label: "إدخال بيانات", url: "entry.html", cls: "page-btn" },
-          { label: "المراجعة", url: "review.html", cls: "page-btn review" },
-          { label: "المتابعة", url: "supervise.html", cls: "page-btn supervise" },
-          { label: "لوحة الإدارة", url: "admin.html", cls: "page-btn admin" }
-        ]
-      };
+      const pages = [];
 
-      const pages = rolePages[role] || [];
+      // كل الأدوار يحصلون على "عرض البيانات"
+      pages.push({ label: "عرض البيانات", url: "view-only.html", cls: "page-btn view" });
+
+      // باقي الصفحات حسب الدور
+      if (role === 'data_entry') {
+        pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
+      }
+      else if (role === 'financing_officer') {
+        pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
+        pages.push({ label: "إدارة التمويل", url: "financing.html", cls: "page-btn financing" });
+      }
+      else if (role === 'team_leader') {
+        pages.push({ label: "عرض فريق العمل", url: "team-view.html", cls: "page-btn team" });
+      }
+      else if (role === 'internal_reviewer') {
+        pages.push({ label: "المراجعة الداخلية", url: "review.html", cls: "page-btn review" });
+      }
+      else if (role === 'followup_supervisor') {
+        pages.push({ label: "متابعة العمليات", url: "supervise.html", cls: "page-btn supervise" });
+      }
+      else if (role === 'admin') {
+        pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
+        pages.push({ label: "المراجعة", url: "review.html", cls: "page-btn review" });
+        pages.push({ label: "المتابعة", url: "supervise.html", cls: "page-btn supervise" });
+        pages.push({ label: "لوحة الإدارة", url: "admin.html", cls: "page-btn admin" });
+      }
+
       pages.forEach(page => {
         const btn = document.createElement('a');
         btn.href = page.url;

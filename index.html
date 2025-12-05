@@ -1,14 +1,11 @@
-// 1. تحميل Supabase (لو لم يكن محملًا)
 import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2').then(async (mod) => {
   const { createClient } = mod;
   
-  // 2. إنشاء العميل
   const supabase = createClient(
     'https://akjyrmmqsnxdbkslxmvb.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
   );
 
-  // 3. اختبار قراءة جدول (مثل: users)
   const { data, error } = await supabase.from('users').select('id').limit(1);
   
   if (error) {

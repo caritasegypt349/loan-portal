@@ -1,16 +1,41 @@
-import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2').then(async (mod) => {
-  const { createClient } = mod;
-  
-  const supabase = createClient(
-    'https://akjyrmmqsnxdbkslxmvb.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
-  );
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار الاتصال بـ Supabase</title>
+</head>
+<body>
+    <h1>اختبار الاتصال بقاعدة البيانات</h1>
+    <div id="status"></div>
 
-  const { data, error } = await supabase.from('users').select('id').limit(1);
-  
-  if (error) {
-    console.error('❌ خطأ:', error);
-  } else {
-    console.log('✅ الاتصال ناجح! البيانات:', data);
-  }
-});
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        async function testConnection() {
+            const { createClient } = window.supabase;
+            
+            const supabase = createClient(
+                'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+            );
+
+            try {
+                const { data, error } = await supabase.from('users').select('id').limit(1);
+                
+                if (error) {
+                    document.getElementById('status').innerHTML = '❌ خطأ: ' + error.message;
+                    console.error('خطأ:', error);
+                } else {
+                    document.getElementById('status').innerHTML = '✅ الاتصال ناجح! البيانات: ' + JSON.stringify(data);
+                    console.log('الاتصال ناجح! البيانات:', data);
+                }
+            } catch (err) {
+                document.getElementById('status').innerHTML = '❌ خطأ في الاتصال: ' + err.message;
+                console.error('خطأ:', err);
+            }
+        }
+
+        testConnection();
+    </script>
+</body>
+</html>

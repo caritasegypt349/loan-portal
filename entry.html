@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="torrent" content="width=device-width, initial-scale=1.0"/>
   <title>إدخال بيانات العملية</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -207,7 +207,7 @@
       }
     };
 
-    // --- عرض بيانات العميل والضامن (نفس الكود السابق بدون تغيير) ---
+    // --- عرض بيانات العميل ---
     document.getElementById('national_id').addEventListener('blur', async () => {
       const nid = document.getElementById('national_id').value.trim();
       const div = document.getElementById('clientData');
@@ -255,6 +255,7 @@
       }
     });
 
+    // --- عرض بيانات الضامن ---
     document.getElementById('guarantor_id').addEventListener('blur', async () => {
       const gid = document.getElementById('guarantor_id').value.trim();
       const div = document.getElementById('guarantorData');
@@ -290,7 +291,6 @@
     // --- حفظ البيانات ---
     document.getElementById('entryForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const msg = document.getElementById('message');
 
       const data = {
         "رقم البطاقة العميل": document.getElementById('national_id').value.trim(),
@@ -313,23 +313,24 @@
       };
 
       if (!/^\d{14}$/.test(data["رقم البطاقة العميل"]) || !/^\d{14}$/.test(data["رقم بطاقة الضامن"])) {
-        msg.innerHTML = '<div class="error">يجب أن يكون رقم البطاقة 14 رقمًا</div>';
+        alert("الرجاء التأكد من أن رقم البطاقة مكون من 14 رقمًا");
         return;
       }
       if (!data["الفرع"]) {
-        msg.innerHTML = '<div class="error">الرجاء اختيار الفرع</div>';
+        alert("الرجاء اختيار الفرع");
         return;
       }
 
       try {
         const { error } = await supabase.from('operations').insert([data]);
         if (error) throw error;
-        msg.innerHTML = '<div class="success">تم الحفظ بنجاح!</div>';
-        document.getElementById('entryForm').reset();
-        document.getElementById('clientData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
-        document.getElementById('guarantorData').innerHTML = "تم الحفظ — أدخل رقم جديد للمعاينة";
+
+        // ✅ إظهار تنبيه ثم إعادة التحميل
+        alert("تم الحفظ بنجاح!");
+        window.location.reload(); // إعادة تحميل الصفحة بالكامل
+
       } catch (err) {
-        msg.innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
+        alert("خطأ: " + (err.message || "فشل في الحفظ"));
       }
     });
   </script>

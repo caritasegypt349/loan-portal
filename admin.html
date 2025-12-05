@@ -66,14 +66,12 @@
     </div>
   </div>
 
-  <!-- نموذج التعديل الكامل -->
   <div id="editModal" class="modal">
     <div class="modal-content">
       <h3>تعديل كل بيانات العملية</h3>
       <input type="hidden" id="editRecordId" />
       
       <div class="form-grid">
-        <!-- العمود الأول -->
         <div>
           <label>رقم بطاقة العميل</label>
           <input type="text" id="editNationalId" maxlength="14" />
@@ -103,7 +101,6 @@
           <input type="text" id="editCommittee" />
         </div>
         
-        <!-- العمود الثاني -->
         <div>
           <label>القائم بالزيارة</label>
           <input type="text" id="editVisitor" />
@@ -164,7 +161,8 @@
         return;
       }
 
-      const {  user, error: userError } = await supabase
+      // **تم التصحيح هنا:** يجب جلب البيانات في المتغير 'user' من الخاصية 'data'
+      const { data: user, error: userError } = await supabase 
         .from('users')
         .select('role')
         .eq('id', userId)

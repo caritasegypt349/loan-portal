@@ -119,17 +119,15 @@
   </div>
 
   <script>
-    // ⚠️ يرجى التأكد من أن هذه القيم هي القيم الصحيحة لمشروعك في Supabase
-    const SUPABASE_URL = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImФранlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'; 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // ✅ تم إصلاح المسافات وتوحيد استخدام full_name
+    const supabase = window.supabase.createClient(
+      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+    );
 
     let allData = [];
     let loggedInUser = {};
 
-    // ==========================================================
-    // تهيئة الصفحة (التعديل للتشخيص)
-    // ==========================================================
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
       if (!userId) {
@@ -138,31 +136,31 @@
         return;
       }
 
-      const { data: user, error: userError } = await supabase 
+      // ✅ select full_name كما هو في الجدول
+      const { data: user, error: userError } = await supabase
         .from('users')
-        // 🚀 تم تصحيح: استخدام 'full_name' بدلاً من 'name'
-        .select('role, full_name, id, branches') 
+        .select('id, full_name, role, branches')
         .eq('id', userId)
         .single();
 
       if (userError || !user) {
-        // 🚨 إضافة لطباعة الخطأ في Console لفحصه
-        console.error("Supabase User Fetch Error:", userError); 
-        alert("حدث خطأ في تحميل بيانات المستخدم. الرجاء فتح Console في المتصفح (F12) والتحقق من رسالة الخطأ التفصيلية.");
+        alert("خطأ في تحميل بيانات المستخدم. تأكد أنك سجلت الدخول بشكل صحيح.");
+        console.error("خطأ:", userError);
         window.location.href = "index.html";
         return;
       }
-      
-      // تعيين الاسم الكامل كاسم المستخدم لضمان التوافق مع باقي الكود
-      loggedInUser = user;
-      loggedInUser.name = user.full_name; 
+
+      // ✅ تعيين الاسم الكامل
+      loggedInUser = {
+        id: user.id,
+        name: user.full_name,
+        role: user.role,
+        branches: user.branches
+      };
 
       await loadData();
     }
 
-    // ==========================================================
-    // تحميل وعرض البيانات (مع تطبيق الفلترة التلقائية)
-    // ==========================================================
     async function loadData() {
       document.getElementById('tableContainer').innerHTML = '<div class="loading">جارٍ تحميل البيانات...</div>';
       
@@ -170,10 +168,8 @@
         .from('operations_with_details')
         .select('*');
         
-      // 🚀 تطبيق الفلترة حسب الفروع للمستخدمين غير الإداريين
-      if (loggedInUser.role !== 'admin' && loggedInUser.branches && loggedInUser.branches.length > 0) {
-        // نستخدم .in للتحقق مما إذا كانت قيمة عمود "الفرع" موجودة في مصفوفة الفروع الخاصة بالمستخدم
-        query = query.in('الفرع', loggedInUser.branches); 
+      if (loggedInUser.role !== 'admin' && loggedInUser.branches) {
+        query = query.in('الفرع', loggedInUser.branches);
       }
         
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -182,17 +178,16 @@
         document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ في تحميل البيانات: ${error.message}</div>`;
         return;
       }
+      
       allData = data;
       renderFilters();
       applyFilters();
     }
 
     function renderFilters() {
-      // نستخدم فقط البيانات التي تم جلبها لعرض الفلاتر
       const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v))];
       const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
 
-      // ملء قائمة الفروع
       const branchSelect = document.getElementById('filterBranch');
       branchSelect.innerHTML = '<option value="">الفرع (الكل)</option>';
       branches.forEach(v => {
@@ -202,7 +197,6 @@
         branchSelect.appendChild(opt);
       });
       
-      // ملء قائمة الأخصائيين
       const officerSelect = document.getElementById('filterOfficer');
       officerSelect.innerHTML = '<option value="">اسم الأخصائي (الكل)</option>';
       officers.forEach(v => {
@@ -234,7 +228,7 @@
 
     function renderTable(data) {
       if (!data || data.length === 0) {
-        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات مطابقة لمعايير البحث</div>';
+        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات مطابقة</div>';
         return;
       }
 
@@ -243,7 +237,7 @@
           <thead>
             <tr>
               <th>رقم بطاقة العميل</th>
-              <th>اسم العميل (أساسي)</th> 
+              <th>اسم العميل</th>
               <th>كود العميل</th>
               <th>المشروع</th>
               <th>الأخصائي</th>
@@ -251,7 +245,7 @@
               <th>المراجعة</th>
               <th>المتابعة</th>
               <th>الإدارة</th>
-              <th>اسم الضامن</th> 
+              <th>اسم الضامن</th>
               <th>الإجراء</th>
             </tr>
           </thead>
@@ -263,14 +257,14 @@
           <tr>
             <td>${row["رقم البطاقة العميل"] || '—'}</td>
             <td>${row["اسم_العميل"] || '—'}</td>
-            <td>${row["كود_العميل"] || '—'}</td> 
+            <td>${row["كود_العميل"] || '—'}</td>
             <td>${row["المشروع"] || '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
             <td>${row["الفرع"] || '—'}</td>
             <td>${row["المراجعة الداخلية"] || '—'}</td>
             <td>${row["مسؤول المتابعة"] || '—'}</td>
             <td>${row["الادارة"] || '—'}</td>
-            <td>${row["اسم_الضامن"] || '—'}</td> 
+            <td>${row["اسم_الضامن"] || '—'}</td>
             <td>
               <button class="request-btn" onclick="openEditModal(${row.id})">طلب تعديل</button>
               <button class="request-btn detail-btn" onclick="toggleDetail(${row.id}, event)">+</button>
@@ -283,17 +277,11 @@
       document.getElementById('tableContainer').innerHTML = html;
     }
     
-    // ==========================================================
-    // وظائف الـ Modal
-    // ==========================================================
     function openEditModal(recordId) {
       const record = allData.find(r => r.id == recordId);
       if (!record) return;
 
-      // تخزين ID السجل
       document.getElementById('editRecordId').value = record.id;
-      
-      // ملء حقول التعديل بالقيم الحالية (هذه هي القيم القديمة)
       document.getElementById('editNationalId').value = record["رقم البطاقة العميل"] || '';
       document.getElementById('editGuarantorId').value = record["رقم بطاقة الضامن"] || '';
       document.getElementById('editProject').value = record["المشروع"] || '';
@@ -304,12 +292,9 @@
       document.getElementById('editBranch').value = record["الفرع"] || '';
       document.getElementById('editCommittee').value = record["رقم اللجنة"] || '';
       
-      // حقول القراءة فقط لعرض حالة المراجعة الحالية
       document.getElementById('currentReview').value = record["المراجعة الداخلية"] || '';
       document.getElementById('currentSupervisor').value = record["مسؤول المتابعة"] || '';
       document.getElementById('currentAdmin').value = record["الادارة"] || '';
-      
-      // تصفير ملاحظات الطلب
       document.getElementById('requestNotes').value = '';
 
       document.getElementById('editModal').style.display = 'block';
@@ -319,92 +304,80 @@
       document.getElementById('editModal').style.display = 'none';
     }
 
-    // ==========================================================
-    // دالة إرسال طلب التعديل
-    // ==========================================================
     async function submitEditRequest() {
       const id = parseInt(document.getElementById('editRecordId').value);
       const record = allData.find(r => r.id === id);
-
       if (!record) {
-          alert("خطأ: لم يتم العثور على السجل.");
-          return;
+        alert("لم يتم العثور على السجل.");
+        return;
       }
       
       const notes = document.getElementById('requestNotes').value.trim();
-      
       if (!notes) {
-          alert("الرجاء إدخال ملاحظات توضح سبب طلب التعديل.");
-          return;
+        alert("الرجاء إدخال سبب طلب التعديل.");
+        return;
       }
       
-      // تجميع القيم الجديدة
       const newValues = {
-          "رقم البطاقة العميل": document.getElementById('editNationalId').value.trim(),
-          "رقم بطاقة الضامن": document.getElementById('editGuarantorId').value.trim(),
-          "المشروع": document.getElementById('editProject').value.trim(),
-          "المبلغ المطلوب": parseInt(document.getElementById('editAmount').value) || null,
-          "عدد الاقساط": parseInt(document.getElementById('editInstallments').value) || null,
-          "اسم الاخصائى": document.getElementById('editOfficer').value.trim(),
-          "المنطقه": document.getElementById('editRegion').value.trim(),
-          "الفرع": document.getElementById('editBranch').value.trim(),
-          "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
+        "رقم البطاقة العميل": document.getElementById('editNationalId').value.trim(),
+        "رقم بطاقة الضامن": document.getElementById('editGuarantorId').value.trim(),
+        "المشروع": document.getElementById('editProject').value.trim(),
+        "المبلغ المطلوب": parseFloat(document.getElementById('editAmount').value) || null,
+        "عدد الاقساط": parseInt(document.getElementById('editInstallments').value) || null,
+        "اسم الاخصائى": document.getElementById('editOfficer').value.trim(),
+        "المنطقه": document.getElementById('editRegion').value.trim(),
+        "الفرع": document.getElementById('editBranch').value.trim(),
+        "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
       };
       
-      // تجميع القيم القديمة (للمقارنة في صفحة المدير)
       const oldValues = {
-          "رقم البطاقة العميل": record["رقم البطاقة العميل"],
-          "رقم بطاقة الضامن": record["رقم بطاقة الضامن"],
-          "المشروع": record["المشروع"],
-          "المبلغ المطلوب": record["المبلغ المطلوب"],
-          "عدد الاقساط": record["عدد الاقساط"],
-          "اسم الاخصائى": record["اسم الاخصائى"],
-          "المنطقه": record["المنطقه"],
-          "الفرع": record["الفرع"],
-          "رقم اللجنة": record["رقم اللجنة"],
+        "رقم البطاقة العميل": record["رقم البطاقة العميل"],
+        "رقم بطاقة الضامن": record["رقم بطاقة الضامن"],
+        "المشروع": record["المشروع"],
+        "المبلغ المطلوب": record["المبلغ المطلوب"],
+        "عدد الاقساط": record["عدد الاقساط"],
+        "اسم الاخصائى": record["اسم الاخصائى"],
+        "المنطقه": record["المنطقه"],
+        "الفرع": record["الفرع"],
+        "رقم اللجنة": record["رقم اللجنة"],
       };
 
-      // التحقق من أن المستخدم قام بتغيير قيمة واحدة على الأقل
       let hasChanged = false;
       for (const key in newValues) {
-          if (String(newValues[key]) !== String(oldValues[key])) {
-              hasChanged = true;
-              break;
-          }
+        if (String(newValues[key]) !== String(oldValues[key])) {
+          hasChanged = true;
+          break;
+        }
       }
 
       if (!hasChanged) {
-          alert("الرجاء تعديل قيمة واحدة على الأقل لتقديم طلب التعديل.");
-          return;
+        alert("الرجاء تعديل قيمة واحدة على الأقل.");
+        return;
       }
       
-      // تجهيز البيانات لإرسالها كطلب تعديل
       const requestData = {
-          operation_id: id,
-          requester_id: loggedInUser.id,
-          requested_by: loggedInUser.name || 'مستخدم غير معروف',
-          old_value: oldValues, // JSONB
-          new_value: newValues, // JSONB
-          notes: notes,
-          status: 'Pending',
+        operation_id: id,
+        requester_id: loggedInUser.id,
+        requested_by: loggedInUser.name,
+        old_value: oldValues,
+        new_value: newValues,
+        notes: notes,
+        status: 'Pending',
       };
       
       try {
-          const { error } = await supabase.from('edit_requests').insert([requestData]);
-
-          if (error) throw error;
-          
-          alert("✅ تم إرسال طلب التعديل بنجاح! سيتم مراجعته من قبل المدير.");
-          closeModal();
+        const { error } = await supabase.from('edit_requests').insert([requestData]);
+        if (error) throw error;
+        
+        alert("تم إرسال طلب التعديل بنجاح!");
+        closeModal();
+        applyFilters();
       } catch (e) {
-          console.error('Error submitting request:', e);
-          alert("❌ حدث خطأ أثناء إرسال الطلب: " + e.message);
+        alert("خطأ: " + e.message);
+        console.error(e);
       }
     }
     
-    // ==========================================================
-    // وظيفة عرض التفاصيل (لمساعدة المستخدم على مراجعة البيانات)
-    // ==========================================================
     function toggleDetail(recordId, event) {
       const row = allData.find(r => r.id == recordId);
       if (!row) return;
@@ -413,13 +386,8 @@
       let detailRow = document.getElementById(detailRowId);
 
       if (detailRow) {
-        if (detailRow.style.display === 'none') {
-          detailRow.style.display = 'table-row';
-          event.target.textContent = '−';
-        } else {
-          detailRow.style.display = 'none';
-          event.target.textContent = '+';
-        }
+        detailRow.style.display = detailRow.style.display === 'none' ? 'table-row' : 'none';
+        event.target.textContent = detailRow.style.display === 'none' ? '+' : '−';
         return;
       }
 
@@ -476,13 +444,12 @@
     }
 
     window.onclick = function(event) {
-      const modal = document.getElementById('editModal');
-      if (event.target == modal) closeModal();
+      if (event.target.id === 'editModal') closeModal();
     };
 
     init().catch(err => {
-      console.error('Initialization Error:', err);
-      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ في تهيئة النظام: ${err.message}</div>`;
+      console.error('خطأ:', err);
+      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
     });
   </script>
 </body>

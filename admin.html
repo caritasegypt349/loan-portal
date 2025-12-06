@@ -179,7 +179,7 @@
   <script>
     const supabase = window.supabase.createClient(
       'https://akjyrmmqsnxdbkslxmvb.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImФранlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
     );
 
     let allData = [];
@@ -280,15 +280,14 @@
           <thead>
             <tr>
               <th>رقم بطاقة العميل</th>
-              <th>اسم العميل</th>
-              <th>كود العميل</th>
+              <th>اسم العميل (أساسي)</th> <th>اسم العميل (تقييم)</th> <th>كود العميل</th>
               <th>المشروع</th>
               <th>الأخصائي</th>
               <th>الفرع</th>
               <th>المراجعة</th>
               <th>المتابعة</th>
               <th>الإدارة</th>
-             <th>اسم الضامن</th> 
+              <th>اسم الضامن</th> 
               <th>الإجراء</th>
             </tr>
           </thead>
@@ -299,15 +298,15 @@
         html += `
           <tr>
             <td>${row["رقم البطاقة العميل"] || '—'}</td>
-            <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
-            <td>${row["كود_العميل"] || '—'}</td>
+            <td>${row["اسم_العميل"] || '—'}</td> <td>${row["اسم_العميل_من_التقييم"] || '—'}</td> <td>${row["كود_العميل"] || '—'}</td>
             <td>${row["المشروع"] || '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
             <td>${row["الفرع"] || '—'}</td>
             <td>${row["المراجعة الداخلية"] || '—'}</td>
             <td>${row["مسؤول المتابعة"] || '—'}</td>
             <td>${row["الادارة"] || '—'}</td>
-            <td>${row["اسم_الضامن"] || '—'}</td> <td>
+            <td>${row["اسم_الضامن"] || '—'}</td> 
+            <td>
               <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل الكل</button>
               <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id}, event)">+</button>
             </td>
@@ -425,8 +424,7 @@
       detailRowEl.id = detailRowId;
       detailRowEl.className = 'detail-row';
       detailRowEl.innerHTML = `
-        <td colspan="10">
-          <strong>بيانات تفصيلية:</strong><br>
+        <td colspan="12"> <strong>بيانات تفصيلية:</strong><br>
           المبلغ المطلوب: ${row["المبلغ المطلوب"] || '—'}<br>
           عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
           الفرع: ${row["الفرع"] || '—'}<br>
@@ -446,7 +444,7 @@
           الفرع من القروض: ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
 
           <strong>بيانات العميل من التقييم:</strong><br>
-          نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
+          الاسم من التقييم: ${row["اسم_العميل_من_التقييم"] || '—'}<br> نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
           التقييم الرقمي: ${row["التقييم_الرقمى"] || '—'}<br>
           الإحداثيات: ${row["احداثيات الموقع"] || '—'}<br><br>
 

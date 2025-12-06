@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>طلب تعديل بيانات - نظام القروض</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
+    .container { max-width: 1800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #3498db; margin-top: 0; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+    select, input, button { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 13px; }
+    th { background-color: #f2f2f2; }
+    .request-btn { 
+      background: #3498db; 
+      color: white; 
+      border: none; 
+      padding: 4px 8px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      margin: 2px;
+    }
+    .detail-btn {
+      background: #2ecc71;
+    }
+    .loading { text-align: center; padding: 40px; color: #777; }
+    .error { color: #e74c3c; text-align: center; padding: 20px; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal-content { background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 800px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
+    .modal label { display: block; margin: 10px 0 5px; font-weight: bold; }
+    .modal input, .modal textarea, .modal select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;}
+    .modal button { width: auto; margin: 5px; padding: 8px 16px; }
+    .detail-row td { padding: 15px; background: #f8f9fa; font-size: 12px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .read-only { background: #eee; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>طلب تعديل بيانات عملية</h2>
+    
+    <div class="filters">
+      <select id="filterBranch">
+        <option value="">الفرع (الكل)</option>
+      </select>
+      <select id="filterOfficer">
+        <option value="">اسم الأخصائي (الكل)</option>
+      </select>
+      <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
+      <input type="text" id="searchClientCode" placeholder="بحث بكود العميل" />
+      <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #3498db; color: white;">تطبيق الفلاتر</button>
+    </div>
+
+    <div id="tableContainer">
+      <div class="loading">جارٍ تحميل البيانات...</div>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h3>طلب تعديل بيانات السجل</h3>
+      <input type="hidden" id="editRecordId" />
+      <p style="color:red; font-weight:bold;">**ستقوم بإرسال طلب التعديل للمدير، لن يتم تطبيق التعديلات إلا بعد موافقته.**</p>
+      
+      <div class="form-grid">
+        <div>
+          <label>رقم بطاقة العميل (الجديد)</label>
+          <input type="text" id="editNationalId" maxlength="14" />
+          
+          <label>رقم بطاقة الضامن (الجديد)</label>
+          <input type="text" id="editGuarantorId" maxlength="14" />
+          
+          <label>المشروع (الجديد)</label>
+          <input type="text" id="editProject" />
+          
+          <label>المبلغ المطلوب (الجديد)</label>
+          <input type="number" id="editAmount" />
+          
+          <label>عدد الأقساط (الجديد)</label>
+          <input type="number" id="editInstallments" />
+          
+          <label>اسم الأخصائي (الجديد)</label>
+          <input type="text" id="editOfficer" />
+          
+          <label>المنطقة (الجديدة)</label>
+          <input type="text" id="editRegion" />
+          
+          <label>الفرع (الجديد)</label>
+          <input type="text" id="editBranch" />
+          
+          <label>رقم اللجنة (الجديد)</label>
+          <input type="text" id="editCommittee" />
+        </div>
+        
+        <div>
+          <p>
+            <strong>بيانات المراجعة والمتابعة الحالية (للقراءة فقط):</strong>
+          </p>
+          <label>المراجعة الداخلية</label>
+          <input type="text" id="currentReview" class="read-only" readonly />
+          
+          <label>مسؤول المتابعة</label>
+          <input type="text" id="currentSupervisor" class="read-only" readonly />
+          
+          <label>الإدارة</label>
+          <input type="text" id="currentAdmin" class="read-only" readonly />
+          
+          <label>ملاحظات على الطلب (مهم: يجب ذكر سبب التعديل بوضوح)</label>
+          <textarea id="requestNotes" rows="6" placeholder="الرجاء كتابة سبب طلب التعديل هنا" required></textarea>
+        </div>
+      </div>
+      
+      <button onclick="submitEditRequest()" style="background:#3498db;color:white;">إرسال طلب التعديل</button>
+      <button onclick="closeModal()" style="background:#e74c3c;color:white;">إلغاء</button>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImФранlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'; 
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let allData = [];
+    let loggedInUser = {};
+
+    // ==========================================================
+    // تهيئة الصفحة
+    // ==========================================================
+    async function init() {
+      const userId = localStorage.getItem('loggedInUserId');
+      if (!userId) {
+        alert("الرجاء تسجيل الدخول أولًا!");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const { data: user, error: userError } = await supabase 
+        .from('users')
+        .select('role, name, id')
+        .eq('id', userId)
+        .single();
+
+      if (userError || !user) {
+        alert("حدث خطأ في تحميل بيانات المستخدم.");
+        window.location.href = "index.html";
+        return;
+      }
+      
+      loggedInUser = user;
+      await loadData();
+    }
+
+    // ==========================================================
+    // تحميل وعرض البيانات
+    // ==========================================================
+    async function loadData() {
+      document.getElementById('tableContainer').innerHTML = '<div class="loading">جارٍ تحميل البيانات...</div>';
+      
+      // جلب البيانات من View (operations_with_details)
+      const { data, error } = await supabase
+        .from('operations_with_details')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ في تحميل البيانات: ${error.message}</div>`;
+        return;
+      }
+      allData = data;
+      renderFilters();
+      applyFilters();
+    }
+
+    function renderFilters() {
+      const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v))];
+      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
+
+      // ملء قائمة الفروع
+      const branchSelect = document.getElementById('filterBranch');
+      branchSelect.innerHTML = '<option value="">الفرع (الكل)</option>';
+      branches.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        branchSelect.appendChild(opt);
+      });
+      
+      // ملء قائمة الأخصائيين
+      const officerSelect = document.getElementById('filterOfficer');
+      officerSelect.innerHTML = '<option value="">اسم الأخصائي (الكل)</option>';
+      officers.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        officerSelect.appendChild(opt);
+      });
+    }
+
+    function applyFilters() {
+      document.querySelectorAll('[id^="detail-row-"]').forEach(el => el.remove());
+
+      const branch = document.getElementById('filterBranch').value;
+      const officer = document.getElementById('filterOfficer').value;
+      const nationalId = document.getElementById('searchNationalId').value.trim();
+      const clientCode = document.getElementById('searchClientCode').value.trim();
+
+      let filtered = allData.filter(row => {
+        if (branch && row["الفرع"] !== branch) return false;
+        if (officer && row["اسم الاخصائى"] !== officer) return false;
+        if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
+        if (clientCode && !row["كود_العميل"]?.includes(clientCode)) return false;
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    function renderTable(data) {
+      if (!data || data.length === 0) {
+        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات مطابقة لمعايير البحث</div>';
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>رقم بطاقة العميل</th>
+              <th>اسم العميل (أساسي)</th> 
+              <th>كود العميل</th>
+              <th>المشروع</th>
+              <th>الأخصائي</th>
+              <th>الفرع</th>
+              <th>المراجعة</th>
+              <th>المتابعة</th>
+              <th>الإدارة</th>
+              <th>اسم الضامن</th> 
+              <th>الإجراء</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+      `;
+
+      data.forEach(row => {
+        html += `
+          <tr>
+            <td>${row["رقم البطاقة العميل"] || '—'}</td>
+            <td>${row["اسم_العميل"] || '—'}</td>
+            <td>${row["كود_العميل"] || '—'}</td> 
+            <td>${row["المشروع"] || '—'}</td>
+            <td>${row["اسم الاخصائى"] || '—'}</td>
+            <td>${row["الفرع"] || '—'}</td>
+            <td>${row["المراجعة الداخلية"] || '—'}</td>
+            <td>${row["مسؤول المتابعة"] || '—'}</td>
+            <td>${row["الادارة"] || '—'}</td>
+            <td>${row["اسم_الضامن"] || '—'}</td> 
+            <td>
+              <button class="request-btn" onclick="openEditModal(${row.id})">طلب تعديل</button>
+              <button class="request-btn detail-btn" onclick="toggleDetail(${row.id}, event)">+</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('tableContainer').innerHTML = html;
+    }
+    
+    // ==========================================================
+    // وظائف الـ Modal
+    // ==========================================================
+    function openEditModal(recordId) {
+      const record = allData.find(r => r.id == recordId);
+      if (!record) return;
+
+      // تخزين ID السجل
+      document.getElementById('editRecordId').value = record.id;
+      
+      // ملء حقول التعديل بالقيم الحالية (هذه هي القيم القديمة)
+      document.getElementById('editNationalId').value = record["رقم البطاقة العميل"] || '';
+      document.getElementById('editGuarantorId').value = record["رقم بطاقة الضامن"] || '';
+      document.getElementById('editProject').value = record["المشروع"] || '';
+      document.getElementById('editAmount').value = record["المبلغ المطلوب"] || '';
+      document.getElementById('editInstallments').value = record["عدد الاقساط"] || '';
+      document.getElementById('editOfficer').value = record["اسم الاخصائى"] || '';
+      document.getElementById('editRegion').value = record["المنطقه"] || '';
+      document.getElementById('editBranch').value = record["الفرع"] || '';
+      document.getElementById('editCommittee').value = record["رقم اللجنة"] || '';
+      
+      // حقول القراءة فقط لعرض حالة المراجعة الحالية
+      document.getElementById('currentReview').value = record["المراجعة الداخلية"] || '';
+      document.getElementById('currentSupervisor').value = record["مسؤول المتابعة"] || '';
+      document.getElementById('currentAdmin').value = record["الادارة"] || '';
+      
+      // تصفير ملاحظات الطلب
+      document.getElementById('requestNotes').value = '';
+
+      document.getElementById('editModal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    // ==========================================================
+    // دالة إرسال طلب التعديل (التي تتوافق مع جدول edit_requests)
+    // ==========================================================
+    async function submitEditRequest() {
+      const id = parseInt(document.getElementById('editRecordId').value);
+      const record = allData.find(r => r.id === id);
+
+      if (!record) {
+          alert("خطأ: لم يتم العثور على السجل.");
+          return;
+      }
+      
+      const notes = document.getElementById('requestNotes').value.trim();
+      
+      if (!notes) {
+          alert("الرجاء إدخال ملاحظات توضح سبب طلب التعديل.");
+          return;
+      }
+      
+      // تجميع القيم الجديدة
+      const newValues = {
+          "رقم البطاقة العميل": document.getElementById('editNationalId').value.trim(),
+          "رقم بطاقة الضامن": document.getElementById('editGuarantorId').value.trim(),
+          "المشروع": document.getElementById('editProject').value.trim(),
+          "المبلغ المطلوب": parseInt(document.getElementById('editAmount').value) || null,
+          "عدد الاقساط": parseInt(document.getElementById('editInstallments').value) || null,
+          "اسم الاخصائى": document.getElementById('editOfficer').value.trim(),
+          "المنطقه": document.getElementById('editRegion').value.trim(),
+          "الفرع": document.getElementById('editBranch').value.trim(),
+          "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
+      };
+      
+      // تجميع القيم القديمة (للمقارنة في صفحة المدير)
+      const oldValues = {
+          "رقم البطاقة العميل": record["رقم البطاقة العميل"],
+          "رقم بطاقة الضامن": record["رقم بطاقة الضامن"],
+          "المشروع": record["المشروع"],
+          "المبلغ المطلوب": record["المبلغ المطلوب"],
+          "عدد الاقساط": record["عدد الاقساط"],
+          "اسم الاخصائى": record["اسم الاخصائى"],
+          "المنطقه": record["المنطقه"],
+          "الفرع": record["الفرع"],
+          "رقم اللجنة": record["رقم اللجنة"],
+      };
+
+      // تجهيز البيانات لإرسالها كطلب تعديل
+      const requestData = {
+          operation_id: id,
+          requester_id: loggedInUser.id,
+          requested_by: loggedInUser.name || 'مستخدم غير معروف',
+          old_value: oldValues, // JSONB
+          new_value: newValues, // JSONB
+          notes: notes,
+          status: 'Pending',
+      };
+      
+      // التحقق من أن المستخدم قام بتغيير قيمة واحدة على الأقل
+      let hasChanged = false;
+      for (const key in newValues) {
+          // مقارنة القيمة الجديدة المدخلة بالقيمة القديمة الموجودة في السجل
+          if (String(newValues[key]) !== String(oldValues[key])) {
+              hasChanged = true;
+              break;
+          }
+      }
+
+      if (!hasChanged) {
+          alert("الرجاء تعديل قيمة واحدة على الأقل لتقديم طلب التعديل.");
+          return;
+      }
+      
+      try {
+          const { error } = await supabase.from('edit_requests').insert([requestData]);
+
+          if (error) throw error;
+          
+          alert("✅ تم إرسال طلب التعديل بنجاح! سيتم مراجعته من قبل المدير.");
+          closeModal();
+      } catch (e) {
+          console.error('Error submitting request:', e);
+          alert("❌ حدث خطأ أثناء إرسال الطلب: " + e.message);
+      }
+    }
+    
+    // ==========================================================
+    // وظيفة عرض التفاصيل (مأخوذة من admin.html)
+    // ==========================================================
+    function toggleDetail(recordId, event) {
+      const row = allData.find(r => r.id == recordId);
+      if (!row) return;
+
+      const detailRowId = `detail-row-${recordId}`;
+      let detailRow = document.getElementById(detailRowId);
+
+      if (detailRow) {
+        if (detailRow.style.display === 'none') {
+          detailRow.style.display = 'table-row';
+          event.target.textContent = '−';
+        } else {
+          detailRow.style.display = 'none';
+          event.target.textContent = '+';
+        }
+        return;
+      }
+
+      const index = allData.findIndex(r => r.id == recordId);
+      const tableBody = document.getElementById('tableBody');
+      if (!tableBody) return;
+      
+      // يجب أن يكون colspan هنا هو عدد الأعمدة في الجدول (11 عمود)
+      const detailRowEl = document.createElement('tr');
+      detailRowEl.id = detailRowId;
+      detailRowEl.className = 'detail-row';
+      detailRowEl.innerHTML = `
+        <td colspan="11"> 
+          <strong>بيانات تفصيلية:</strong><br>
+          المبلغ المطلوب: ${row["المبلغ المطلوب"] || '—'}<br>
+          عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
+          الفرع: ${row["الفرع"] || '—'}<br>
+          القائم بالزيارة: ${row["القائم بالزياره"] || '—'}<br>
+          اسم القائم بالإدخال: ${row["اسم القائم بالادخال"] || '—'}<br>
+          ملاحظات المراجعة: ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
+          تعليق المتابعة: ${row["تعليق مسؤول المتابعة"] || '—'}<br>
+          ملاحظات الإدارة: ${row["ملاحظات الادارة"] || '—'}<br>
+          تم التحويل: ${row["تم التحويل"] ? 'نعم' : 'لا'}<br>
+          التاريخ: ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br><br>
+
+          <strong>بيانات العميل من القروض:</strong><br>
+          تاريخ القرض: ${row["تاريخ_القرض"] || '—'}<br>
+          أخصائي القرض: ${row["اخصائى_القرض"] || '—'}<br>
+          كود العميل: ${row["كود_العميل"] || '—'}<br>
+          النشاط الثانى: ${row["النشاط_الثانى"] || '—'}<br>
+          الفرع من القروض: ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
+
+          <strong>بيانات العميل من التقييم:</strong><br>
+          الاسم من التقييم: ${row["اسم_العميل_من_التقييم"] || '—'}<br>
+          نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
+          التقييم الرقمي: ${row["التقييم_الرقمى"] || '—'}<br>
+          الإحداثيات: ${row["احداثيات الموقع"] || '—'}<br><br>
+
+          <strong>بيانات الضامن:</strong><br>
+          الاسم: ${row["اسم_الضامن"] || '—'}<br>
+          الاسم من الإي سكور: ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
+          نتيجة تقييم الضامن: ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
+          التقييم الرقمي للضامن: ${row["تقييم_رقمى_الضامن"] || '—'}<br>
+        </td>
+      `;
+
+      const originalRow = tableBody.children[index];
+      if (originalRow) {
+        tableBody.insertBefore(detailRowEl, originalRow.nextSibling);
+      } else {
+        tableBody.appendChild(detailRowEl);
+      }
+
+      event.target.textContent = '−';
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('editModal');
+      if (event.target == modal) closeModal();
+    };
+
+    init().catch(err => {
+      console.error('Initialization Error:', err);
+      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ في تهيئة النظام: ${err.message}</div>`;
+    });
+  </script>
+</body>
+</html>

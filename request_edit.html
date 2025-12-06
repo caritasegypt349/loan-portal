@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>طلب تعديل بيانات - نظام القروض</title>
+  <title>طلب تعديل بيانات عملية - نظام القروض</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
@@ -119,6 +119,7 @@
   </div>
 
   <script>
+    // ⚠️ يرجى التأكد من أن هذه القيم هي القيم الصحيحة لمشروعك في Supabase
     const SUPABASE_URL = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImФранlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'; 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -127,7 +128,7 @@
     let loggedInUser = {};
 
     // ==========================================================
-    // تهيئة الصفحة
+    // تهيئة الصفحة (مع جلب مصفوفة الفروع)
     // ==========================================================
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
@@ -139,7 +140,7 @@
 
       const { data: user, error: userError } = await supabase 
         .from('users')
-        .select('role, name, id')
+        .select('role, name, id, branches') // 🚀 تم جلب مصفوفة الفروع
         .eq('id', userId)
         .single();
 
@@ -154,16 +155,22 @@
     }
 
     // ==========================================================
-    // تحميل وعرض البيانات
+    // تحميل وعرض البيانات (مع تطبيق الفلترة التلقائية)
     // ==========================================================
     async function loadData() {
       document.getElementById('tableContainer').innerHTML = '<div class="loading">جارٍ تحميل البيانات...</div>';
       
-      // جلب البيانات من View (operations_with_details)
-      const { data, error } = await supabase
+      let query = supabase
         .from('operations_with_details')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+        
+      // 🚀 تطبيق الفلترة حسب الفروع للمستخدمين غير الإداريين
+      if (loggedInUser.role !== 'admin' && loggedInUser.branches && loggedInUser.branches.length > 0) {
+        // نستخدم .in للتحقق مما إذا كانت قيمة عمود "الفرع" موجودة في مصفوفة الفروع الخاصة بالمستخدم
+        query = query.in('الفرع', loggedInUser.branches); 
+      }
+        
+      const { data, error } = await query.order('created_at', { ascending: false });
         
       if (error) {
         document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ في تحميل البيانات: ${error.message}</div>`;
@@ -175,6 +182,7 @@
     }
 
     function renderFilters() {
+      // نستخدم فقط البيانات التي تم جلبها لعرض الفلاتر
       const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v))];
       const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
 
@@ -306,7 +314,7 @@
     }
 
     // ==========================================================
-    // دالة إرسال طلب التعديل (التي تتوافق مع جدول edit_requests)
+    // دالة إرسال طلب التعديل
     // ==========================================================
     async function submitEditRequest() {
       const id = parseInt(document.getElementById('editRecordId').value);
@@ -350,21 +358,9 @@
           "رقم اللجنة": record["رقم اللجنة"],
       };
 
-      // تجهيز البيانات لإرسالها كطلب تعديل
-      const requestData = {
-          operation_id: id,
-          requester_id: loggedInUser.id,
-          requested_by: loggedInUser.name || 'مستخدم غير معروف',
-          old_value: oldValues, // JSONB
-          new_value: newValues, // JSONB
-          notes: notes,
-          status: 'Pending',
-      };
-      
       // التحقق من أن المستخدم قام بتغيير قيمة واحدة على الأقل
       let hasChanged = false;
       for (const key in newValues) {
-          // مقارنة القيمة الجديدة المدخلة بالقيمة القديمة الموجودة في السجل
           if (String(newValues[key]) !== String(oldValues[key])) {
               hasChanged = true;
               break;
@@ -375,6 +371,17 @@
           alert("الرجاء تعديل قيمة واحدة على الأقل لتقديم طلب التعديل.");
           return;
       }
+      
+      // تجهيز البيانات لإرسالها كطلب تعديل
+      const requestData = {
+          operation_id: id,
+          requester_id: loggedInUser.id,
+          requested_by: loggedInUser.name || 'مستخدم غير معروف',
+          old_value: oldValues, // JSONB
+          new_value: newValues, // JSONB
+          notes: notes,
+          status: 'Pending',
+      };
       
       try {
           const { error } = await supabase.from('edit_requests').insert([requestData]);
@@ -390,7 +397,7 @@
     }
     
     // ==========================================================
-    // وظيفة عرض التفاصيل (مأخوذة من admin.html)
+    // وظيفة عرض التفاصيل (لمساعدة المستخدم على مراجعة البيانات)
     // ==========================================================
     function toggleDetail(recordId, event) {
       const row = allData.find(r => r.id == recordId);
@@ -414,7 +421,6 @@
       const tableBody = document.getElementById('tableBody');
       if (!tableBody) return;
       
-      // يجب أن يكون colspan هنا هو عدد الأعمدة في الجدول (11 عمود)
       const detailRowEl = document.createElement('tr');
       detailRowEl.id = detailRowId;
       detailRowEl.className = 'detail-row';

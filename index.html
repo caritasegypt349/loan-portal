@@ -166,11 +166,13 @@
       // كل الأدوار يحصلون على "عرض البيانات"
       pages.push({ label: "عرض البيانات", url: "view-only.html", cls: "page-btn view" });
 
+      // كل الأدوار يحصلون على "طلباتي"
+      pages.push({ label: "طلباتي", url: "my_requests.html", cls: "page-btn" });
+
       // باقي الصفحات حسب الدور
       if (role === 'data_entry') {
         pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
-        // إضافة رابط طلب التعديل لمدخل البيانات
-        pages.push({ label: "إرسال طلب تعديل", url: "request_edit.html", cls: "page-btn" });
+        pages.push({ label: "طلب تعديل", url: "request_edit.html", cls: "page-btn" });
       }
       else if (role === 'financing_officer') {
         pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
@@ -181,8 +183,7 @@
       }
       else if (role === 'internal_reviewer') {
         pages.push({ label: "المراجعة الداخلية", url: "review.html", cls: "page-btn review" });
-        // إضافة رابط طلب التعديل للمراجع الداخلي
-        pages.push({ label: "إرسال طلب تعديل", url: "request_edit.html", cls: "page-btn" });
+        pages.push({ label: "طلب تعديل", url: "request_edit.html", cls: "page-btn" });
       }
       else if (role === 'followup_supervisor') {
         pages.push({ label: "متابعة العمليات", url: "supervise.html", cls: "page-btn supervise" });
@@ -192,7 +193,7 @@
         pages.push({ label: "المراجعة", url: "review.html", cls: "page-btn review" });
         pages.push({ label: "المتابعة", url: "supervise.html", cls: "page-btn supervise" });
         pages.push({ label: "لوحة الإدارة", url: "admin.html", cls: "page-btn admin" });
-        pages.push({ label: "إرسال طلب تعديل", url: "request_edit.html", cls: "page-btn" });
+        pages.push({ label: "طلب تعديل", url: "request_edit.html", cls: "page-btn" });
         pages.push({ label: "إدارة طلبات التعديل", url: "admin_requests.html", cls: "page-btn admin" });
       }
 

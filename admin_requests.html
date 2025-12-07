@@ -79,21 +79,39 @@
       </div>
       
       <div style="text-align: center; margin-top: 20px;">
-        <button class="action-btn approve" id="modalApproveBtn" onclick="" style="margin-right: 15px;">الموافقة على التعديل</button>
-        <button class="action-btn reject" id="modalRejectBtn" onclick="">رفض التعديل</button>
+        <button class="action-btn approve" id="modalApproveBtn" style="margin-right: 15px;">الموافقة على التعديل</button>
+        <button class="action-btn reject" id="modalRejectBtn">رفض التعديل</button>
       </div>
     </div>
   </div>
 
   <script>
     const SUPABASE_URL = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImФранlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'; 
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let allRequests = [];
 
     async function init() {
-      // (إجراء تحقق الأدوار للمدير يمكن أن يضاف هنا)
+      const userId = localStorage.getItem('loggedInUserId');
+      if (!userId) {
+        alert("الرجاء تسجيل الدخول أولًا!");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const {  user, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (error || !user || user.role !== 'admin') {
+        alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
+        window.location.href = "index.html";
+        return;
+      }
+
       await loadRequests();
     }
 
@@ -101,7 +119,7 @@
       const { data, error } = await supabase
         .from('edit_requests')
         .select('*')
-        .eq('status', 'Pending') // جلب الطلبات المعلقة فقط
+        .eq('status', 'Pending')
         .order('created_at', { ascending: true });
 
       if (error) {
@@ -170,12 +188,9 @@
         let oldHtml = '';
         let newHtml = '';
         
-        // لعرض التعديلات فقط ومقارنتها
         for (const key in newVals) {
             const oldValue = oldVals ? oldVals[key] : 'غير متوفر';
             const newValue = newVals[key];
-            
-            // تحديد إذا كان هناك تغيير لعرضه بتمييز
             const changedClass = (oldValue !== newValue) ? 'style="color: blue; font-weight: bold;"' : '';
 
             oldHtml += `<strong>${key}:</strong> <span ${changedClass}>${oldValue || '—'}</span><br>`;
@@ -185,7 +200,6 @@
         document.getElementById('oldValuesBody').innerHTML = oldHtml;
         document.getElementById('newValuesBody').innerHTML = newHtml;
 
-        // ربط أزرار القرار بـ ID الطلب الحالي
         document.getElementById('modalApproveBtn').onclick = () => approveRequest(requestId);
         document.getElementById('modalRejectBtn').onclick = () => rejectRequest(requestId);
 
@@ -196,9 +210,6 @@
         document.getElementById('comparisonModal').style.display = 'none';
     }
 
-    // ==========================================================
-    // دالة الموافقة: تقوم بتحديث جدول operations وتغيير حالة الطلب
-    // ==========================================================
     async function approveRequest(requestId) {
         if (!confirm("هل أنت متأكد من الموافقة على طلب التعديل هذا؟ سيتم تغيير البيانات الأصلية للسجل.")) return;
 
@@ -206,15 +217,13 @@
         if (!request) return alert("خطأ: لم يتم العثور على الطلب.");
         
         try {
-            // 1. تحديث جدول operations (البيانات الأصلية)
             const { error: updateError } = await supabase
                 .from('operations')
-                .update(request.new_value) // نستخدم new_value مباشرة لأنه JSONB
+                .update(request.new_value)
                 .eq('id', request.operation_id);
 
             if (updateError) throw updateError;
             
-            // 2. تحديث حالة الطلب في جدول edit_requests
             const { error: statusError } = await supabase
                 .from('edit_requests')
                 .update({ status: 'Approved' })
@@ -224,16 +233,13 @@
 
             alert(`تمت الموافقة على الطلب رقم ${requestId} وتم تحديث السجل بنجاح.`);
             closeModal();
-            await loadRequests(); // إعادة تحميل القائمة
+            await loadRequests();
         } catch (e) {
-            console.error('Error approving request:', e);
-            alert("حدث خطأ أثناء الموافقة على الطلب: " + e.message);
+            console.error('Error:', e);
+            alert("حدث خطأ أثناء الموافقة: " + e.message);
         }
     }
 
-    // ==========================================================
-    // دالة الرفض: تقوم بتغيير حالة الطلب فقط
-    // ==========================================================
     async function rejectRequest(requestId) {
         if (!confirm("هل أنت متأكد من رفض طلب التعديل هذا؟")) return;
 
@@ -247,10 +253,10 @@
 
             alert(`تم رفض الطلب رقم ${requestId}.`);
             closeModal();
-            await loadRequests(); // إعادة تحميل القائمة
+            await loadRequests();
         } catch (e) {
-            console.error('Error rejecting request:', e);
-            alert("حدث خطأ أثناء رفض الطلب: " + e.message);
+            console.error('Error:', e);
+            alert("حدث خطأ أثناء الرفض: " + e.message);
         }
     }
 
@@ -260,7 +266,8 @@
     };
 
     init().catch(err => {
-      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ عام: ${err.message}</div>`;
+      console.error('Init error:', err);
+      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
     });
   </script>
 </body>

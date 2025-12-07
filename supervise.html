@@ -18,6 +18,7 @@
     .loading { text-align: center; padding: 40px; color: #777; }
     .action-btn { padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; background: #3498db; color: white; font-size: 13px; }
     
+    /* ألوان الحالة لتسهيل الرؤية */
     .status-Approved { background-color: #2ecc71; color: white; padding: 3px 6px; border-radius: 3px; }
     .status-Pending { background-color: #f39c12; color: white; padding: 3px 6px; border-radius: 3px; }
   </style>
@@ -36,9 +37,9 @@
   </div>
 
   <script>
-    // ⚠️ يرجى التأكد من أن هذه القيم هي القيم الصحيحة لمشروعك في Supabase
-    const SUPABASE_URL = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImФранlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ0NDE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'; 
+    // ⚠️ يرجى استخدام قيم Supabase الصحيحة لمشروعك هنا
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // استبدل
+    const SUPABASE_KEY = 'YOUR_SUPABASE_KEY'; // استبدل
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let allOperations = [];
@@ -61,9 +62,8 @@
         .eq('id', userId)
         .single();
 
-      // 💡 تحسين التشخيص: طباعة الخطأ في الكونسول لمعرفة السبب
       if (userError) {
-        console.error("Supabase User Fetch Error (RLS or Not Found):", userError);
+        console.error("Supabase User Fetch Error (Check RLS Policy):", userError);
       }
       
       if (userError || !user) {
@@ -74,7 +74,7 @@
 
       loggedInUser = user;
       
-      // ✅ التحقق باستخدام .toLowerCase()
+      // التحقق من الصلاحية
       if (loggedInUser.role.toLowerCase() !== 'followup_supervisor') {
         alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
         window.location.href = "index.html";
@@ -90,6 +90,7 @@
     async function loadOperations() {
       document.getElementById('tableContainer').innerHTML = '<div class="loading">جارٍ تحميل بيانات العمليات...</div>';
 
+      // 💡 يتم جلب البيانات من جدول operations
       const { data, error } = await supabase
         .from('operations')
         .select('*')
@@ -106,7 +107,7 @@
     }
 
     // ==========================================================
-    // عرض الجدول - مُعدَّل ليطابق الأعمدة الجديدة
+    // عرض الجدول - مُعدَّل ليطابق الأعمدة الجديدة المطلوبة
     // ==========================================================
     function renderTable(data) {
       const tableContainer = document.getElementById('tableContainer');
@@ -142,9 +143,12 @@
       `;
 
       data.forEach((row, idx) => {
+        // تحديد الحقول الجديدة والقديمة
         const reviewStatus = row["المراجعة الداخلية"] || '—';
         const superviseStatus = row["مسؤول المتابعة"] || '—';
         const adminStatus = row["الادارة"] || '—';
+        
+        // عرض "نعم" أو "لا" لعمود "تم التحويل"
         const transferred = row["تم التحويل"] ? `<span class="status-Approved">نعم</span>` : `<span class="status-Pending">لا</span>`;
 
         html += `

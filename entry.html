@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="torrent" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>إدخال بيانات العملية</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -57,6 +57,13 @@
       display: block;
       margin: 20px auto;
     }
+    button:hover {
+      background: #1f6391;
+    }
+    button:disabled {
+      background: #95a5a6;
+      cursor: not-allowed;
+    }
     .message {
       padding: 10px;
       margin: 10px 0;
@@ -65,6 +72,7 @@
     }
     .success { background: #d4edda; color: #155724; }
     .error { background: #f8d7da; color: #721c24; }
+    .warning { background: #fff3cd; color: #856404; }
     .preview-section { margin-top: 20px; }
     .preview-item {
       margin-bottom: 8px;
@@ -78,6 +86,14 @@
       color: #2c3e50;
     }
     .required::after { content: " *"; color: red; }
+    .duplicate-warning {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      color: #856404;
+    }
   </style>
 </head>
 <body>
@@ -88,10 +104,12 @@
         <div class="form-group">
           <label class="required">رقم البطاقة العميل</label>
           <input type="text" id="national_id" maxlength="14" minlength="14" required />
+          <div id="clientDuplicateWarning"></div>
         </div>
         <div class="form-group">
           <label class="required">رقم بطاقة الضامن</label>
           <input type="text" id="guarantor_id" maxlength="14" minlength="14" required />
+          <div id="guarantorDuplicateWarning"></div>
         </div>
         <div class="form-group">
           <label class="required">عدد أيام التأخير</label>
@@ -135,7 +153,7 @@
           <label class="required">اسم القائم بالإدخال</label>
           <input type="text" id="entry_by_display" readonly style="background:#f0f0f0;" />
         </div>
-        <button type="submit">حفظ العملية</button>
+        <button type="submit" id="submitBtn">حفظ العملية</button>
         <div id="message"></div>
       </form>
     </div>
@@ -207,10 +225,84 @@
       }
     };
 
+    // --- فحص التكرار للعميل ---
+    async function checkClientDuplicate(nationalId) {
+      const warningDiv = document.getElementById('clientDuplicateWarning');
+      if (!nationalId || nationalId.length !== 14) {
+        warningDiv.innerHTML = '';
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('operations')
+          .select('id, المشروع, created_at')
+          .eq('رقم البطاقة العميل', nationalId)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          let html = '<div class="duplicate-warning">';
+          html += `<strong>⚠️ تحذير:</strong> رقم بطاقة العميل موجود في ${data.length} عملية سابقة:<br>`;
+          data.forEach((op, idx) => {
+            const date = new Date(op.created_at).toLocaleDateString('ar-EG');
+            html += `${idx + 1}. المشروع: ${op['المشروع'] || '—'} - التاريخ: ${date}<br>`;
+          });
+          html += '</div>';
+          warningDiv.innerHTML = html;
+        } else {
+          warningDiv.innerHTML = '';
+        }
+      } catch (err) {
+        console.error("خطأ في فحص التكرار:", err);
+      }
+    }
+
+    // --- فحص التكرار للضامن ---
+    async function checkGuarantorDuplicate(guarantorId) {
+      const warningDiv = document.getElementById('guarantorDuplicateWarning');
+      if (!guarantorId || guarantorId.length !== 14) {
+        warningDiv.innerHTML = '';
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('operations')
+          .select('id, المشروع, created_at')
+          .eq('رقم بطاقة الضامن', guarantorId)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          let html = '<div class="duplicate-warning">';
+          html += `<strong>⚠️ تحذير:</strong> رقم بطاقة الضامن موجود في ${data.length} عملية سابقة:<br>`;
+          data.forEach((op, idx) => {
+            const date = new Date(op.created_at).toLocaleDateString('ar-EG');
+            html += `${idx + 1}. المشروع: ${op['المشروع'] || '—'} - التاريخ: ${date}<br>`;
+          });
+          html += '</div>';
+          warningDiv.innerHTML = html;
+        } else {
+          warningDiv.innerHTML = '';
+        }
+      } catch (err) {
+        console.error("خطأ في فحص التكرار:", err);
+      }
+    }
+
     // --- عرض بيانات العميل ---
     document.getElementById('national_id').addEventListener('blur', async () => {
       const nid = document.getElementById('national_id').value.trim();
       const div = document.getElementById('clientData');
+      
+      // فحص التكرار
+      await checkClientDuplicate(nid);
+      
       if (!nid) {
         div.innerHTML = "أدخل رقم بطاقة العميل لعرض البيانات";
         return;
@@ -259,6 +351,10 @@
     document.getElementById('guarantor_id').addEventListener('blur', async () => {
       const gid = document.getElementById('guarantor_id').value.trim();
       const div = document.getElementById('guarantorData');
+      
+      // فحص التكرار
+      await checkGuarantorDuplicate(gid);
+      
       if (!gid) {
         div.innerHTML = "أدخل رقم بطاقة الضامن لعرض البيانات";
         return;
@@ -292,6 +388,10 @@
     document.getElementById('entryForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'جارٍ الحفظ...';
+
       const data = {
         "رقم البطاقة العميل": document.getElementById('national_id').value.trim(),
         "رقم بطاقة الضامن": document.getElementById('guarantor_id').value.trim(),
@@ -314,10 +414,14 @@
 
       if (!/^\d{14}$/.test(data["رقم البطاقة العميل"]) || !/^\d{14}$/.test(data["رقم بطاقة الضامن"])) {
         alert("الرجاء التأكد من أن رقم البطاقة مكون من 14 رقمًا");
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'حفظ العملية';
         return;
       }
       if (!data["الفرع"]) {
         alert("الرجاء اختيار الفرع");
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'حفظ العملية';
         return;
       }
 
@@ -325,12 +429,23 @@
         const { error } = await supabase.from('operations').insert([data]);
         if (error) throw error;
 
-        // ✅ إظهار تنبيه ثم إعادة التحميل
         alert("تم الحفظ بنجاح!");
-        window.location.reload(); // إعادة تحميل الصفحة بالكامل
+        window.location.reload();
 
       } catch (err) {
-        alert("خطأ: " + (err.message || "فشل في الحفظ"));
+        let errorMsg = "خطأ في الحفظ";
+        
+        if (err.message.includes('duplicate key') && err.message.includes('رقم البطاقة العميل')) {
+          errorMsg = "⚠️ رقم بطاقة العميل مكرر!\nهذا الرقم موجود بالفعل في النظام.";
+        } else if (err.message.includes('duplicate key') && err.message.includes('رقم بطاقة الضامن')) {
+          errorMsg = "⚠️ رقم بطاقة الضامن مكرر!\nهذا الرقم موجود بالفعل في النظام.";
+        } else if (err.message) {
+          errorMsg = "خطأ: " + err.message;
+        }
+        
+        alert(errorMsg);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'حفظ العملية';
       }
     });
   </script>

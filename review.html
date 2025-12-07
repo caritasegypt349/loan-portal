@@ -51,9 +51,20 @@
         <option value="لم تتم المراجعة" selected>لم تتم المراجعة</option>
         <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
         <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+        <option value="مطلوب ارسال الملف على الميل">مطلوب ارسال الملف على الميل</option>
+        <option value="مرسل ميل بالملاحظات فى انتظار الرد">مرسل ميل بالملاحظات فى انتظار الرد</option>
+        <option value="مناقشه المبلغ">مناقشه المبلغ</option>
+        <option value="مطلوب تغيير الضامن">مطلوب تغيير الضامن</option>
+        <option value="مطلوب عمل استثناء الـ iScore">مطلوب عمل استثناء الـ iScore</option>
+        <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)">عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)</option>
+        <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي</option>
+        <option value="يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه">يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه</option>
+        <option value="سداد معجل">سداد معجل</option>
+        <option value="مرفوض من اداره الائتمان">مرفوض من اداره الائتمان</option>
         <option value="">الكل</option>
       </select>
       <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
+      <input type="text" id="searchClientCode" placeholder="بحث بكود العميل" />
       <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #2ecc71; color: white;">تطبيق الفلاتر</button>
     </div>
 
@@ -73,6 +84,16 @@
         <option value="لم تتم المراجعة">لم تتم المراجعة</option>
         <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
         <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+        <option value="مطلوب ارسال الملف على الميل">مطلوب ارسال الملف على الميل</option>
+        <option value="مرسل ميل بالملاحظات فى انتظار الرد">مرسل ميل بالملاحظات فى انتظار الرد</option>
+        <option value="مناقشه المبلغ">مناقشه المبلغ</option>
+        <option value="مطلوب تغيير الضامن">مطلوب تغيير الضامن</option>
+        <option value="مطلوب عمل استثناء الـ iScore">مطلوب عمل استثناء الـ iScore</option>
+        <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)">عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)</option>
+        <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي</option>
+        <option value="يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه">يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه</option>
+        <option value="سداد معجل">سداد معجل</option>
+        <option value="مرفوض من اداره الائتمان">مرفوض من اداره الائتمان</option>
       </select>
       <label>ملاحظات المراجعة</label>
       <textarea id="editReviewNotes" rows="3"></textarea>
@@ -109,15 +130,19 @@
         window.location.href = "index.html";
         return;
       }
-      userBranches = user.branches;
+      userBranches = user.branches || [];
       await loadData();
     }
 
     async function loadData() {
-      const { data, error } = await supabase
-        .from('operations_with_details')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('operations_with_details').select('*');
+      
+      // تطبيق فلتر الفروع إذا كانت محددة
+      if (userBranches && userBranches.length > 0) {
+        query = query.in('الفرع', userBranches);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       allData = data;
       renderFilters();
@@ -154,12 +179,14 @@
       const officer = document.getElementById('filterOfficer').value;
       const reviewStatus = document.getElementById('filterReviewStatus').value;
       const nationalId = document.getElementById('searchNationalId').value.trim();
+      const clientCode = document.getElementById('searchClientCode').value.trim();
 
       let filtered = allData.filter(row => {
         if (branch && row["الفرع"] !== branch) return false;
         if (officer && row["اسم الاخصائى"] !== officer) return false;
         if (reviewStatus && row["المراجعة الداخلية"] !== reviewStatus) return false;
         if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
+        if (clientCode && !row["كود_العميل"]?.includes(clientCode)) return false;
         return true;
       });
 

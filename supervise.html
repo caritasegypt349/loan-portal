@@ -3,51 +3,101 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>متابعة العمليات - مسؤول المتابعة</title>
+  <title>متابعة العمليات - نظام القروض</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* CSS Styles */
     body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
     .container { max-width: 1800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     h2 { text-align: center; color: #2c3e50; margin-top: 0; }
     .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
     select, input, button { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; }
-    th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: right; font-size: 13px; word-wrap: break-word; }
-    th { background-color: #f2f2f2; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 13px; }
+    th { background-color: #f2f2f2; }
+    .edit-btn { 
+      background: #34495e; 
+      color: white; 
+      border: none; 
+      padding: 4px 8px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      margin: 2px;
+    }
+    .detail-btn {
+      background: #3498db;
+    }
     .loading { text-align: center; padding: 40px; color: #777; }
-    .action-btn { padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; background: #3498db; color: white; font-size: 13px; }
-    
-    /* ألوان الحالة لتسهيل الرؤية */
-    .status-Approved { background-color: #2ecc71; color: white; padding: 3px 6px; border-radius: 3px; }
-    .status-Pending { background-color: #f39c12; color: white; padding: 3px 6px; border-radius: 3px; }
+    .error { color: #e74c3c; text-align: center; padding: 20px; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+    .modal-content { background: white; margin: 5% auto; padding: 20px; width: 500px; border-radius: 8px; }
+    .modal label { display: block; margin: 10px 0 5px; font-weight: bold; }
+    .modal input, .modal textarea, .modal select { width: 100%; padding: 8px; margin-bottom: 10px; }
+    .modal button { width: auto; margin: 5px; padding: 8px 16px; }
+    .detail-row td { padding: 15px; background: #f8f9fa; font-size: 12px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>لوحة متابعة العمليات - مسؤول المتابعة</h2>
-    
+    <h2>متابعة العمليات</h2>
+
     <div class="filters">
-        <input type="text" id="filterInput" onkeyup="applyFilter()" placeholder="ابحث برقم البطاقة أو الاسم...">
+      <select id="filterBranch">
+        <option value="">الفرع (الكل)</option>
+      </select>
+      <select id="filterOfficer">
+        <option value="">اسم الأخصائي (الكل)</option>
+      </select>
+      <select id="filterSupervisorStatus">
+        <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+            <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+            <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+            <option value="مطلوب ارسال الملف على الميل">مطلوب ارسال الملف على الميل</option>
+            <option value="مرسل ميل بالملاحظات فى انتظار الرد">مرسل ميل بالملاحظات فى انتظار الرد</option>
+            <option value="مناقشه المبلغ">مناقشه المبلغ</option>
+            <option value="مطلوب تغيير الضامن">مطلوب تغيير الضامن</option>
+            <option value="مطلوب عمل استثناء الـ iScore">مطلوب عمل استثناء الـ iScore</option>
+            <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به">عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)</option>
+            <option value="تاريخ الاستعلام قديم. يرجى عمل استعلام جديد">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي</option>
+            <option value="يرجى استكمال باقى الملاحظات للمراجعة والموافقة">يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه</option>
+            <option value="سداد معجل">سداد معجل</option>
+            <option value="مرفوض من اداره الائتمان">مرفوض من اداره الائتمان</option>>
+        <option value="">الكل</option>
+      </select>
+      <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
+      <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #2ecc71; color: white;">تطبيق الفلاتر</button>
     </div>
 
     <div id="tableContainer">
-      <div class="loading">جارٍ تحميل العمليات...</div>
+      <div class="loading">جارٍ تحميل البيانات...</div>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h3>تعديل متابعة العملية</h3>
+      <input type="hidden" id="editRecordId" />
+      <label>حالة المتابعة</label>
+      <select id="editSupervisorStatus">
+        <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+        <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+        <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+      </select>
+      <label>تعليق مسؤول المتابعة</label>
+      <textarea id="editSupervisorComment" rows="3"></textarea>
+      <button onclick="saveSupervise()" style="background:#27ae60;color:white;">حفظ</button>
+      <button onclick="closeModal()" style="background:#e74c3c;color:white;">إغلاق</button>
     </div>
   </div>
 
   <script>
-    // ⚠️ يرجى استخدام قيم Supabase الصحيحة لمشروعك هنا
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // استبدل
-    const SUPABASE_KEY = 'YOUR_SUPABASE_KEY'; // استبدل
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = window.supabase.createClient(
+      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+    );
 
-    let allOperations = [];
-    let loggedInUser = {};
+    let allData = [];
+    let userBranches = [];
 
-    // ==========================================================
-    // تهيئة الصفحة (init) - تحقق من صلاحية مسؤول المتابعة
-    // ==========================================================
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
       if (!userId) {
@@ -58,70 +108,82 @@
 
       const { data: user, error: userError } = await supabase
         .from('users')
-        .select('role, full_name, id')
+        .select('role, branches')
         .eq('id', userId)
         .single();
 
-      if (userError) {
-        console.error("Supabase User Fetch Error (Check RLS Policy):", userError);
-      }
-      
-      if (userError || !user) {
-        alert("حدث خطأ في تحميل بيانات المستخدم.");
-        window.location.href = "index.html";
-        return;
-      }
-
-      loggedInUser = user;
-      
-      // التحقق من الصلاحية
-      if (loggedInUser.role.toLowerCase() !== 'followup_supervisor') {
+      if (userError || !user || user.role !== 'followup_supervisor') {
         alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
         window.location.href = "index.html";
         return;
       }
-      
-      await loadOperations();
+      userBranches = user.branches;
+      await loadData();
     }
 
-    // ==========================================================
-    // تحميل بيانات العمليات (operations)
-    // ==========================================================
-    async function loadOperations() {
-      document.getElementById('tableContainer').innerHTML = '<div class="loading">جارٍ تحميل بيانات العمليات...</div>';
-
-      // 💡 يتم جلب البيانات من جدول operations
-      const { data, error } = await supabase
-        .from('operations')
-        .select('*')
-        .order('id', { ascending: false });
-
-      if (error) {
-        document.getElementById('tableContainer').innerHTML = `<div class="status-Rejected">خطأ في تحميل البيانات: ${error.message}</div>`;
-        console.error("Supabase Load Operations Error:", error);
-        return;
-      }
-
-      allOperations = data;
-      renderTable(allOperations);
+    async function loadData() {
+      let query = supabase.from('operations_with_details').select('*');
+      // مسؤول المتابعة يرى كل الفروع (حتى لو branches غير فارغة)
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (error) throw error;
+      allData = data;
+      renderFilters();
+      applyFilters();
     }
 
-    // ==========================================================
-    // عرض الجدول - مُعدَّل ليطابق الأعمدة الجديدة المطلوبة
-    // ==========================================================
+    function renderFilters() {
+      const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v))];
+      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
+
+      const branchSelect = document.getElementById('filterBranch');
+      branchSelect.innerHTML = '<option value="">الفرع (الكل)</option>';
+      branches.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        branchSelect.appendChild(opt);
+      });
+
+      const officerSelect = document.getElementById('filterOfficer');
+      officerSelect.innerHTML = '<option value="">اسم الأخصائي (الكل)</option>';
+      officers.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        officerSelect.appendChild(opt);
+      });
+    }
+
+    function applyFilters() {
+      document.querySelectorAll('[id^="detail-row-"]').forEach(el => el.remove());
+
+      const branch = document.getElementById('filterBranch').value;
+      const officer = document.getElementById('filterOfficer').value;
+      const supervisorStatus = document.getElementById('filterSupervisorStatus').value;
+      const nationalId = document.getElementById('searchNationalId').value.trim();
+
+      let filtered = allData.filter(row => {
+        if (branch && row["الفرع"] !== branch) return false;
+        if (officer && row["اسم الاخصائى"] !== officer) return false;
+        if (supervisorStatus && row["مسؤول المتابعة"] !== supervisorStatus) return false;
+        if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
     function renderTable(data) {
-      const tableContainer = document.getElementById('tableContainer');
       if (!data || data.length === 0) {
-        tableContainer.innerHTML = '<div class="loading">لا توجد عمليات مطابقة لمعايير البحث.</div>';
+        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
         return;
       }
 
       let html = `
-        <div style="overflow-x:auto;">
         <table>
           <thead>
             <tr>
-              <th>#</th>
+             <th>#</th>
               <th>رقم بطاقة العميل</th>
               <th>كود العميل</th>
               <th>اسم العميل</th>
@@ -139,21 +201,13 @@
               <th>الإجراء</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="tableBody">
       `;
 
-      data.forEach((row, idx) => {
-        // تحديد الحقول الجديدة والقديمة
-        const reviewStatus = row["المراجعة الداخلية"] || '—';
-        const superviseStatus = row["مسؤول المتابعة"] || '—';
-        const adminStatus = row["الادارة"] || '—';
-        
-        // عرض "نعم" أو "لا" لعمود "تم التحويل"
-        const transferred = row["تم التحويل"] ? `<span class="status-Approved">نعم</span>` : `<span class="status-Pending">لا</span>`;
-
+      data.forEach(row => {
         html += `
           <tr>
-            <td>${idx + 1}</td>
+           <td>${idx + 1}</td>
             <td>${row["رقم البطاقة العميل"] || '—'}</td>
             <td>${row["كود_العميل"] || '—'}</td>
             <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
@@ -169,34 +223,143 @@
             <td>${adminStatus}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
             <td>
-              <button class="action-btn" onclick="alert('Action for Operation ID: ${row.id}')">عرض</button>
+              <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل</button>
+              <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id}, event)">+</button>
             </td>
           </tr>
         `;
       });
 
-      html += `</tbody></table></div>`;
-      tableContainer.innerHTML = html;
+      html += `</tbody></table>`;
+      document.getElementById('tableContainer').innerHTML = html;
     }
 
-    // ==========================================================
-    // وظيفة الفلترة (للتطبيق على البيانات المعروضة)
-    // ==========================================================
-    function applyFilter() {
-        const filterValue = document.getElementById('filterInput').value.toLowerCase();
-        
-        let filteredData = allOperations.filter(row => {
-            return (row["رقم البطاقة العميل"] && row["رقم البطاقة العميل"].toString().includes(filterValue)) ||
-                   (row["اسم_العميل"] && row["اسم_العميل"].toLowerCase().includes(filterValue)) ||
-                   (row["كود_العميل"] && row["كود_العميل"].toString().includes(filterValue));
-        });
-        
-        renderTable(filteredData);
+    function openEditModal(recordId) {
+      const record = allData.find(r => r.id == recordId);
+      if (!record) return;
+
+      document.getElementById('editRecordId').value = record.id;
+      document.getElementById('editSupervisorStatus').value = record["مسؤول المتابعة"] || 'لم تتم المراجعة';
+      document.getElementById('editSupervisorComment').value = record["تعليق مسؤول المتابعة"] || '';
+
+      document.getElementById('editModal').style.display = 'block';
     }
 
-    // بدء تشغيل تهيئة الصفحة
+    async function saveSupervise() {
+      // **تم تصحيح الخطأ هنا:** تم تغيير 'editRecord  Id' إلى 'editRecordId'
+      const idValue = document.getElementById('editRecordId').value;
+      const id = parseInt(idValue);
+      
+      if (isNaN(id) || !idValue) {
+        alert("خطأ: لم يتم تحديد السجل بشكل صحيح");
+        return;
+      }
+
+      const updates = {
+        "مسؤول المتابعة": document.getElementById('editSupervisorStatus').value,
+        "تعليق مسؤول المتابعة": document.getElementById('editSupervisorComment').value.trim() || null
+      };
+
+      const { error } = await supabase
+        .from('operations')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) {
+        alert("حدث خطأ أثناء الحفظ: " + error.message);
+        return;
+      }
+
+      const idx = allData.findIndex(r => r.id == id);
+      if (idx !== -1) {
+        allData[idx] = { ...allData[idx], ...updates };
+      }
+
+      closeModal();
+      applyFilters();
+      alert("تم الحفظ بنجاح!");
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    function toggleDetail(recordId, event) {
+      const row = allData.find(r => r.id == recordId);
+      if (!row) return;
+
+      const detailRowId = `detail-row-${recordId}`;
+      let detailRow = document.getElementById(detailRowId);
+
+      if (detailRow) {
+        if (detailRow.style.display === 'none') {
+          detailRow.style.display = 'table-row';
+          event.target.textContent = '−';
+        } else {
+          detailRow.style.display = 'none';
+          event.target.textContent = '+';
+        }
+        return;
+      }
+
+      const index = allData.findIndex(r => r.id == recordId);
+      const tableBody = document.getElementById('tableBody');
+      if (!tableBody) return;
+
+      const detailRowEl = document.createElement('tr');
+      detailRowEl.id = detailRowId;
+      detailRowEl.className = 'detail-row';
+      detailRowEl.innerHTML = `
+        <td colspan="7">
+          <strong>بيانات تفصيلية:</strong><br>
+          عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
+          عدد الأقساط: ${row["عدد الاقساط"] || '—'}<br>
+          المنطقة: ${row["المنطقه"] || '—'}<br>
+          الفرع: ${row["الفرع"] || '—'}<br>
+          القائم بالزيارة: ${row["القائم بالزياره"] || '—'}<br>
+          اسم القائم بالإدخال: ${row["اسم القائم بالادخال"] || '—'}<br>
+          ملاحظات المراجعة: ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
+          تعليق المتابعة: ${row["تعليق مسؤول المتابعة"] || '—'}<br>
+          ملاحظات الإدارة: ${row["ملاحظات الادارة"] || '—'}<br>
+          تم التحويل: ${row["تم التحويل"] ? 'نعم' : 'لا'}<br>
+          التاريخ: ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br><br>
+
+          <strong>بيانات العميل من القروض:</strong><br>
+          تاريخ القرض: ${row["تاريخ_القرض"] || '—'}<br>
+          أخصائي القرض: ${row["اخصائى_القرض"] || '—'}<br>
+          كود العميل: ${row["كود_العميل"] || '—'}<br>
+          النشاط الثانى: ${row["النشاط_الثانى"] || '—'}<br>
+          الفرع من القروض: ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
+
+          <strong>بيانات العميل من التقييم:</strong><br>
+          نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
+          التقييم الرقمي: ${row["التقييم_الرقمى"] || '—'}<br>
+          الإحداثيات: ${row["احداثيات الموقع"] || '—'}<br><br>
+
+          <strong>بيانات الضامن:</strong><br>
+          الاسم من الإي سكور: ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
+          نتيجة التقييم: ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
+          التقييم الرقمي: ${row["تقييم_رقمى_الضامن"] || '—'}<br>
+        </td>
+      `;
+
+      const originalRow = tableBody.children[index];
+      if (originalRow) {
+        tableBody.insertBefore(detailRowEl, originalRow.nextSibling);
+      } else {
+        tableBody.appendChild(detailRowEl);
+      }
+
+      event.target.textContent = '−';
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('editModal');
+      if (event.target == modal) closeModal();
+    };
+
     init().catch(err => {
-      console.error('Init error:', err);
+      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
     });
   </script>
 </body>

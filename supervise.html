@@ -49,18 +49,8 @@
       </select>
       <select id="filterSupervisorStatus">
         <option value="لم تتم المراجعة">لم تتم المراجعة</option>
-            <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
-            <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
-            <option value="مطلوب ارسال الملف على الميل">مطلوب ارسال الملف على الميل</option>
-            <option value="مرسل ميل بالملاحظات فى انتظار الرد">مرسل ميل بالملاحظات فى انتظار الرد</option>
-            <option value="مناقشه المبلغ">مناقشه المبلغ</option>
-            <option value="مطلوب تغيير الضامن">مطلوب تغيير الضامن</option>
-            <option value="مطلوب عمل استثناء الـ iScore">مطلوب عمل استثناء الـ iScore</option>
-            <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به">عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)</option>
-            <option value="تاريخ الاستعلام قديم. يرجى عمل استعلام جديد">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي</option>
-            <option value="يرجى استكمال باقى الملاحظات للمراجعة والموافقة">يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه</option>
-            <option value="سداد معجل">سداد معجل</option>
-            <option value="مرفوض من اداره الائتمان">مرفوض من اداره الائتمان</option>>
+        <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+        <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
         <option value="">الكل</option>
       </select>
       <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
@@ -106,7 +96,7 @@
         return;
       }
 
-      const { data: user, error: userError } = await supabase
+      const {  user, error: userError } = await supabase
         .from('users')
         .select('role, branches')
         .eq('id', userId)
@@ -122,9 +112,10 @@
     }
 
     async function loadData() {
-      let query = supabase.from('operations_with_details').select('*');
-      // مسؤول المتابعة يرى كل الفروع (حتى لو branches غير فارغة)
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('operations_with_details')
+        .select('*')
+        .order('created_at', { ascending: false });
       if (error) throw error;
       allData = data;
       renderFilters();
@@ -183,27 +174,45 @@
         <table>
           <thead>
             <tr>
+              <th>#</th>
               <th>رقم بطاقة العميل</th>
+              <th>كود العميل</th>
               <th>اسم العميل</th>
+              <th>الاسم من الإي سكور</th>
               <th>المشروع</th>
+              <th>رقم بطاقة الضامن</th>
+              <th>اسم الضامن</th>
+              <th>المبلغ</th>
               <th>الأخصائي</th>
-              <th>الفرع</th>
-              <th>حالة المتابعة</th>
+              <th>تم التحويل</th>
+              <th>المراجعة</th>
+              <th>المتابعة</th>
+              <th>الإدارة</th>
+              <th>رقم اللجنة</th>
               <th>الإجراء</th>
             </tr>
           </thead>
           <tbody id="tableBody">
       `;
 
-      data.forEach(row => {
+      data.forEach((row, idx) => {
         html += `
           <tr>
+            <td>${idx + 1}</td>
             <td>${row["رقم البطاقة العميل"] || '—'}</td>
+            <td>${row["كود_العميل"] || '—'}</td>
             <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
+            <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
             <td>${row["المشروع"] || '—'}</td>
+            <td>${row["رقم بطاقة الضامن"] || '—'}</td>
+            <td>${row["اسم_الضامن"] || '—'}</td>
+            <td>${row["المبلغ المطلوب"] || '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
-            <td>${row["الفرع"] || '—'}</td>
+            <td>${row["تم التحويل"] ? 'نعم' : 'لا'}</td>
+            <td>${row["المراجعة الداخلية"] || '—'}</td>
             <td>${row["مسؤول المتابعة"] || '—'}</td>
+            <td>${row["الادارة"] || '—'}</td>
+            <td>${row["رقم اللجنة"] || '—'}</td>
             <td>
               <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل</button>
               <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id}, event)">+</button>
@@ -228,7 +237,6 @@
     }
 
     async function saveSupervise() {
-      // **تم تصحيح الخطأ هنا:** تم تغيير 'editRecord  Id' إلى 'editRecordId'
       const idValue = document.getElementById('editRecordId').value;
       const id = parseInt(idValue);
       
@@ -292,7 +300,7 @@
       detailRowEl.id = detailRowId;
       detailRowEl.className = 'detail-row';
       detailRowEl.innerHTML = `
-        <td colspan="7">
+        <td colspan="16">
           <strong>بيانات تفصيلية:</strong><br>
           عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
           عدد الأقساط: ${row["عدد الاقساط"] || '—'}<br>

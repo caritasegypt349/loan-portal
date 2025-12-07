@@ -18,8 +18,7 @@
     .loading { text-align: center; padding: 40px; color: #777; }
     .action-btn { padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; background: #3498db; color: white; font-size: 13px; }
     
-    /* ألوان الحالة لتسهيل الرؤية */
-    .status-Completed { background-color: #2ecc71; color: white; padding: 3px 6px; border-radius: 3px; }
+    .status-Approved { background-color: #2ecc71; color: white; padding: 3px 6px; border-radius: 3px; }
     .status-Pending { background-color: #f39c12; color: white; padding: 3px 6px; border-radius: 3px; }
   </style>
 </head>
@@ -62,8 +61,12 @@
         .eq('id', userId)
         .single();
 
+      // 💡 تحسين التشخيص: طباعة الخطأ في الكونسول لمعرفة السبب
+      if (userError) {
+        console.error("Supabase User Fetch Error (RLS or Not Found):", userError);
+      }
+      
       if (userError || !user) {
-        console.error("Supabase User Fetch Error:", userError);
         alert("حدث خطأ في تحميل بيانات المستخدم.");
         window.location.href = "index.html";
         return;
@@ -71,7 +74,7 @@
 
       loggedInUser = user;
       
-      // ✅ التحقق باستخدام .toLowerCase() لإصلاح مشكلة الصلاحية
+      // ✅ التحقق باستخدام .toLowerCase()
       if (loggedInUser.role.toLowerCase() !== 'followup_supervisor') {
         alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
         window.location.href = "index.html";
@@ -87,7 +90,6 @@
     async function loadOperations() {
       document.getElementById('tableContainer').innerHTML = '<div class="loading">جارٍ تحميل بيانات العمليات...</div>';
 
-      // 💡 يتم جلب البيانات من جدول operations
       const { data, error } = await supabase
         .from('operations')
         .select('*')
@@ -114,6 +116,7 @@
       }
 
       let html = `
+        <div style="overflow-x:auto;">
         <table>
           <thead>
             <tr>
@@ -139,7 +142,6 @@
       `;
 
       data.forEach((row, idx) => {
-        // تحديد الحالة لتسهيل عرضها (يمكنك تعديل هذه الأعمدة لتظهر الحالة الفعلية بدلاً من النص)
         const reviewStatus = row["المراجعة الداخلية"] || '—';
         const superviseStatus = row["مسؤول المتابعة"] || '—';
         const adminStatus = row["الادارة"] || '—';
@@ -169,15 +171,14 @@
         `;
       });
 
-      html += `</tbody></table>`;
+      html += `</tbody></table></div>`;
       tableContainer.innerHTML = html;
     }
 
     // ==========================================================
-    // وظيفة الفلترة (يجب تطويرها لاحقاً لفلترة فعلية)
+    // وظيفة الفلترة (للتطبيق على البيانات المعروضة)
     // ==========================================================
     function applyFilter() {
-        // يمكن تطوير هذه الدالة لتطبيق فلترة على البيانات المعروضة في allOperations
         const filterValue = document.getElementById('filterInput').value.toLowerCase();
         
         let filteredData = allOperations.filter(row => {

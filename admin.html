@@ -339,12 +339,7 @@
           
           <label>اسم القائم بالإدخال</label>
           <input type="text" id="editEntryBy" />
-
-          <label>ملاحظات العميل</label>
-          <textarea id="editClientNotes" rows="2"></textarea>
           
-          <label>ملاحظات الضامن</label>
-          <textarea id="editGuarantorNotes" rows="2"></textarea>
           <label>المراجعة الداخلية</label>
           <select id="editReview">
             <option value="لم تتم المراجعة">لم تتم المراجعة</option>
@@ -622,10 +617,7 @@
       document.getElementById('editVisitor').value = record["القائم بالزياره"] || '';
       document.getElementById('editEntryBy').value = record["اسم القائم بالادخال"] || '';
 
-      // إضافة تعليقات العميل والضامن
-      document.getElementById('editClientNotes').value = record["ملاحظات العميل"] || '';
-      document.getElementById('editGuarantorNotes').value = record["ملاحظات الضامن"] || '';
-      // نهاية الإضافة
+      // تم حذف حقول تعليقات الاستعلام من هنا لأنها بيانات تقييم غير قابلة للتعديل
       
       document.getElementById('editReview').value = record["المراجعة الداخلية"] || 'لم تتم المراجعة';
       document.getElementById('editSupervisor').value = record["مسؤول المتابعة"] || 'لم تتم المراجعة';
@@ -658,12 +650,8 @@
         "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
         "القائم بالزياره": document.getElementById('editVisitor').value.trim() || null,
         "اسم القائم بالادخال": document.getElementById('editEntryBy').value.trim(),
-
-        // إضافة تعليقات العميل والضامن إلى البيانات المحفوظة
-        "ملاحظات العميل": document.getElementById('editClientNotes').value.trim() || null,
-        "ملاحظات الضامن": document.getElementById('editGuarantorNotes').value.trim() || null,
-        // نهاية الإضافة
-
+        
+        // هذه الأعمدة قابلة للتعديل والخاصة بسير العمل
         "المراجعة الداخلية": document.getElementById('editReview').value,
         "مسؤول المتابعة": document.getElementById('editSupervisor').value,
         "الادارة": document.getElementById('editAdmin').value,
@@ -706,6 +694,7 @@
       const detailRowId = `detail-row-${recordId}`;
       let detailRow = document.getElementById(detailRowId);
 
+      // Toggle existing detail row
       if (detailRow) {
         if (detailRow.style.display === 'none' || detailRow.style.display === '') {
           detailRow.style.display = 'table-row';
@@ -721,19 +710,17 @@
         return;
       }
 
+      // Find the row to insert the details after
       const rows = tableBody.querySelectorAll('tr:not(.detail-row)');
       let targetRow = null;
       
-      rows.forEach((tr, idx) => {
-        const cells = tr.querySelectorAll('td');
-        if (cells.length > 0) {
-          const buttons = tr.querySelectorAll('button');
-          buttons.forEach(btn => {
-            if (btn.onclick && btn.onclick.toString().includes(`toggleDetail(${recordId})`)) {
-              targetRow = tr;
-            }
-          });
-        }
+      rows.forEach((tr) => {
+        const buttons = tr.querySelectorAll('button');
+        buttons.forEach(btn => {
+          if (btn.onclick && btn.onclick.toString().includes(`toggleDetail(${recordId})`)) {
+            targetRow = tr;
+          }
+        });
       });
 
       if (!targetRow) {
@@ -741,6 +728,7 @@
         return;
       }
 
+      // Create and insert the new detail row
       const detailRowEl = document.createElement('tr');
       detailRowEl.id = detailRowId;
       detailRowEl.className = 'detail-row';
@@ -771,16 +759,16 @@
               <strong>رقم الحساب:</strong> ${row["رقم_الحساب_من_التقييم"] || '—'}<br>
               <strong>نتيجة التقييم:</strong> ${row["نتيجة_التقييم"] || '—'}<br>
               <strong>التقييم الرقمي:</strong> ${row["التقييم_الرقمى"] || '—'}<br>
+              <strong style="color: #e67e22;">تعليق الاستعلام (العميل):</strong> ${row["تعليق_استعلام_العميل"] || '—'}<br>
             </div>
             <div>
               <strong style="color: #16a085; font-size: 16px;">👥 تقييم الضامن:</strong><br><br>
               <strong>اسم الضامن:</strong> ${row["اسم_الضامن"] || '—'}<br>
               <strong>الاسم من I-Score:</strong> ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
               <strong>نتيجة التقييم:</strong> ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
-              <strong>التقييم الرقمي:</strong> ${row["تقييم_رقمى_الضامن"] || '—'}<br><br>
+              <strong>التقييم الرقمي:</strong> ${row["تقييم_رقمى_الضامن"] || '—'}<br>
+              <strong style="color: #e67e22;">تعليق الاستعلام (الضامن):</strong> ${row["تعليق_استعلام_الضامن"] || '—'}<br><br>
               <strong style="color: #16a085; font-size: 16px;">✅ المراجعة والمتابعة:</strong><br><br>
-              <strong>ملاحظات العميل:</strong> ${row["ملاحظات العميل"] || '—'}<br>
-              <strong>ملاحظات الضامن:</strong> ${row["ملاحظات الضامن"] || '—'}<br>
               <strong>ملاحظات المراجعة:</strong> ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
               <strong>تعليق المتابعة:</strong> ${row["تعليق مسؤول المتابعة"] || '—'}<br>
               <strong>ملاحظات الإدارة:</strong> ${row["ملاحظات الادارة"] || '—'}<br>

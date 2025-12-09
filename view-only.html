@@ -633,14 +633,19 @@
         // وظيفة لتحديد لون الخلفية
         const getCellClass = (value) => {
           if (!value) return '';
-          const lowerValue = value.toLowerCase();
-          if (lowerValue.includes('تمت المراجعة') || lowerValue.includes('مقبول')) {
-            return 'approved-cell';
-          }
-          if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي')) {
-            return 'rejected-cell';
-          }
-          return '';
+const lowerValue = value.toLowerCase();
+
+// 1. حالة القبول: إذا كان النص يحتوي على كلمة "مقبول" في أي مكان
+if (lowerValue.includes('مقبول')) {
+  return 'approved-cell';
+}
+
+// 2. حالة الرفض: إذا كان النص يحتوي على كلمة "مرفوض" أو "ملغي" في أي مكان
+if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي')) {
+  return 'rejected-cell';
+}
+
+return '';
         };
 
         const reviewClass = getCellClass(row["المراجعة الداخلية"]);

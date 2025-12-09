@@ -6,34 +6,223 @@
   <title>متابعة العمليات - نظام القروض</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
-    .container { max-width: 1800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #2c3e50; margin-top: 0; }
-    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
-    select, input, button { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 13px; }
-    th { background-color: #f2f2f2; }
-    .edit-btn { 
-      background: #34495e; 
+    body { 
+      font-family: 'Segoe UI', Tahoma, sans-serif; 
+      background: linear-gradient(135deg, #1e8449 0%, #16a085 100%); 
+      margin: 0; 
+      padding: 20px; 
+      min-height: 100vh;
+    }
+    .container { 
+      max-width: 1900px; 
+      margin: 0 auto; 
+      background: white; 
+      padding: 25px; 
+      border-radius: 12px; 
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+    }
+    h2 { 
+      text-align: center; 
+      color: #16a085; 
+      margin-top: 0; 
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    .filters { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+      gap: 15px; 
+      margin: 20px 0; 
+      padding: 15px;
+      background: #f0f8f5;
+      border-radius: 8px;
+    }
+    select, input { 
+      width: 100%; 
+      padding: 10px; 
+      border: 2px solid #d5f4e6; 
+      border-radius: 6px; 
+      transition: all 0.3s; 
+      font-size: 14px;
+    }
+    select:focus, input:focus { 
+      outline: none; 
+      border-color: #16a085; 
+      box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1); 
+    }
+    button { 
+      width: 100%; 
+      padding: 12px; 
+      background: linear-gradient(135deg, #e67e22 0%, #d35400 100%); 
       color: white; 
       border: none; 
-      padding: 4px 8px; 
+      border-radius: 6px; 
+      font-size: 16px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      transition: all 0.3s;
+    }
+    button:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 20px rgba(230, 126, 34, 0.4); 
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 20px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    th, td { 
+      border: 1px solid #d5f4e6; 
+      padding: 12px 8px; 
+      text-align: right; 
+      font-size: 13px; 
+    }
+    th { 
+      background: linear-gradient(135deg, #1e8449 0%, #16a085 100%); 
+      color: white; 
+      position: sticky; 
+      top: 0; 
+      z-index: 10;
+      font-weight: bold;
+    }
+    tr:nth-child(even) { 
+      background-color: #f0f8f5; 
+    }
+    tr:hover:not(.detail-row) { 
+      background-color: #d5f4e6; 
+      transition: background-color 0.3s; 
+    }
+    .edit-btn { 
+      background: linear-gradient(135deg, #e67e22 0%, #d35400 100%); 
+      color: white; 
+      border: none; 
+      padding: 6px 12px; 
       border-radius: 4px; 
       cursor: pointer; 
       margin: 2px;
+      font-weight: bold;
+      transition: all 0.3s;
+      width: auto;
+    }
+    .edit-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4);
     }
     .detail-btn {
-      background: #3498db;
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
     }
-    .loading { text-align: center; padding: 40px; color: #777; }
-    .error { color: #e74c3c; text-align: center; padding: 20px; }
-    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-    .modal-content { background: white; margin: 5% auto; padding: 20px; width: 500px; border-radius: 8px; }
-    .modal label { display: block; margin: 10px 0 5px; font-weight: bold; }
-    .modal input, .modal textarea, .modal select { width: 100%; padding: 8px; margin-bottom: 10px; }
-    .modal button { width: auto; margin: 5px; padding: 8px 16px; }
-    .detail-row td { padding: 15px; background: #f8f9fa; font-size: 12px; }
+    .detail-btn:hover {
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+    }
+    .loading { 
+      text-align: center; 
+      padding: 40px; 
+      color: #16a085; 
+      font-size: 18px;
+    }
+    .error { 
+      color: #e74c3c; 
+      text-align: center; 
+      padding: 20px; 
+      font-size: 16px;
+    }
+    
+    /* Modal Styles */
+    .modal { 
+      display: none; 
+      position: fixed; 
+      z-index: 1000; 
+      left: 0; 
+      top: 0; 
+      width: 100%; 
+      height: 100%; 
+      background: rgba(0,0,0,0.6); 
+      overflow-y: auto;
+      padding: 20px 0;
+    }
+    .modal-content { 
+      background: white; 
+      margin: 10% auto; 
+      padding: 30px; 
+      width: 90%;
+      max-width: 550px; /* أصغر من لوحة الإدارة */
+      border-radius: 12px; 
+      max-height: 85vh; 
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .modal-content h3 {
+      color: #16a085;
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 24px;
+      border-bottom: 3px solid #16a085;
+      padding-bottom: 10px;
+    }
+    .modal label { 
+      display: block; 
+      margin: 12px 0 5px; 
+      font-weight: bold;
+      color: #2c3e50;
+      font-size: 14px;
+    }
+    .modal input, .modal textarea, .modal select { 
+      width: 100%; 
+      padding: 10px; 
+      margin-bottom: 15px;
+      border: 2px solid #d5f4e6;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: all 0.3s;
+      box-sizing: border-box;
+    }
+    .modal input:focus, .modal textarea:focus, .modal select:focus {
+      border-color: #16a085;
+      box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1);
+      outline: none;
+    }
+    .modal button { 
+      width: auto; 
+      margin: 10px 5px 0; 
+      padding: 12px 30px;
+      font-size: 16px;
+    }
+    .modal .btn-save {
+      background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+    }
+    .modal .btn-close {
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    }
+    .modal .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #d5f4e6;
+    }
+    .detail-row { 
+      display: none; 
+      background: #f0f8f5; 
+    }
+    .detail-row td { 
+      padding: 20px; 
+      line-height: 1.8;
+      font-size: 13px;
+    }
+    
+    /* ألوان المقبول والمرفوض */
+    .approved-cell {
+      background-color: #e6ffe6;
+      color: #008000;
+      font-weight: bold;
+    }
+    .rejected-cell {
+      background-color: #ffe6e6;
+      color: #cc0000;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -48,8 +237,11 @@
         <option value="">اسم الأخصائي (الكل)</option>
       </select>
       <select id="filterSupervisorStatus">
+        <option value="">حالة المتابعة (الكل)</option>
         <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+        <option value="الموقع لاستكمال الموافقة علي تمويل العميل">الموقع لاستكمال الموافقة علي تمويل العميل</option>
         <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+        <option value="تمت الموافقة على التمويل، وتم تعديل المبلغ/المدة">تمت الموافقة على التمويل، وتم تعديل المبلغ/المدة</option>
         <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
         <option value="تم الغاء الطلب من العميل">تم الغاء الطلب من العميل</option>
         <option value="مطلوب ارسال الملف على الميل">مطلوب ارسال الملف على الميل</option>
@@ -58,15 +250,14 @@
         <option value="مطلوب تغيير الضامن">مطلوب تغيير الضامن</option>
         <option value="مطلوب عمل استثناء الـ iScore">مطلوب عمل استثناء الـ iScore</option>
         <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)">عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)</option>
-        <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي</option>
+        <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يعتد بالاستعلام الحالي">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يعتد بالاستعلام الحالي</option>
         <option value="يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه">يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه</option>
         <option value="سداد معجل">سداد معجل</option>
         <option value="مرفوض من اداره الائتمان">مرفوض من اداره الائتمان</option>
-        <option value="">الكل</option>
       </select>
       <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
       <input type="text" id="searchClientCode" placeholder="بحث بكود العميل" />
-      <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #2ecc71; color: white;">تطبيق الفلاتر</button>
+      <button onclick="applyFilters()" style="grid-column: span 2;">تطبيق الفلاتر</button>
     </div>
 
     <div id="tableContainer">
@@ -81,7 +272,9 @@
       <label>حالة المتابعة</label>
       <select id="editSupervisorStatus">
         <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+        <option value="الموقع لاستكمال الموافقة علي تمويل العميل">الموقع لاستكمال الموافقة علي تمويل العميل</option>
         <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+        <option value="تمت الموافقة على التمويل، وتم تعديل المبلغ/المدة">تمت الموافقة على التمويل، وتم تعديل المبلغ/المدة</option>
         <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
         <option value="تم الغاء الطلب من العميل">تم الغاء الطلب من العميل</option>
         <option value="مطلوب ارسال الملف على الميل">مطلوب ارسال الملف على الميل</option>
@@ -90,15 +283,17 @@
         <option value="مطلوب تغيير الضامن">مطلوب تغيير الضامن</option>
         <option value="مطلوب عمل استثناء الـ iScore">مطلوب عمل استثناء الـ iScore</option>
         <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)">عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)</option>
-        <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي</option>
+        <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يعتد بالاستعلام الحالي">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يعتد بالاستعلام الحالي</option>
         <option value="يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه">يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه</option>
         <option value="سداد معجل">سداد معجل</option>
         <option value="مرفوض من اداره الائتمان">مرفوض من اداره الائتمان</option>
       </select>
       <label>تعليق مسؤول المتابعة</label>
       <textarea id="editSupervisorComment" rows="3"></textarea>
-      <button onclick="saveSupervise()" style="background:#27ae60;color:white;">حفظ</button>
-      <button onclick="closeModal()" style="background:#e74c3c;color:white;">إغلاق</button>
+      <div class="button-group">
+        <button onclick="saveSupervise()" class="btn-save">حفظ</button>
+        <button onclick="closeModal()" class="btn-close">إغلاق</button>
+      </div>
     </div>
   </div>
 
@@ -187,6 +382,15 @@
       renderTable(filtered);
     }
 
+    const getCellClass = (value) => {
+      if (!value) return '';
+      const lowerValue = value.toLowerCase();
+      // تشمل 'مرفوض' و 'ملغي' و 'الغاء'
+      if (lowerValue.includes('مقبول') || lowerValue.includes('الموافقة على التمويل')) return 'approved-cell';
+      if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي') || lowerValue.includes('الغاء')) return 'rejected-cell';
+      return '';
+    };
+
     function renderTable(data) {
       if (!data || data.length === 0) {
         document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
@@ -219,6 +423,10 @@
       `;
 
       data.forEach((row, idx) => {
+        const reviewClass = getCellClass(row["المراجعة الداخلية"]);
+        const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
+        const adminClass = getCellClass(row["الادارة"]);
+
         html += `
           <tr>
             <td>${idx + 1}</td>
@@ -229,16 +437,16 @@
             <td>${row["المشروع"] || '—'}</td>
             <td>${row["رقم بطاقة الضامن"] || '—'}</td>
             <td>${row["اسم_الضامن"] || '—'}</td>
-            <td>${row["المبلغ المطلوب"] || '—'}</td>
+            <td style="font-weight: bold; color: #16a085;">${row["المبلغ المطلوب"] || '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
-            <td>${row["تم التحويل"] ? 'نعم' : 'لا'}</td>
-            <td>${row["المراجعة الداخلية"] || '—'}</td>
-            <td>${row["مسؤول المتابعة"] || '—'}</td>
-            <td>${row["الادارة"] || '—'}</td>
+            <td>${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
+            <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
+            <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
+            <td class="${adminClass}">${row["الادارة"] || '—'}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
             <td>
               <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل</button>
-              <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id}, event)">+</button>
+              <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id})">تفاصيل</button>
             </td>
           </tr>
         `;
@@ -283,13 +491,14 @@
         return;
       }
 
+      // Update the local data cache for immediate display refresh
       const idx = allData.findIndex(r => r.id == id);
       if (idx !== -1) {
         allData[idx] = { ...allData[idx], ...updates };
       }
 
       closeModal();
-      applyFilters();
+      applyFilters(); // Re-render table with new data
       alert("تم الحفظ بنجاح!");
     }
 
@@ -297,73 +506,83 @@
       document.getElementById('editModal').style.display = 'none';
     }
 
-    function toggleDetail(recordId, event) {
+    function toggleDetail(recordId) {
       const row = allData.find(r => r.id == recordId);
-      if (!row) return;
+      if (!row) {
+        console.error('Row not found:', recordId);
+        return;
+      }
 
       const detailRowId = `detail-row-${recordId}`;
       let detailRow = document.getElementById(detailRowId);
+      const targetRow = Array.from(document.getElementById('tableBody').querySelectorAll('tr:not(.detail-row)')).find(tr => {
+        return tr.outerHTML.includes(`openEditModal(${recordId})`);
+      });
 
+      // Toggle existing detail row
       if (detailRow) {
-        if (detailRow.style.display === 'none') {
+        if (detailRow.style.display === 'none' || detailRow.style.display === '') {
           detailRow.style.display = 'table-row';
-          event.target.textContent = '−';
+          targetRow.querySelector('.detail-btn').textContent = 'إخفاء';
         } else {
           detailRow.style.display = 'none';
-          event.target.textContent = '+';
+          targetRow.querySelector('.detail-btn').textContent = 'تفاصيل';
         }
         return;
       }
 
-      const index = allData.findIndex(r => r.id == recordId);
-      const tableBody = document.getElementById('tableBody');
-      if (!tableBody) return;
+      if (!targetRow) {
+        console.error('Target row not found for ID:', recordId);
+        return;
+      }
 
+      // Create and insert the new detail row
       const detailRowEl = document.createElement('tr');
       detailRowEl.id = detailRowId;
       detailRowEl.className = 'detail-row';
+      detailRowEl.style.display = 'table-row';
       detailRowEl.innerHTML = `
-        <td colspan="16">
-          <strong>بيانات تفصيلية:</strong><br>
-          عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
-          عدد الأقساط: ${row["عدد الاقساط"] || '—'}<br>
-          المنطقة: ${row["المنطقه"] || '—'}<br>
-          الفرع: ${row["الفرع"] || '—'}<br>
-          القائم بالزيارة: ${row["القائم بالزياره"] || '—'}<br>
-          اسم القائم بالإدخال: ${row["اسم القائم بالادخال"] || '—'}<br>
-          ملاحظات المراجعة: ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
-          تعليق المتابعة: ${row["تعليق مسؤول المتابعة"] || '—'}<br>
-          ملاحظات الإدارة: ${row["ملاحظات الادارة"] || '—'}<br>
-          تم التحويل: ${row["تم التحويل"] ? 'نعم' : 'لا'}<br>
-          التاريخ: ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br><br>
-
-          <strong>بيانات العميل من القروض:</strong><br>
-          تاريخ القرض: ${row["تاريخ_القرض"] || '—'}<br>
-          أخصائي القرض: ${row["اخصائى_القرض"] || '—'}<br>
-          كود العميل: ${row["كود_العميل"] || '—'}<br>
-          النشاط الثانى: ${row["النشاط_الثانى"] || '—'}<br>
-          الفرع من القروض: ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
-
-          <strong>بيانات العميل من التقييم:</strong><br>
-          نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
-          التقييم الرقمي: ${row["التقييم_الرقمى"] || '—'}<br>
-          الإحداثيات: ${row["احداثيات الموقع"] || '—'}<br><br>
-
-          <strong>بيانات الضامن:</strong><br>
-          الاسم من الإي سكور: ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
-          نتيجة التقييم: ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
-          التقييم الرقمي: ${row["تقييم_رقمى_الضامن"] || '—'}<br>
+        <td colspan="16" style="padding: 20px; background: #f0f8f5;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <div>
+              <strong style="color: #16a085; font-size: 16px;">📋 بيانات العملية:</strong><br><br>
+              <strong>المبلغ المطلوب:</strong> ${row["المبلغ المطلوب"] || '—'}<br>
+              <strong>عدد أيام التأخير:</strong> ${row["عدد ايام التاخير"] || '—'}<br>
+              <strong>عدد الأقساط:</strong> ${row["عدد الاقساط"] || '—'}<br>
+              <strong>المنطقة:</strong> ${row["المنطقه"] || '—'}<br>
+              <strong>الفرع:</strong> ${row["الفرع"] || '—'}<br>
+              <strong>القائم بالزيارة:</strong> ${row["القائم بالزياره"] || '—'}<br>
+              <strong>القائم بالإدخال:</strong> ${row["اسم القائم بالادخال"] || '—'}<br>
+              <strong>تاريخ الإدخال:</strong> ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br>
+              <strong>تم التحويل:</strong> ${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}<br>
+            </div>
+            <div>
+              <strong style="color: #16a085; font-size: 16px;">💰 بيانات القرض والتقييم:</strong><br><br>
+              <strong>تاريخ القرض:</strong> ${row["تاريخ_القرض"] || '—'}<br>
+              <strong>أخصائي القرض:</strong> ${row["اخصائى_القرض"] || '—'}<br>
+              <strong>كود العميل:</strong> ${row["كود_العميل"] || '—'}<br>
+              <strong>النشاط الثاني:</strong> ${row["النشاط_الثانى"] || '—'}<br>
+              <strong>فرع العميل:</strong> ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
+              <strong>نتيجة التقييم (العميل):</strong> ${row["نتيجة_التقييم"] || '—'}<br>
+              <strong>التقييم الرقمي (العميل):</strong> ${row["التقييم_الرقمى"] || '—'}<br>
+              <strong>الإحداثيات:</strong> ${row["احداثيات الموقع"] || '—'}<br>
+            </div>
+            <div>
+              <strong style="color: #16a085; font-size: 16px;">👥 بيانات الضامن والمراجعة:</strong><br><br>
+              <strong>اسم الضامن:</strong> ${row["اسم_الضامن"] || '—'}<br>
+              <strong>الاسم من I-Score (الضامن):</strong> ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
+              <strong>نتيجة التقييم (الضامن):</strong> ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
+              <strong>التقييم الرقمي (الضامن):</strong> ${row["تقييم_رقمى_الضامن"] || '—'}<br><br>
+              <strong>ملاحظات المراجعة الداخلية:</strong> ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
+              <strong>تعليق مسؤول المتابعة:</strong> ${row["تعليق مسؤول المتابعة"] || '—'}<br>
+              <strong>ملاحظات الإدارة:</strong> ${row["ملاحظات الادارة"] || '—'}<br>
+            </div>
+          </div>
         </td>
       `;
 
-      const originalRow = tableBody.children[index];
-      if (originalRow) {
-        tableBody.insertBefore(detailRowEl, originalRow.nextSibling);
-      } else {
-        tableBody.appendChild(detailRowEl);
-      }
-
-      event.target.textContent = '−';
+      targetRow.parentNode.insertBefore(detailRowEl, targetRow.nextSibling);
+      targetRow.querySelector('.detail-btn').textContent = 'إخفاء';
     }
 
     window.onclick = function(event) {

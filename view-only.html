@@ -223,25 +223,70 @@
       margin-top: 4px;
     }
     /* -------------------------------------- */
-    /* ✅ التنسيقات المضافة لحل مشكلة اللون */
+    /* ألوان المقبول والمرفوض */
     .approved-cell {
-      background-color: #e6ffe6; /* لون أخضر فاتح جداً للقبول */
-      color: #008000; /* لون نص أخضر داكن */
+      background-color: #e6ffe6; 
+      color: #008000; 
       font-weight: bold;
     }
     .rejected-cell {
-      background-color: #ffe6e6; /* لون أحمر فاتح جداً للرفض */
-      color: #cc0000; /* لون نص أحمر داكن */
+      background-color: #ffe6e6; 
+      color: #cc0000; 
       font-weight: bold;
     }
     /* -------------------------------------- */
+    /* تنسيقات التفاصيل */
+    .detail-container {
+        padding: 10px;
+    }
+    .detail-row-sections {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px dashed #d0d0d0;
+    }
+    .detail-section h3 {
+        color: #764ba2;
+        font-size: 18px;
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #764ba2;
+        padding-bottom: 5px;
+    }
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 13px;
+    }
+    .detail-label {
+        font-weight: bold;
+        color: #2c3e50;
+        flex-basis: 50%;
+        text-align: right;
+        padding-left: 10px;
+    }
+    .detail-value {
+        flex-basis: 50%;
+        text-align: left;
+        color: #555;
+    }
+    .detail-section-full h3 {
+        color: #2ecc71;
+        font-size: 18px;
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #2ecc71;
+        padding-bottom: 5px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>عرض البيانات التفصيلي</h2>
 
-    <!-- إحصائيات -->
     <div class="stats">
       <div class="stat-card">
         <div class="label">إجمالي السجلات</div>
@@ -253,7 +298,6 @@
       </div>
     </div>
 
-    <!-- الفلاتر العامة -->
     <div class="filters" id="filters">
       <div class="filter-group">
         <label class="filter-label">الفرع</label>
@@ -299,7 +343,6 @@
         </select>
       </div>
       
-      <!-- فلتر رقم اللجنة بالـ checkboxes -->
       <div class="filter-group committee-filter">
         <label class="filter-label">رقم اللجنة</label>
         <div class="committee-toggle" onclick="toggleCommitteeDropdown()">
@@ -312,7 +355,6 @@
       <button onclick="resetFilters()" class="btn-apply">إعادة تعيين الفلاتر</button>
     </div>
 
-    <!-- الجدول -->
     <div class="table-wrapper">
       <div id="tableContainer">
         <div class="loading">جاري تحميل البيانات...</div>
@@ -321,6 +363,7 @@
   </div>
 
   <script>
+    // ** تم الحفاظ على سطري الاتصال كما هما بناءً على طلبك **
     const supabase = window.supabase.createClient(
       'https://akjyrmmqsnxdbkslxmvb.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
@@ -646,19 +689,19 @@
         // وظيفة لتحديد لون الخلفية
         const getCellClass = (value) => {
           if (!value) return '';
-const lowerValue = value.toLowerCase();
+          const lowerValue = value.toLowerCase();
 
-// 1. حالة القبول: إذا كان النص يحتوي على كلمة "مقبول" في أي مكان
-if (lowerValue.includes('مقبول')) {
-  return 'approved-cell';
-}
+          // 1. حالة القبول: إذا كان النص يحتوي على كلمة "مقبول" في أي مكان
+          if (lowerValue.includes('مقبول')) {
+            return 'approved-cell';
+          }
 
-// 2. حالة الرفض: إذا كان النص يحتوي على كلمة "مرفوض" أو "ملغي" في أي مكان
-if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي')) {
-  return 'rejected-cell';
-}
+          // 2. حالة الرفض: إذا كان النص يحتوي على كلمة "مرفوض" أو "ملغي" في أي مكان
+          if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي')) {
+            return 'rejected-cell';
+          }
 
-return '';
+          return '';
         };
 
         const reviewClass = getCellClass(row["المراجعة الداخلية"]);
@@ -690,10 +733,8 @@ return '';
             <td colspan="18">
               <div class="detail-container">
                 
-                <!-- الصف الأول: 4 أقسام رئيسية -->
                 <div class="detail-row-sections">
                   
-                  <!-- معلومات العملية -->
                   <div class="detail-section">
                     <h3>📋 معلومات العملية</h3>
                     <div class="detail-item">
@@ -726,7 +767,6 @@ return '';
                     </div>
                   </div>
 
-                  <!-- بيانات القرض -->
                   <div class="detail-section">
                     <h3>💰 بيانات القرض</h3>
                     <div class="detail-item">
@@ -751,7 +791,6 @@ return '';
                     </div>
                   </div>
 
-                  <!-- تقييم العميل -->
                   <div class="detail-section">
                     <h3>📊 تقييم العميل</h3>
                     <div class="detail-item">
@@ -775,12 +814,15 @@ return '';
                       <span class="detail-value">${row["تاريخ_استعلام_العميل"] || '—'}</span>
                     </div>
                     <div class="detail-item">
+                      <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
+                      <span class="detail-value">${row["تعليق_استعلام_العميل"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
                       <span class="detail-label">الإحداثيات:</span>
                       <span class="detail-value" style="font-size: 9px;">${row["احداثيات الموقع"] || '—'}</span>
                     </div>
                   </div>
 
-                  <!-- تقييم الضامن -->
                   <div class="detail-section">
                     <h3>👥 تقييم الضامن</h3>
                     <div class="detail-item">
@@ -803,11 +845,14 @@ return '';
                       <span class="detail-label">تاريخ الاستعلام:</span>
                       <span class="detail-value">${row["تاريخ_استعلام_الضامن"] || '—'}</span>
                     </div>
+                    <div class="detail-item">
+                      <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
+                      <span class="detail-value">${row["تعليق_استعلام_الضامن"] || '—'}</span>
+                    </div>
                   </div>
 
                 </div>
 
-                <!-- الصف الثاني: المراجعة والمتابعة (عرض كامل) -->
                 <div class="detail-section-full">
                   <h3>✅ المراجعة والمتابعة</h3>
                   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">

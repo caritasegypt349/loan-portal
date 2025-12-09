@@ -6,25 +6,179 @@
   <title>عرض البيانات التفصيلي - نظام القروض</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
-    .container { max-width: 1800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #2c3e50; margin-top: 0; }
-    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
-    select, input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 13px; }
-    th { background-color: #f2f2f2; }
-    .expand-btn { background: #3498db; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-    .detail-row { display: none; background: #f9f9f9; }
-    .loading { text-align: center; padding: 40px; color: #777; }
-    .error { color: #e74c3c; text-align: center; padding: 20px; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      margin: 0; 
+      padding: 20px; 
+      min-height: 100vh; 
+    }
+    .container { 
+      max-width: 1900px; 
+      margin: 0 auto; 
+      background: white; 
+      padding: 25px; 
+      border-radius: 12px; 
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+    }
+    h2 { 
+      text-align: center; 
+      color: #2c3e50; 
+      margin-top: 0; 
+      font-size: 28px; 
+      margin-bottom: 10px; 
+    }
+    .stats { 
+      display: flex; 
+      gap: 20px; 
+      justify-content: center; 
+      margin-bottom: 20px; 
+    }
+    .stat-card { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      color: white; 
+      padding: 15px 30px; 
+      border-radius: 8px; 
+      text-align: center; 
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); 
+      transition: transform 0.3s; 
+    }
+    .stat-card:hover { 
+      transform: translateY(-5px); 
+    }
+    .stat-card .label { 
+      font-size: 14px; 
+      opacity: 0.9; 
+    }
+    .stat-card .value { 
+      font-size: 24px; 
+      font-weight: bold; 
+      margin-top: 5px; 
+    }
+    .filters { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+      gap: 15px; 
+      margin: 20px 0; 
+      padding: 15px; 
+      background: #f8f9fa; 
+      border-radius: 8px; 
+    }
+    select, input { 
+      width: 100%; 
+      padding: 10px; 
+      border: 2px solid #e0e0e0; 
+      border-radius: 6px; 
+      transition: all 0.3s; 
+      font-size: 14px; 
+    }
+    select:focus, input:focus { 
+      outline: none; 
+      border-color: #667eea; 
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); 
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 20px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+    }
+    th, td { 
+      border: 1px solid #e0e0e0; 
+      padding: 12px 8px; 
+      text-align: right; 
+      font-size: 13px; 
+    }
+    th { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      color: white; 
+      position: sticky; 
+      top: 0; 
+      z-index: 10; 
+    }
+    th input, th select { 
+      width: 95%; 
+      padding: 6px; 
+      margin-top: 8px; 
+      border: 1px solid #fff; 
+      border-radius: 4px; 
+      font-size: 12px; 
+      background: rgba(255,255,255,0.95); 
+    }
+    tr:nth-child(even) { 
+      background-color: #f8f9fa; 
+    }
+    tr:hover:not(.detail-row) { 
+      background-color: #e3f2fd; 
+      transition: background-color 0.3s; 
+    }
+    .expand-btn { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      color: white; 
+      border: none; 
+      padding: 6px 12px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      transition: all 0.3s; 
+      font-weight: bold; 
+    }
+    .expand-btn:hover { 
+      transform: scale(1.1); 
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); 
+    }
+    .detail-row { 
+      display: none; 
+      background: #f0f4f8; 
+    }
+    .detail-row td { 
+      padding: 20px; 
+      line-height: 1.8; 
+    }
+    .loading { 
+      text-align: center; 
+      padding: 40px; 
+      color: #777; 
+    }
+    .error { 
+      color: #e74c3c; 
+      text-align: center; 
+      padding: 20px; 
+    }
+    .btn-apply { 
+      grid-column: span 2; 
+      padding: 12px; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      color: white; 
+      border: none; 
+      border-radius: 6px; 
+      font-size: 16px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      transition: all 0.3s; 
+    }
+    .btn-apply:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); 
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>عرض البيانات التفصيلي</h2>
 
-    <!-- الفلاتر -->
+    <!-- إحصائيات -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="label">إجمالي السجلات</div>
+        <div class="value" id="totalRecords">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">مجموع المبالغ</div>
+        <div class="value" id="totalAmount">0</div>
+      </div>
+    </div>
+
+    <!-- الفلاتر العامة -->
     <div class="filters" id="filters">
       <select id="filterBranch">
         <option value="">الفرع (الكل)</option>
@@ -41,15 +195,15 @@
       <select id="filterOfficer">
         <option value="">اسم الأخصائي (الكل)</option>
       </select>
-      <input type="text" id="searchClientId" placeholder="بحث بكود العميل" />
-      <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
-      <input type="text" id="searchCommittee" placeholder="بحث برقم اللجنة" />
-      <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #2ecc71; color: white; border: none; border-radius: 4px;">تطبيق الفلاتر</button>
+      <select id="filterCommittee">
+        <option value="">رقم اللجنة (الكل)</option>
+      </select>
+      <button onclick="resetFilters()" class="btn-apply">إعادة تعيين الفلاتر</button>
     </div>
 
     <!-- الجدول -->
     <div id="tableContainer">
-      <div class="loading">جارٍ تحميل البيانات...</div>
+      <div class="loading">جاري تحميل البيانات...</div>
     </div>
   </div>
 
@@ -62,6 +216,7 @@
     let allData = [];
     let userRole = '';
     let userBranches = [];
+    let filteredData = [];
 
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
@@ -92,8 +247,10 @@
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       allData = data;
+      filteredData = [...allData];
       renderFilters();
-      renderTable(allData);
+      renderTable(filteredData);
+      updateStats(filteredData);
     }
 
     function renderFilters() {
@@ -116,12 +273,14 @@
       const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
       const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
       const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
+      const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))];
 
       const selects = [
         { id: 'filterReview', data: reviews },
         { id: 'filterSupervisor', data: supervisors },
         { id: 'filterAdmin', data: admins },
-        { id: 'filterOfficer', data: officers }
+        { id: 'filterOfficer', data: officers },
+        { id: 'filterCommittee', data: committees }
       ];
 
       selects.forEach(item => {
@@ -133,6 +292,11 @@
           select.appendChild(opt);
         });
       });
+
+      // إضافة مستمعات للفلاتر العامة
+      ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterCommittee'].forEach(id => {
+        document.getElementById(id).addEventListener('change', applyFilters);
+      });
     }
 
     function applyFilters() {
@@ -141,23 +305,67 @@
       const supervisor = document.getElementById('filterSupervisor').value;
       const admin = document.getElementById('filterAdmin').value;
       const officer = document.getElementById('filterOfficer').value;
-      const clientId = document.getElementById('searchClientId').value.trim();
-      const nationalId = document.getElementById('searchNationalId').value.trim();
-      const committee = document.getElementById('searchCommittee').value.trim();
+      const committee = document.getElementById('filterCommittee').value;
 
-      let filtered = allData.filter(row => {
+      filteredData = allData.filter(row => {
         if (branch && row["الفرع"] !== branch) return false;
         if (review && row["المراجعة الداخلية"] !== review) return false;
         if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
         if (admin && row["الادارة"] !== admin) return false;
         if (officer && row["اسم الاخصائى"] !== officer) return false;
-        if (clientId && !row["كود_العميل"]?.includes(clientId)) return false;
-        if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
-        if (committee && !row["رقم اللجنة"]?.includes(committee)) return false; // ← فلتر رقم اللجنة
+        if (committee && row["رقم اللجنة"] !== committee) return false;
+        return true;
+      });
+
+      renderTable(filteredData);
+      updateStats(filteredData);
+    }
+
+    function applyColumnFilters() {
+      const nationalId = document.getElementById('colFilterNationalId').value.trim().toLowerCase();
+      const clientId = document.getElementById('colFilterClientId').value.trim().toLowerCase();
+      const clientName = document.getElementById('colFilterClientName').value.trim().toLowerCase();
+      const project = document.getElementById('colFilterProject').value.trim().toLowerCase();
+      const guarantorId = document.getElementById('colFilterGuarantorId').value.trim().toLowerCase();
+      const guarantorName = document.getElementById('colFilterGuarantorName').value.trim().toLowerCase();
+
+      let filtered = filteredData.filter(row => {
+        if (nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(nationalId)) return false;
+        if (clientId && !row["كود_العميل"]?.toLowerCase().includes(clientId)) return false;
+        if (clientName && !row["اسم_العميل"]?.toLowerCase().includes(clientName) && 
+            !row["اسم_العميل_من_التقييم"]?.toLowerCase().includes(clientName)) return false;
+        if (project && !row["المشروع"]?.toLowerCase().includes(project)) return false;
+        if (guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(guarantorId)) return false;
+        if (guarantorName && !row["اسم_الضامن"]?.toLowerCase().includes(guarantorName)) return false;
         return true;
       });
 
       renderTable(filtered);
+      updateStats(filtered);
+    }
+
+    function resetFilters() {
+      document.getElementById('filterBranch').value = '';
+      document.getElementById('filterReview').value = '';
+      document.getElementById('filterSupervisor').value = '';
+      document.getElementById('filterAdmin').value = '';
+      document.getElementById('filterOfficer').value = '';
+      document.getElementById('filterCommittee').value = '';
+      
+      filteredData = [...allData];
+      renderTable(filteredData);
+      updateStats(filteredData);
+    }
+
+    function updateStats(data) {
+      document.getElementById('totalRecords').textContent = data.length.toLocaleString('ar-EG');
+      
+      const total = data.reduce((sum, row) => {
+        const amount = parseFloat(row["المبلغ المطلوب"]) || 0;
+        return sum + amount;
+      }, 0);
+      
+      document.getElementById('totalAmount').textContent = total.toLocaleString('ar-EG') + ' ج.م';
     }
 
     function renderTable(data) {
@@ -171,16 +379,34 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>رقم بطاقة العميل</th>
-              <th>كود العميل</th>        <!-- جديد -->
-              <th>اسم العميل</th>
+              <th>
+                رقم بطاقة العميل
+                <input type="text" id="colFilterNationalId" placeholder="بحث..." oninput="applyColumnFilters()" />
+              </th>
+              <th>
+                كود العميل
+                <input type="text" id="colFilterClientId" placeholder="بحث..." oninput="applyColumnFilters()" />
+              </th>
+              <th>
+                اسم العميل
+                <input type="text" id="colFilterClientName" placeholder="بحث..." oninput="applyColumnFilters()" />
+              </th>
               <th>الاسم من الإي سكور</th>
-              <th>المشروع</th>
-              <th>رقم بطاقة الضامن</th>
-              <th>اسم الضامن</th>
+              <th>
+                المشروع
+                <input type="text" id="colFilterProject" placeholder="بحث..." oninput="applyColumnFilters()" />
+              </th>
+              <th>
+                رقم بطاقة الضامن
+                <input type="text" id="colFilterGuarantorId" placeholder="بحث..." oninput="applyColumnFilters()" />
+              </th>
+              <th>
+                اسم الضامن
+                <input type="text" id="colFilterGuarantorName" placeholder="بحث..." oninput="applyColumnFilters()" />
+              </th>
               <th>المبلغ</th>
               <th>الأخصائي</th>
-              <th>تم التحويل</th>        <!-- جديد -->
+              <th>تم التحويل</th>
               <th>المراجعة</th>
               <th>المتابعة</th>
               <th>الإدارة</th>
@@ -196,15 +422,15 @@
           <tr>
             <td>${idx + 1}</td>
             <td>${row["رقم البطاقة العميل"] || '—'}</td>
-            <td>${row["كود_العميل"] || '—'}</td>           <!-- جديد -->
+            <td>${row["كود_العميل"] || '—'}</td>
             <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
             <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
             <td>${row["المشروع"] || '—'}</td>
             <td>${row["رقم بطاقة الضامن"] || '—'}</td>
             <td>${row["اسم_الضامن"] || '—'}</td>
-            <td>${row["المبلغ المطلوب"] || '—'}</td>
+            <td style="font-weight: bold; color: #667eea;">${row["المبلغ المطلوب"] || '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
-            <td>${row["تم التحويل"] ? 'نعم' : 'لا'}</td>  <!-- جديد -->
+            <td>${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
             <td>${row["المراجعة الداخلية"] || '—'}</td>
             <td>${row["مسؤول المتابعة"] || '—'}</td>
             <td>${row["الادارة"] || '—'}</td>

@@ -130,6 +130,7 @@
       margin: 2px;
       font-weight: bold;
       transition: all 0.3s;
+      width: auto;
     }
     .edit-btn:hover {
       transform: scale(1.05);
@@ -201,6 +202,7 @@
       border-radius: 6px;
       font-size: 14px;
       transition: all 0.3s;
+      box-sizing: border-box;
     }
     .modal input:focus, .modal textarea:focus, .modal select:focus {
       border-color: #16a085;
@@ -420,356 +422,369 @@
   </div>
 
   <script>
-    // الجزء الثاني من الكود (JavaScript) سيأتي في الرسالة التالية
-    // JavaScript الكامل لصفحة الإدارة
+    const supabase = window.supabase.createClient(
+      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+    );
 
-const supabase = window.supabase.createClient(
-  'https://akjyrmmqsnxdbkslxmvb.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
-);
+    let allData = [];
 
-let allData = [];
+    async function init() {
+      const userId = localStorage.getItem('loggedInUserId');
+      if (!userId) {
+        alert("الرجاء تسجيل الدخول أولاً!");
+        window.location.href = "index.html";
+        return;
+      }
 
-async function init() {
-  const userId = localStorage.getItem('loggedInUserId');
-  if (!userId) {
-    alert("الرجاء تسجيل الدخول أولاً!");
-    window.location.href = "index.html";
-    return;
-  }
+      const { data: user, error: userError } = await supabase 
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
 
-  const { data: user, error: userError } = await supabase 
-    .from('users')
-    .select('role')
-    .eq('id', userId)
-    .single();
-
-  if (userError || !user || user.role !== 'admin') {
-    alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
-    window.location.href = "index.html";
-    return;
-  }
-  await loadData();
-}
-
-async function loadData() {
-  const { data, error } = await supabase
-    .from('operations_with_details')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  allData = data;
-  renderFilters();
-  applyFilters();
-}
-
-function renderFilters() {
-  const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v))];
-  const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
-  const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v))];
-  const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v))];
-  const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v))];
-
-  const selects = [
-    { id: 'filterBranch', data: branches },
-    { id: 'filterOfficer', data: officers },
-    { id: 'filterReview', data: reviews },
-    { id: 'filterSupervisor', data: supervisors },
-    { id: 'filterAdmin', data: admins }
-  ];
-
-  selects.forEach(item => {
-    const select = document.getElementById(item.id);
-    select.innerHTML = `<option value="">${select.querySelector('option').textContent}</option>`;
-    item.data.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v;
-      opt.textContent = v;
-      select.appendChild(opt);
-    });
-  });
-}
-
-function applyFilters() {
-  document.querySelectorAll('[id^="detail-row-"]').forEach(el => el.remove());
-
-  const branch = document.getElementById('filterBranch').value;
-  const officer = document.getElementById('filterOfficer').value;
-  const review = document.getElementById('filterReview').value;
-  const supervisor = document.getElementById('filterSupervisor').value;
-  const admin = document.getElementById('filterAdmin').value;
-  const nationalId = document.getElementById('searchNationalId').value.trim();
-  const clientCode = document.getElementById('searchClientCode').value.trim();
-
-  let filtered = allData.filter(row => {
-    if (branch && row["الفرع"] !== branch) return false;
-    if (officer && row["اسم الاخصائى"] !== officer) return false;
-    if (review && row["المراجعة الداخلية"] !== review) return false;
-    if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
-    if (admin && row["الادارة"] !== admin) return false;
-    if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
-    if (clientCode && !row["كود_العميل"]?.includes(clientCode)) return false;
-    return true;
-  });
-
-  renderTable(filtered);
-  updateStats(filtered);
-}
-
-function updateStats(data) {
-  document.getElementById('totalRecords').textContent = data.length.toLocaleString('ar-EG');
-  
-  const total = data.reduce((sum, row) => {
-    const amount = parseFloat(row["المبلغ المطلوب"]) || 0;
-    return sum + amount;
-  }, 0);
-  
-  document.getElementById('totalAmount').textContent = total.toLocaleString('ar-EG') + ' ج.م';
-}
-
-function renderTable(data) {
-  if (!data || data.length === 0) {
-    document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
-    return;
-  }
-
-  // وظيفة لتحديد لون الخلفية
-  const getCellClass = (value) => {
-    if (!value) return '';
-    const lowerValue = value.toLowerCase();
-    if (lowerValue.includes('مقبول')) return 'approved-cell';
-    if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي')) return 'rejected-cell';
-    return '';
-  };
-
-  let html = `
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>رقم بطاقة العميل</th>
-          <th>كود العميل</th>
-          <th>اسم العميل</th>
-          <th>رقم الحساب</th>
-          <th>الإحداثيات</th>
-          <th>الاسم من I-Score</th>
-          <th>المشروع</th>
-          <th>رقم بطاقة الضامن</th>
-          <th>اسم الضامن</th>
-          <th>المبلغ</th>
-          <th>الأخصائي</th>
-          <th>تم التحويل</th>
-          <th>المراجعة</th>
-          <th>المتابعة</th>
-          <th>الإدارة</th>
-          <th>رقم اللجنة</th>
-          <th>الإجراء</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody">
-  `;
-
-  data.forEach((row, idx) => {
-    const reviewClass = getCellClass(row["المراجعة الداخلية"]);
-    const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
-    const adminClass = getCellClass(row["الادارة"]);
-
-    html += `
-      <tr>
-        <td>${idx + 1}</td>
-        <td>${row["رقم البطاقة العميل"] || '—'}</td>
-        <td>${row["كود_العميل"] || '—'}</td>
-        <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
-        <td style="font-size: 10px;">${row["رقم_الحساب_من_التقييم"] || '—'}</td>
-        <td style="font-size: 9px;">${row["احداثيات الموقع"] ? row["احداثيات الموقع"].substring(0, 20) + '...' : '—'}</td>
-        <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
-        <td>${row["المشروع"] || '—'}</td>
-        <td>${row["رقم بطاقة الضامن"] || '—'}</td>
-        <td>${row["اسم_الضامن"] || '—'}</td>
-        <td style="font-weight: bold; color: #16a085;">${row["المبلغ المطلوب"] || '—'}</td>
-        <td>${row["اسم الاخصائى"] || '—'}</td>
-        <td>${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
-        <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
-        <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
-        <td class="${adminClass}">${row["الادارة"] || '—'}</td>
-        <td>${row["رقم اللجنة"] || '—'}</td>
-        <td>
-          <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل الكل</button>
-          <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id}, event)">تفاصيل</button>
-        </td>
-      </tr>
-    `;
-  });
-
-  html += `</tbody></table>`;
-  document.getElementById('tableContainer').innerHTML = html;
-}
-
-function openEditModal(recordId) {
-  const record = allData.find(r => r.id == recordId);
-  if (!record) return;
-
-  document.getElementById('editRecordId').value = record.id;
-  document.getElementById('editNationalId').value = record["رقم البطاقة العميل"] || '';
-  document.getElementById('editGuarantorId').value = record["رقم بطاقة الضامن"] || '';
-  document.getElementById('editProject').value = record["المشروع"] || '';
-  document.getElementById('editAmount').value = record["المبلغ المطلوب"] || '';
-  document.getElementById('editInstallments').value = record["عدد الاقساط"] || '';
-  document.getElementById('editOfficer').value = record["اسم الاخصائى"] || '';
-  document.getElementById('editRegion').value = record["المنطقه"] || '';
-  document.getElementById('editBranch').value = record["الفرع"] || '';
-  document.getElementById('editCommittee').value = record["رقم اللجنة"] || '';
-  document.getElementById('editVisitor').value = record["القائم بالزياره"] || '';
-  document.getElementById('editEntryBy').value = record["اسم القائم بالادخال"] || '';
-  document.getElementById('editReview').value = record["المراجعة الداخلية"] || 'لم تتم المراجعة';
-  document.getElementById('editSupervisor').value = record["مسؤول المتابعة"] || 'لم تتم المراجعة';
-  document.getElementById('editAdmin').value = record["الادارة"] || 'لم تتم المراجعة';
-  document.getElementById('editReviewNotes').value = record["ملاحظات المراجعة الداخلية"] || '';
-  document.getElementById('editSupervisorComment').value = record["تعليق مسؤول المتابعة"] || '';
-  document.getElementById('editAdminNotes').value = record["ملاحظات الادارة"] || '';
-
-  document.getElementById('editModal').style.display = 'block';
-}
-
-async function saveAdmin() {
-  const idValue = document.getElementById('editRecordId').value;
-  const id = parseInt(idValue);
-  
-  if (isNaN(id) || !idValue) {
-    alert("خطأ: لم يتم تحديد السجل بشكل صحيح");
-    return;
-  }
-
-  const updates = {
-    "رقم البطاقة العميل": document.getElementById('editNationalId').value.trim(),
-    "رقم بطاقة الضامن": document.getElementById('editGuarantorId').value.trim(),
-    "المشروع": document.getElementById('editProject').value.trim(),
-    "المبلغ المطلوب": parseFloat(document.getElementById('editAmount').value) || null,
-    "عدد الاقساط": parseInt(document.getElementById('editInstallments').value) || null,
-    "اسم الاخصائى": document.getElementById('editOfficer').value.trim(),
-    "المنطقه": document.getElementById('editRegion').value.trim(),
-    "الفرع": document.getElementById('editBranch').value.trim(),
-    "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
-    "القائم بالزياره": document.getElementById('editVisitor').value.trim() || null,
-    "اسم القائم بالادخال": document.getElementById('editEntryBy').value.trim(),
-    "المراجعة الداخلية": document.getElementById('editReview').value,
-    "مسؤول المتابعة": document.getElementById('editSupervisor').value,
-    "الادارة": document.getElementById('editAdmin').value,
-    "ملاحظات المراجعة الداخلية": document.getElementById('editReviewNotes').value.trim() || null,
-    "تعليق مسؤول المتابعة": document.getElementById('editSupervisorComment').value.trim() || null,
-    "ملاحظات الادارة": document.getElementById('editAdminNotes').value.trim() || null
-  };
-
-  const { error } = await supabase
-    .from('operations')
-    .update(updates)
-    .eq('id', id);
-
-  if (error) {
-    alert("حدث خطأ أثناء الحفظ: " + error.message);
-    return;
-  }
-
-  const idx = allData.findIndex(r => r.id == id);
-  if (idx !== -1) {
-    allData[idx] = { ...allData[idx], ...updates };
-  }
-
-  closeModal();
-  applyFilters();
-  alert("تم الحفظ بنجاح!");
-}
-
-function closeModal() {
-  document.getElementById('editModal').style.display = 'none';
-}
-
-function toggleDetail(recordId, event) {
-  const row = allData.find(r => r.id == recordId);
-  if (!row) return;
-
-  const detailRowId = `detail-row-${recordId}`;
-  let detailRow = document.getElementById(detailRowId);
-
-  if (detailRow) {
-    if (detailRow.style.display === 'none') {
-      detailRow.style.display = 'table-row';
-      event.target.textContent = 'إخفاء';
-    } else {
-      detailRow.style.display = 'none';
-      event.target.textContent = 'تفاصيل';
+      if (userError || !user || user.role !== 'admin') {
+        alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
+        window.location.href = "index.html";
+        return;
+      }
+      await loadData();
     }
-    return;
-  }
 
-  const index = allData.findIndex(r => r.id == recordId);
-  const tableBody = document.getElementById('tableBody');
-  if (!tableBody) return;
+    async function loadData() {
+      const { data, error } = await supabase
+        .from('operations_with_details')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      allData = data;
+      renderFilters();
+      applyFilters();
+    }
 
-  const detailRowEl = document.createElement('tr');
-  detailRowEl.id = detailRowId;
-  detailRowEl.className = 'detail-row';
-  detailRowEl.innerHTML = `
-    <td colspan="18">
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-        <div>
-          <strong>📋 بيانات العملية:</strong><br>
-          المبلغ المطلوب: ${row["المبلغ المطلوب"] || '—'}<br>
-          عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
-          عدد الأقساط: ${row["عدد الاقساط"] || '—'}<br>
-          المنطقة: ${row["المنطقه"] || '—'}<br>
-          الفرع: ${row["الفرع"] || '—'}<br>
-          القائم بالزيارة: ${row["القائم بالزياره"] || '—'}<br>
-          القائم بالإدخال: ${row["اسم القائم بالادخال"] || '—'}<br>
-          تاريخ الإدخال: ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br>
-        </div>
-        <div>
-          <strong>💰 بيانات القرض:</strong><br>
-          تاريخ القرض: ${row["تاريخ_القرض"] || '—'}<br>
-          أخصائي القرض: ${row["اخصائى_القرض"] || '—'}<br>
-          كود العميل: ${row["كود_العميل"] || '—'}<br>
-          النشاط الثاني: ${row["النشاط_الثانى"] || '—'}<br>
-          فرع العميل: ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
-          <strong>📊 تقييم العميل:</strong><br>
-          الاسم من I-Score: ${row["الاسم_من_الاي_سكور"] || '—'}<br>
-          رقم الحساب: ${row["رقم_الحساب_من_التقييم"] || '—'}<br>
-          نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
-          التقييم الرقمي: ${row["التقييم_الرقمى"] || '—'}<br>
-        </div>
-        <div>
-          <strong>👥 تقييم الضامن:</strong><br>
-          اسم الضامن: ${row["اسم_الضامن"] || '—'}<br>
-          الاسم من I-Score: ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
-          نتيجة التقييم: ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
-          التقييم الرقمي: ${row["تقييم_رقمى_الضامن"] || '—'}<br><br>
-          <strong>✅ المراجعة:</strong><br>
-          ملاحظات المراجعة: ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
-          تعليق المتابعة: ${row["تعليق مسؤول المتابعة"] || '—'}<br>
-          ملاحظات الإدارة: ${row["ملاحظات الادارة"] || '—'}<br>
-          تم التحويل: ${row["تم التحويل"] ? 'نعم' : 'لا'}<br>
-        </div>
-      </div>
-    </td>
-  `;
+    function renderFilters() {
+      const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v))];
+      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
+      const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v))];
+      const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v))];
+      const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v))];
 
-  const originalRow = tableBody.children[index];
-  if (originalRow) {
-    tableBody.insertBefore(detailRowEl, originalRow.nextSibling);
-  } else {
-    tableBody.appendChild(detailRowEl);
-  }
+      const selects = [
+        { id: 'filterBranch', data: branches },
+        { id: 'filterOfficer', data: officers },
+        { id: 'filterReview', data: reviews },
+        { id: 'filterSupervisor', data: supervisors },
+        { id: 'filterAdmin', data: admins }
+      ];
 
-  event.target.textContent = 'إخفاء';
-}
+      selects.forEach(item => {
+        const select = document.getElementById(item.id);
+        select.innerHTML = `<option value="">${select.querySelector('option').textContent}</option>`;
+        item.data.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          select.appendChild(opt);
+        });
+      });
+    }
 
-window.onclick = function(event) {
-  const modal = document.getElementById('editModal');
-  if (event.target == modal) closeModal();
-};
+    function applyFilters() {
+      document.querySelectorAll('[id^="detail-row-"]').forEach(el => el.remove());
 
-init().catch(err => {
-  document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
-});
+      const branch = document.getElementById('filterBranch').value;
+      const officer = document.getElementById('filterOfficer').value;
+      const review = document.getElementById('filterReview').value;
+      const supervisor = document.getElementById('filterSupervisor').value;
+      const admin = document.getElementById('filterAdmin').value;
+      const nationalId = document.getElementById('searchNationalId').value.trim();
+      const clientCode = document.getElementById('searchClientCode').value.trim();
+
+      let filtered = allData.filter(row => {
+        if (branch && row["الفرع"] !== branch) return false;
+        if (officer && row["اسم الاخصائى"] !== officer) return false;
+        if (review && row["المراجعة الداخلية"] !== review) return false;
+        if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
+        if (admin && row["الادارة"] !== admin) return false;
+        if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
+        if (clientCode && !row["كود_العميل"]?.includes(clientCode)) return false;
+        return true;
+      });
+
+      renderTable(filtered);
+      updateStats(filtered);
+    }
+
+    function updateStats(data) {
+      document.getElementById('totalRecords').textContent = data.length.toLocaleString('ar-EG');
+      
+      const total = data.reduce((sum, row) => {
+        const amount = parseFloat(row["المبلغ المطلوب"]) || 0;
+        return sum + amount;
+      }, 0);
+      
+      document.getElementById('totalAmount').textContent = total.toLocaleString('ar-EG') + ' ج.م';
+    }
+
+    function renderTable(data) {
+      if (!data || data.length === 0) {
+        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
+        return;
+      }
+
+      const getCellClass = (value) => {
+        if (!value) return '';
+        const lowerValue = value.toLowerCase();
+        if (lowerValue.includes('مقبول')) return 'approved-cell';
+        if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي')) return 'rejected-cell';
+        return '';
+      };
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>رقم بطاقة العميل</th>
+              <th>كود العميل</th>
+              <th>اسم العميل</th>
+              <th>رقم الحساب</th>
+              <th>الإحداثيات</th>
+              <th>الاسم من I-Score</th>
+              <th>المشروع</th>
+              <th>رقم بطاقة الضامن</th>
+              <th>اسم الضامن</th>
+              <th>المبلغ</th>
+              <th>الأخصائي</th>
+              <th>تم التحويل</th>
+              <th>المراجعة</th>
+              <th>المتابعة</th>
+              <th>الإدارة</th>
+              <th>رقم اللجنة</th>
+              <th>الإجراء</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+      `;
+
+      data.forEach((row, idx) => {
+        const reviewClass = getCellClass(row["المراجعة الداخلية"]);
+        const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
+        const adminClass = getCellClass(row["الادارة"]);
+
+        html += `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${row["رقم البطاقة العميل"] || '—'}</td>
+            <td>${row["كود_العميل"] || '—'}</td>
+            <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
+            <td style="font-size: 10px;">${row["رقم_الحساب_من_التقييم"] || '—'}</td>
+            <td style="font-size: 9px;">${row["احداثيات الموقع"] ? row["احداثيات الموقع"].substring(0, 20) + '...' : '—'}</td>
+            <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
+            <td>${row["المشروع"] || '—'}</td>
+            <td>${row["رقم بطاقة الضامن"] || '—'}</td>
+            <td>${row["اسم_الضامن"] || '—'}</td>
+            <td style="font-weight: bold; color: #16a085;">${row["المبلغ المطلوب"] || '—'}</td>
+            <td>${row["اسم الاخصائى"] || '—'}</td>
+            <td>${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
+            <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
+            <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
+            <td class="${adminClass}">${row["الادارة"] || '—'}</td>
+            <td>${row["رقم اللجنة"] || '—'}</td>
+            <td>
+              <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل الكل</button>
+              <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id})">تفاصيل</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('tableContainer').innerHTML = html;
+    }
+
+    function openEditModal(recordId) {
+      const record = allData.find(r => r.id == recordId);
+      if (!record) return;
+
+      document.getElementById('editRecordId').value = record.id;
+      document.getElementById('editNationalId').value = record["رقم البطاقة العميل"] || '';
+      document.getElementById('editGuarantorId').value = record["رقم بطاقة الضامن"] || '';
+      document.getElementById('editProject').value = record["المشروع"] || '';
+      document.getElementById('editAmount').value = record["المبلغ المطلوب"] || '';
+      document.getElementById('editInstallments').value = record["عدد الاقساط"] || '';
+      document.getElementById('editOfficer').value = record["اسم الاخصائى"] || '';
+      document.getElementById('editRegion').value = record["المنطقه"] || '';
+      document.getElementById('editBranch').value = record["الفرع"] || '';
+      document.getElementById('editCommittee').value = record["رقم اللجنة"] || '';
+      document.getElementById('editVisitor').value = record["القائم بالزياره"] || '';
+      document.getElementById('editEntryBy').value = record["اسم القائم بالادخال"] || '';
+      document.getElementById('editReview').value = record["المراجعة الداخلية"] || 'لم تتم المراجعة';
+      document.getElementById('editSupervisor').value = record["مسؤول المتابعة"] || 'لم تتم المراجعة';
+      document.getElementById('editAdmin').value = record["الادارة"] || 'لم تتم المراجعة';
+      document.getElementById('editReviewNotes').value = record["ملاحظات المراجعة الداخلية"] || '';
+      document.getElementById('editSupervisorComment').value = record["تعليق مسؤول المتابعة"] || '';
+      document.getElementById('editAdminNotes').value = record["ملاحظات الادارة"] || '';
+
+      document.getElementById('editModal').style.display = 'block';
+    }
+
+    async function saveAdmin() {
+      const idValue = document.getElementById('editRecordId').value;
+      const id = parseInt(idValue);
+      
+      if (isNaN(id) || !idValue) {
+        alert("خطأ: لم يتم تحديد السجل بشكل صحيح");
+        return;
+      }
+
+      const updates = {
+        "رقم البطاقة العميل": document.getElementById('editNationalId').value.trim(),
+        "رقم بطاقة الضامن": document.getElementById('editGuarantorId').value.trim(),
+        "المشروع": document.getElementById('editProject').value.trim(),
+        "المبلغ المطلوب": parseFloat(document.getElementById('editAmount').value) || null,
+        "عدد الاقساط": parseInt(document.getElementById('editInstallments').value) || null,
+        "اسم الاخصائى": document.getElementById('editOfficer').value.trim(),
+        "المنطقه": document.getElementById('editRegion').value.trim(),
+        "الفرع": document.getElementById('editBranch').value.trim(),
+        "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
+        "القائم بالزياره": document.getElementById('editVisitor').value.trim() || null,
+        "اسم القائم بالادخال": document.getElementById('editEntryBy').value.trim(),
+        "المراجعة الداخلية": document.getElementById('editReview').value,
+        "مسؤول المتابعة": document.getElementById('editSupervisor').value,
+        "الادارة": document.getElementById('editAdmin').value,
+        "ملاحظات المراجعة الداخلية": document.getElementById('editReviewNotes').value.trim() || null,
+        "تعليق مسؤول المتابعة": document.getElementById('editSupervisorComment').value.trim() || null,
+        "ملاحظات الادارة": document.getElementById('editAdminNotes').value.trim() || null
+      };
+
+      const { error } = await supabase
+        .from('operations')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) {
+        alert("حدث خطأ أثناء الحفظ: " + error.message);
+        return;
+      }
+
+      const idx = allData.findIndex(r => r.id == id);
+      if (idx !== -1) {
+        allData[idx] = { ...allData[idx], ...updates };
+      }
+
+      closeModal();
+      applyFilters();
+      alert("تم الحفظ بنجاح!");
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    function toggleDetail(recordId) {
+      const row = allData.find(r => r.id == recordId);
+      if (!row) {
+        console.error('Row not found:', recordId);
+        return;
+      }
+
+      const detailRowId = `detail-row-${recordId}`;
+      let detailRow = document.getElementById(detailRowId);
+
+      if (detailRow) {
+        if (detailRow.style.display === 'none' || detailRow.style.display === '') {
+          detailRow.style.display = 'table-row';
+        } else {
+          detailRow.style.display = 'none';
+        }
+        return;
+      }
+
+      const tableBody = document.getElementById('tableBody');
+      if (!tableBody) {
+        console.error('Table body not found');
+        return;
+      }
+
+      const rows = tableBody.querySelectorAll('tr:not(.detail-row)');
+      let targetRow = null;
+      
+      rows.forEach((tr, idx) => {
+        const cells = tr.querySelectorAll('td');
+        if (cells.length > 0) {
+          const buttons = tr.querySelectorAll('button');
+          buttons.forEach(btn => {
+            if (btn.onclick && btn.onclick.toString().includes(`toggleDetail(${recordId})`)) {
+              targetRow = tr;
+            }
+          });
+        }
+      });
+
+      if (!targetRow) {
+        console.error('Target row not found for ID:', recordId);
+        return;
+      }
+
+      const detailRowEl = document.createElement('tr');
+      detailRowEl.id = detailRowId;
+      detailRowEl.className = 'detail-row';
+      detailRowEl.style.display = 'table-row';
+      detailRowEl.innerHTML = `
+        <td colspan="18" style="padding: 20px; background: #f0f8f5;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <div>
+              <strong style="color: #16a085; font-size: 16px;">📋 بيانات العملية:</strong><br><br>
+              <strong>المبلغ المطلوب:</strong> ${row["المبلغ المطلوب"] || '—'}<br>
+              <strong>عدد أيام التأخير:</strong> ${row["عدد ايام التاخير"] || '—'}<br>
+              <strong>عدد الأقساط:</strong> ${row["عدد الاقساط"] || '—'}<br>
+              <strong>المنطقة:</strong> ${row["المنطقه"] || '—'}<br>
+              <strong>الفرع:</strong> ${row["الفرع"] || '—'}<br>
+              <strong>القائم بالزيارة:</strong> ${row["القائم بالزياره"] || '—'}<br>
+              <strong>القائم بالإدخال:</strong> ${row["اسم القائم بالادخال"] || '—'}<br>
+              <strong>تاريخ الإدخال:</strong> ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br>
+            </div>
+            <div>
+              <strong style="color: #16a085; font-size: 16px;">💰 بيانات القرض:</strong><br><br>
+              <strong>تاريخ القرض:</strong> ${row["تاريخ_القرض"] || '—'}<br>
+              <strong>أخصائي القرض:</strong> ${row["اخصائى_القرض"] || '—'}<br>
+              <strong>كود العميل:</strong> ${row["كود_العميل"] || '—'}<br>
+              <strong>النشاط الثاني:</strong> ${row["النشاط_الثانى"] || '—'}<br>
+              <strong>فرع العميل:</strong> ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
+              <strong style="color: #16a085; font-size: 16px;">📊 تقييم العميل:</strong><br><br>
+              <strong>الاسم من I-Score:</strong> ${row["الاسم_من_الاي_سكور"] || '—'}<br>
+              <strong>رقم الحساب:</strong> ${row["رقم_الحساب_من_التقييم"] || '—'}<br>
+              <strong>نتيجة التقييم:</strong> ${row["نتيجة_التقييم"] || '—'}<br>
+              <strong>التقييم الرقمي:</strong> ${row["التقييم_الرقمى"] || '—'}<br>
+            </div>
+            <div>
+              <strong style="color: #16a085; font-size: 16px;">👥 تقييم الضامن:</strong><br><br>
+              <strong>اسم الضامن:</strong> ${row["اسم_الضامن"] || '—'}<br>
+              <strong>الاسم من I-Score:</strong> ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
+              <strong>نتيجة التقييم:</strong> ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
+              <strong>التقييم الرقمي:</strong> ${row["تقييم_رقمى_الضامن"] || '—'}<br><br>
+              <strong style="color: #16a085; font-size: 16px;">✅ المراجعة والمتابعة:</strong><br><br>
+              <strong>ملاحظات المراجعة:</strong> ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
+              <strong>تعليق المتابعة:</strong> ${row["تعليق مسؤول المتابعة"] || '—'}<br>
+              <strong>ملاحظات الإدارة:</strong> ${row["ملاحظات الادارة"] || '—'}<br>
+              <strong>تم التحويل:</strong> ${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}<br>
+            </div>
+          </div>
+        </td>
+      `;
+
+      targetRow.parentNode.insertBefore(detailRowEl, targetRow.nextSibling);
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('editModal');
+      if (event.target == modal) closeModal();
+    };
+
+    init().catch(err => {
+      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
+    });
   </script>
 </body>
 </html>

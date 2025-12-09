@@ -77,6 +77,52 @@
       border-color: #667eea; 
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); 
     }
+    .committee-filter {
+      position: relative;
+      grid-column: span 2;
+    }
+    .committee-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: white;
+      border: 2px solid #667eea;
+      border-radius: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+      width: 100%;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .committee-dropdown.show {
+      display: block;
+    }
+    .committee-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .committee-item:hover {
+      background: #f0f4f8;
+    }
+    .committee-item input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+    }
+    .committee-toggle {
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      background: white;
+      text-align: right;
+    }
+    .committee-toggle:hover {
+      border-color: #667eea;
+    }
     table { 
       width: 100%; 
       border-collapse: collapse; 
@@ -160,6 +206,11 @@
       transform: translateY(-2px); 
       box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); 
     }
+    .selected-committees {
+      font-size: 12px;
+      color: #667eea;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -195,9 +246,21 @@
       <select id="filterOfficer">
         <option value="">اسم الأخصائي (الكل)</option>
       </select>
-      <select id="filterCommittee">
-        <option value="">رقم اللجنة (الكل)</option>
+      <select id="filterTransferred">
+        <option value="">تم التحويل (الكل)</option>
+        <option value="true">نعم</option>
+        <option value="false">لا</option>
       </select>
+      
+      <!-- فلتر رقم اللجنة بالـ checkboxes -->
+      <div class="committee-filter">
+        <div class="committee-toggle" onclick="toggleCommitteeDropdown()">
+          <span>رقم اللجنة (اختر اللجان)</span>
+          <div class="selected-committees" id="selectedCommitteesText"></div>
+        </div>
+        <div class="committee-dropdown" id="committeeDropdown"></div>
+      </div>
+      
       <button onclick="resetFilters()" class="btn-apply">إعادة تعيين الفلاتر</button>
     </div>
 
@@ -217,6 +280,15 @@
     let userRole = '';
     let userBranches = [];
     let filteredData = [];
+    let selectedCommittees = [];
+    let columnFilters = {
+      nationalId: '',
+      clientId: '',
+      clientName: '',
+      project: '',
+      guarantorId: '',
+      guarantorName: ''
+    };
 
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
@@ -237,6 +309,13 @@
       userBranches = user.branches;
 
       await loadData();
+      
+      // إغلاق dropdown اللجان عند الضغط خارجها
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.committee-filter')) {
+          document.getElementById('committeeDropdown').classList.remove('show');
+        }
+      });
     }
 
     async function loadData() {
@@ -273,14 +352,13 @@
       const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
       const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
       const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
-      const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))];
+      const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))].sort();
 
       const selects = [
         { id: 'filterReview', data: reviews },
         { id: 'filterSupervisor', data: supervisors },
         { id: 'filterAdmin', data: admins },
-        { id: 'filterOfficer', data: officers },
-        { id: 'filterCommittee', data: committees }
+        { id: 'filterOfficer', data: officers }
       ];
 
       selects.forEach(item => {
@@ -293,27 +371,84 @@
         });
       });
 
+      // إنشاء checkboxes للجان
+      const dropdown = document.getElementById('committeeDropdown');
+      dropdown.innerHTML = '';
+      committees.forEach(committee => {
+        const div = document.createElement('div');
+        div.className = 'committee-item';
+        div.innerHTML = `
+          <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
+          <label for="comm_${committee}">${committee}</label>
+        `;
+        dropdown.appendChild(div);
+      });
+
       // إضافة مستمعات للفلاتر العامة
-      ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterCommittee'].forEach(id => {
-        document.getElementById(id).addEventListener('change', applyFilters);
+      ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
+        document.getElementById(id).addEventListener('change', applyAllFilters);
       });
     }
 
-    function applyFilters() {
+    function toggleCommitteeDropdown() {
+      const dropdown = document.getElementById('committeeDropdown');
+      dropdown.classList.toggle('show');
+    }
+
+    function updateSelectedCommittees() {
+      const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
+      selectedCommittees = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+      
+      const text = document.getElementById('selectedCommitteesText');
+      if (selectedCommittees.length > 0) {
+        text.textContent = `تم اختيار ${selectedCommittees.length} لجنة`;
+      } else {
+        text.textContent = '';
+      }
+      
+      applyAllFilters();
+    }
+
+    function applyAllFilters() {
       const branch = document.getElementById('filterBranch').value;
       const review = document.getElementById('filterReview').value;
       const supervisor = document.getElementById('filterSupervisor').value;
       const admin = document.getElementById('filterAdmin').value;
       const officer = document.getElementById('filterOfficer').value;
-      const committee = document.getElementById('filterCommittee').value;
+      const transferred = document.getElementById('filterTransferred').value;
 
       filteredData = allData.filter(row => {
+        // الفلاتر العامة
         if (branch && row["الفرع"] !== branch) return false;
         if (review && row["المراجعة الداخلية"] !== review) return false;
         if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
         if (admin && row["الادارة"] !== admin) return false;
         if (officer && row["اسم الاخصائى"] !== officer) return false;
-        if (committee && row["رقم اللجنة"] !== committee) return false;
+        if (transferred !== '') {
+          const isTransferred = row["تم التحويل"] === true;
+          if (transferred === 'true' && !isTransferred) return false;
+          if (transferred === 'false' && isTransferred) return false;
+        }
+        
+        // فلتر اللجان (multi-select)
+        if (selectedCommittees.length > 0) {
+          if (!selectedCommittees.includes(row["رقم اللجنة"])) return false;
+        }
+
+        // فلاتر الأعمدة
+        if (columnFilters.nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(columnFilters.nationalId)) return false;
+        if (columnFilters.clientId && !row["كود_العميل"]?.toLowerCase().includes(columnFilters.clientId)) return false;
+        if (columnFilters.clientName) {
+          const name1 = row["اسم_العميل"]?.toLowerCase() || '';
+          const name2 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
+          if (!name1.includes(columnFilters.clientName) && !name2.includes(columnFilters.clientName)) return false;
+        }
+        if (columnFilters.project && !row["المشروع"]?.toLowerCase().includes(columnFilters.project)) return false;
+        if (columnFilters.guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(columnFilters.guarantorId)) return false;
+        if (columnFilters.guarantorName && !row["اسم_الضامن"]?.toLowerCase().includes(columnFilters.guarantorName)) return false;
+
         return true;
       });
 
@@ -321,27 +456,9 @@
       updateStats(filteredData);
     }
 
-    function applyColumnFilters() {
-      const nationalId = document.getElementById('colFilterNationalId').value.trim().toLowerCase();
-      const clientId = document.getElementById('colFilterClientId').value.trim().toLowerCase();
-      const clientName = document.getElementById('colFilterClientName').value.trim().toLowerCase();
-      const project = document.getElementById('colFilterProject').value.trim().toLowerCase();
-      const guarantorId = document.getElementById('colFilterGuarantorId').value.trim().toLowerCase();
-      const guarantorName = document.getElementById('colFilterGuarantorName').value.trim().toLowerCase();
-
-      let filtered = filteredData.filter(row => {
-        if (nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(nationalId)) return false;
-        if (clientId && !row["كود_العميل"]?.toLowerCase().includes(clientId)) return false;
-        if (clientName && !row["اسم_العميل"]?.toLowerCase().includes(clientName) && 
-            !row["اسم_العميل_من_التقييم"]?.toLowerCase().includes(clientName)) return false;
-        if (project && !row["المشروع"]?.toLowerCase().includes(project)) return false;
-        if (guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(guarantorId)) return false;
-        if (guarantorName && !row["اسم_الضامن"]?.toLowerCase().includes(guarantorName)) return false;
-        return true;
-      });
-
-      renderTable(filtered);
-      updateStats(filtered);
+    function updateColumnFilter(field, value) {
+      columnFilters[field] = value.toLowerCase();
+      applyAllFilters();
     }
 
     function resetFilters() {
@@ -350,7 +467,23 @@
       document.getElementById('filterSupervisor').value = '';
       document.getElementById('filterAdmin').value = '';
       document.getElementById('filterOfficer').value = '';
-      document.getElementById('filterCommittee').value = '';
+      document.getElementById('filterTransferred').value = '';
+      
+      // إعادة تعيين checkboxes اللجان
+      const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = false);
+      selectedCommittees = [];
+      document.getElementById('selectedCommitteesText').textContent = '';
+      
+      // إعادة تعيين فلاتر الأعمدة
+      columnFilters = {
+        nationalId: '',
+        clientId: '',
+        clientName: '',
+        project: '',
+        guarantorId: '',
+        guarantorName: ''
+      };
       
       filteredData = [...allData];
       renderTable(filteredData);
@@ -381,28 +514,40 @@
               <th>#</th>
               <th>
                 رقم بطاقة العميل
-                <input type="text" id="colFilterNationalId" placeholder="بحث..." oninput="applyColumnFilters()" />
+                <input type="text" placeholder="بحث..." 
+                  value="${columnFilters.nationalId}" 
+                  oninput="updateColumnFilter('nationalId', this.value)" />
               </th>
               <th>
                 كود العميل
-                <input type="text" id="colFilterClientId" placeholder="بحث..." oninput="applyColumnFilters()" />
+                <input type="text" placeholder="بحث..." 
+                  value="${columnFilters.clientId}" 
+                  oninput="updateColumnFilter('clientId', this.value)" />
               </th>
               <th>
                 اسم العميل
-                <input type="text" id="colFilterClientName" placeholder="بحث..." oninput="applyColumnFilters()" />
+                <input type="text" placeholder="بحث..." 
+                  value="${columnFilters.clientName}" 
+                  oninput="updateColumnFilter('clientName', this.value)" />
               </th>
               <th>الاسم من الإي سكور</th>
               <th>
                 المشروع
-                <input type="text" id="colFilterProject" placeholder="بحث..." oninput="applyColumnFilters()" />
+                <input type="text" placeholder="بحث..." 
+                  value="${columnFilters.project}" 
+                  oninput="updateColumnFilter('project', this.value)" />
               </th>
               <th>
                 رقم بطاقة الضامن
-                <input type="text" id="colFilterGuarantorId" placeholder="بحث..." oninput="applyColumnFilters()" />
+                <input type="text" placeholder="بحث..." 
+                  value="${columnFilters.guarantorId}" 
+                  oninput="updateColumnFilter('guarantorId', this.value)" />
               </th>
               <th>
                 اسم الضامن
-                <input type="text" id="colFilterGuarantorName" placeholder="بحث..." oninput="applyColumnFilters()" />
+                <input type="text" placeholder="بحث..." 
+                  value="${columnFilters.guarantorName}" 
+                  oninput="updateColumnFilter('guarantorName', this.value)" />
               </th>
               <th>المبلغ</th>
               <th>الأخصائي</th>

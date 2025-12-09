@@ -261,7 +261,6 @@
   <div class="container">
     <h2>لوحة الإدارة - نظام القروض</h2>
 
-    <!-- الإحصائيات -->
     <div class="stats">
       <div class="stat-card">
         <div class="label">إجمالي السجلات</div>
@@ -273,7 +272,6 @@
       </div>
     </div>
 
-    <!-- الفلاتر -->
     <div class="filters">
       <select id="filterBranch">
         <option value="">الفرع (الكل)</option>
@@ -300,7 +298,6 @@
     </div>
   </div>
 
-  <!-- Modal التعديل -->
   <div id="editModal" class="modal">
     <div class="modal-content">
       <h3>تعديل كل بيانات العملية</h3>
@@ -342,7 +339,12 @@
           
           <label>اسم القائم بالإدخال</label>
           <input type="text" id="editEntryBy" />
+
+          <label>ملاحظات العميل</label>
+          <textarea id="editClientNotes" rows="2"></textarea>
           
+          <label>ملاحظات الضامن</label>
+          <textarea id="editGuarantorNotes" rows="2"></textarea>
           <label>المراجعة الداخلية</label>
           <select id="editReview">
             <option value="لم تتم المراجعة">لم تتم المراجعة</option>
@@ -619,6 +621,12 @@
       document.getElementById('editCommittee').value = record["رقم اللجنة"] || '';
       document.getElementById('editVisitor').value = record["القائم بالزياره"] || '';
       document.getElementById('editEntryBy').value = record["اسم القائم بالادخال"] || '';
+
+      // إضافة تعليقات العميل والضامن
+      document.getElementById('editClientNotes').value = record["ملاحظات العميل"] || '';
+      document.getElementById('editGuarantorNotes').value = record["ملاحظات الضامن"] || '';
+      // نهاية الإضافة
+      
       document.getElementById('editReview').value = record["المراجعة الداخلية"] || 'لم تتم المراجعة';
       document.getElementById('editSupervisor').value = record["مسؤول المتابعة"] || 'لم تتم المراجعة';
       document.getElementById('editAdmin').value = record["الادارة"] || 'لم تتم المراجعة';
@@ -650,6 +658,12 @@
         "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
         "القائم بالزياره": document.getElementById('editVisitor').value.trim() || null,
         "اسم القائم بالادخال": document.getElementById('editEntryBy').value.trim(),
+
+        // إضافة تعليقات العميل والضامن إلى البيانات المحفوظة
+        "ملاحظات العميل": document.getElementById('editClientNotes').value.trim() || null,
+        "ملاحظات الضامن": document.getElementById('editGuarantorNotes').value.trim() || null,
+        // نهاية الإضافة
+
         "المراجعة الداخلية": document.getElementById('editReview').value,
         "مسؤول المتابعة": document.getElementById('editSupervisor').value,
         "الادارة": document.getElementById('editAdmin').value,
@@ -765,6 +779,8 @@
               <strong>نتيجة التقييم:</strong> ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
               <strong>التقييم الرقمي:</strong> ${row["تقييم_رقمى_الضامن"] || '—'}<br><br>
               <strong style="color: #16a085; font-size: 16px;">✅ المراجعة والمتابعة:</strong><br><br>
+              <strong>ملاحظات العميل:</strong> ${row["ملاحظات العميل"] || '—'}<br>
+              <strong>ملاحظات الضامن:</strong> ${row["ملاحظات الضامن"] || '—'}<br>
               <strong>ملاحظات المراجعة:</strong> ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
               <strong>تعليق المتابعة:</strong> ${row["تعليق مسؤول المتابعة"] || '—'}<br>
               <strong>ملاحظات الإدارة:</strong> ${row["ملاحظات الادارة"] || '—'}<br>

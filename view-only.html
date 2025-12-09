@@ -64,6 +64,17 @@
       background: #f8f9fa; 
       border-radius: 8px; 
     }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .filter-label {
+      font-size: 13px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 2px;
+    }
     select, input { 
       width: 100%; 
       padding: 10px; 
@@ -231,31 +242,55 @@
 
     <!-- الفلاتر العامة -->
     <div class="filters" id="filters">
-      <select id="filterBranch">
-        <option value="">الفرع (الكل)</option>
-      </select>
-      <select id="filterReview">
-        <option value="">المراجعة الداخلية (الكل)</option>
-      </select>
-      <select id="filterSupervisor">
-        <option value="">مسؤول المتابعة (الكل)</option>
-      </select>
-      <select id="filterAdmin">
-        <option value="">الإدارة (الكل)</option>
-      </select>
-      <select id="filterOfficer">
-        <option value="">اسم الأخصائي (الكل)</option>
-      </select>
-      <select id="filterTransferred">
-        <option value="">تم التحويل (الكل)</option>
-        <option value="true">نعم</option>
-        <option value="false">لا</option>
-      </select>
+      <div class="filter-group">
+        <label class="filter-label">الفرع</label>
+        <select id="filterBranch">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">المراجعة الداخلية</label>
+        <select id="filterReview">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">مسؤول المتابعة</label>
+        <select id="filterSupervisor">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">الإدارة</label>
+        <select id="filterAdmin">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">اسم الأخصائي</label>
+        <select id="filterOfficer">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">تم التحويل</label>
+        <select id="filterTransferred">
+          <option value="">الكل</option>
+          <option value="true">نعم</option>
+          <option value="false">لا</option>
+        </select>
+      </div>
       
       <!-- فلتر رقم اللجنة بالـ checkboxes -->
-      <div class="committee-filter">
+      <div class="filter-group committee-filter">
+        <label class="filter-label">رقم اللجنة</label>
         <div class="committee-toggle" onclick="toggleCommitteeDropdown()">
-          <span>رقم اللجنة (اختر اللجان)</span>
+          <span>اختر اللجان</span>
           <div class="selected-committees" id="selectedCommitteesText"></div>
         </div>
         <div class="committee-dropdown" id="committeeDropdown"></div>
@@ -265,8 +300,10 @@
     </div>
 
     <!-- الجدول -->
-    <div id="tableContainer">
-      <div class="loading">جاري تحميل البيانات...</div>
+    <div class="table-wrapper">
+      <div id="tableContainer">
+        <div class="loading">جاري تحميل البيانات...</div>
+      </div>
     </div>
   </div>
 
@@ -289,6 +326,7 @@
       guarantorId: '',
       guarantorName: ''
     };
+    let searchTimeout = null;
 
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
@@ -458,7 +496,26 @@
 
     function updateColumnFilter(field, value) {
       columnFilters[field] = value.toLowerCase();
-      applyAllFilters();
+      
+      // إلغاء البحث السابق
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      // الانتظار 600ms قبل البحث
+      searchTimeout = setTimeout(() => {
+        applyAllFilters();
+      }, 600);
+    }
+    
+    function searchOnEnter(event, field, value) {
+      if (event.key === 'Enter') {
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+        columnFilters[field] = value.toLowerCase();
+        applyAllFilters();
+      }
     }
 
     function resetFilters() {
@@ -502,8 +559,10 @@
     }
 
     function renderTable(data) {
+      const container = document.getElementById('tableContainer');
+      
       if (!data || data.length === 0) {
-        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
+        container.innerHTML = '<div class="loading">لا توجد بيانات</div>';
         return;
       }
 
@@ -514,40 +573,46 @@
               <th>#</th>
               <th>
                 رقم بطاقة العميل
-                <input type="text" placeholder="بحث..." 
+                <input type="text" placeholder="اكتب واضغط Enter..." 
                   value="${columnFilters.nationalId}" 
-                  oninput="updateColumnFilter('nationalId', this.value)" />
+                  oninput="updateColumnFilter('nationalId', this.value)"
+                  onkeypress="searchOnEnter(event, 'nationalId', this.value)" />
               </th>
               <th>
                 كود العميل
-                <input type="text" placeholder="بحث..." 
+                <input type="text" placeholder="اكتب واضغط Enter..." 
                   value="${columnFilters.clientId}" 
-                  oninput="updateColumnFilter('clientId', this.value)" />
+                  oninput="updateColumnFilter('clientId', this.value)"
+                  onkeypress="searchOnEnter(event, 'clientId', this.value)" />
               </th>
               <th>
                 اسم العميل
-                <input type="text" placeholder="بحث..." 
+                <input type="text" placeholder="اكتب واضغط Enter..." 
                   value="${columnFilters.clientName}" 
-                  oninput="updateColumnFilter('clientName', this.value)" />
+                  oninput="updateColumnFilter('clientName', this.value)"
+                  onkeypress="searchOnEnter(event, 'clientName', this.value)" />
               </th>
               <th>الاسم من الإي سكور</th>
               <th>
                 المشروع
-                <input type="text" placeholder="بحث..." 
+                <input type="text" placeholder="اكتب واضغط Enter..." 
                   value="${columnFilters.project}" 
-                  oninput="updateColumnFilter('project', this.value)" />
+                  oninput="updateColumnFilter('project', this.value)"
+                  onkeypress="searchOnEnter(event, 'project', this.value)" />
               </th>
               <th>
                 رقم بطاقة الضامن
-                <input type="text" placeholder="بحث..." 
+                <input type="text" placeholder="اكتب واضغط Enter..." 
                   value="${columnFilters.guarantorId}" 
-                  oninput="updateColumnFilter('guarantorId', this.value)" />
+                  oninput="updateColumnFilter('guarantorId', this.value)"
+                  onkeypress="searchOnEnter(event, 'guarantorId', this.value)" />
               </th>
               <th>
                 اسم الضامن
-                <input type="text" placeholder="بحث..." 
+                <input type="text" placeholder="اكتب واضغط Enter..." 
                   value="${columnFilters.guarantorName}" 
-                  oninput="updateColumnFilter('guarantorName', this.value)" />
+                  oninput="updateColumnFilter('guarantorName', this.value)"
+                  onkeypress="searchOnEnter(event, 'guarantorName', this.value)" />
               </th>
               <th>المبلغ</th>
               <th>الأخصائي</th>
@@ -619,7 +684,7 @@
       });
 
       html += `</tbody></table>`;
-      document.getElementById('tableContainer').innerHTML = html;
+      container.innerHTML = html;
     }
 
     function toggleDetail(index, event) {

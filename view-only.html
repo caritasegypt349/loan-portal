@@ -645,39 +645,154 @@
             <td>${row["مسؤول المتابعة"] || '—'}</td>
             <td>${row["الادارة"] || '—'}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
-            <td><button class="expand-btn" onclick="toggleDetail(${idx}, event)">+</button></td>
+            <td><button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button></td>
           </tr>
-          <tr class="detail-row" id="detail-${idx}" style="display:none;">
+          <tr class="detail-row" id="detail-${idx}">
             <td colspan="16">
-              <strong>بيانات تفصيلية:</strong><br>
-              عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
-              عدد الأقساط: ${row["عدد الاقساط"] || '—'}<br>
-              المنطقة: ${row["المنطقه"] || '—'}<br>
-              الفرع: ${row["الفرع"] || '—'}<br>
-              القائم بالزيارة: ${row["القائم بالزياره"] || '—'}<br>
-              اسم القائم بالإدخال: ${row["اسم القائم بالادخال"] || '—'}<br>
-              ملاحظات المراجعة: ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
-              تعليق المتابعة: ${row["تعليق مسؤول المتابعة"] || '—'}<br>
-              ملاحظات الإدارة: ${row["ملاحظات الادارة"] || '—'}<br>
-              تم التحويل: ${row["تم التحويل"] ? 'نعم' : 'لا'}<br>
-              التاريخ: ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br><br>
+              <div class="detail-container">
+                
+                <!-- معلومات العملية -->
+                <div class="detail-section">
+                  <h3>📋 معلومات العملية</h3>
+                  <div class="detail-item">
+                    <span class="detail-label">عدد أيام التأخير:</span>
+                    <span class="detail-value">${row["عدد ايام التاخير"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">عدد الأقساط:</span>
+                    <span class="detail-value">${row["عدد الاقساط"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">المنطقة:</span>
+                    <span class="detail-value">${row["المنطقه"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">الفرع:</span>
+                    <span class="detail-value">${row["الفرع"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">القائم بالزيارة:</span>
+                    <span class="detail-value">${row["القائم بالزياره"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">القائم بالإدخال:</span>
+                    <span class="detail-value">${row["اسم القائم بالادخال"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">تاريخ الإدخال:</span>
+                    <span class="detail-value">${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}</span>
+                  </div>
+                </div>
 
-              <strong>بيانات العميل من القروض:</strong><br>
-              تاريخ القرض: ${row["تاريخ_القرض"] || '—'}<br>
-              أخصائي القرض: ${row["اخصائى_القرض"] || '—'}<br>
-              كود العميل: ${row["كود_العميل"] || '—'}<br>
-              النشاط الثانى: ${row["النشاط_الثانى"] || '—'}<br>
-              الفرع من القروض: ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
+                <!-- بيانات القرض -->
+                <div class="detail-section">
+                  <h3>💰 بيانات القرض</h3>
+                  <div class="detail-item">
+                    <span class="detail-label">تاريخ القرض:</span>
+                    <span class="detail-value">${row["تاريخ_القرض"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">أخصائي القرض:</span>
+                    <span class="detail-value">${row["اخصائى_القرض"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">كود العميل:</span>
+                    <span class="detail-value">${row["كود_العميل"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">النشاط الثاني:</span>
+                    <span class="detail-value">${row["النشاط_الثانى"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">فرع العميل:</span>
+                    <span class="detail-value">${row["فرع_العميل_من_القروض"] || '—'}</span>
+                  </div>
+                </div>
 
-              <strong>بيانات العميل من التقييم:</strong><br>
-              نتيجة التقييم: ${row["نتيجة_التقييم"] || '—'}<br>
-              التقييم الرقمي: ${row["التقييم_الرقمى"] || '—'}<br>
-              الإحداثيات: ${row["احداثيات الموقع"] || '—'}<br><br>
+                <!-- تقييم العميل -->
+                <div class="detail-section">
+                  <h3>📊 تقييم العميل (I-Score)</h3>
+                  <div class="detail-item">
+                    <span class="detail-label">الاسم من I-Score:</span>
+                    <span class="detail-value">${row["الاسم_من_الاي_سكور"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">نتيجة التقييم:</span>
+                    <span class="detail-value">${row["نتيجة_التقييم"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">التقييم الرقمي:</span>
+                    <span class="detail-value">${row["التقييم_الرقمى"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">تاريخ الاستعلام:</span>
+                    <span class="detail-value">${row["تاريخ_استعلام_العميل"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">إحداثيات الموقع:</span>
+                    <span class="detail-value">${row["احداثيات الموقع"] || '—'}</span>
+                  </div>
+                </div>
 
-              <strong>بيانات الضامن:</strong><br>
-              الاسم من الإي سكور: ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
-              نتيجة التقييم: ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
-              التقييم الرقمي: ${row["تقييم_رقمى_الضامن"] || '—'}<br>
+                <!-- تقييم الضامن -->
+                <div class="detail-section">
+                  <h3>👥 تقييم الضامن (I-Score)</h3>
+                  <div class="detail-item">
+                    <span class="detail-label">اسم الضامن:</span>
+                    <span class="detail-value">${row["اسم_الضامن"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">الاسم من I-Score:</span>
+                    <span class="detail-value">${row["اسم_الضامن_من_الاي_سكور"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">نتيجة التقييم:</span>
+                    <span class="detail-value">${row["نتيجة_تقييم_الضامن"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">التقييم الرقمي:</span>
+                    <span class="detail-value">${row["تقييم_رقمى_الضامن"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">تاريخ الاستعلام:</span>
+                    <span class="detail-value">${row["تاريخ_استعلام_الضامن"] || '—'}</span>
+                  </div>
+                </div>
+
+                <!-- المراجعة والمتابعة -->
+                <div class="detail-section">
+                  <h3>✅ المراجعة والمتابعة</h3>
+                  <div class="detail-item">
+                    <span class="detail-label">المراجعة الداخلية:</span>
+                    <span class="detail-value">${row["المراجعة الداخلية"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">ملاحظات المراجعة:</span>
+                    <span class="detail-value">${row["ملاحظات المراجعة الداخلية"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">مسؤول المتابعة:</span>
+                    <span class="detail-value">${row["مسؤول المتابعة"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">تعليق المتابعة:</span>
+                    <span class="detail-value">${row["تعليق مسؤول المتابعة"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">الإدارة:</span>
+                    <span class="detail-value">${row["الادارة"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">ملاحظات الإدارة:</span>
+                    <span class="detail-value">${row["ملاحظات الادارة"] || '—'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="detail-label">تم التحويل:</span>
+                    <span class="detail-value">${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</span>
+                  </div>
+                </div>
+
+              </div>
             </td>
           </tr>
         `;

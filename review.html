@@ -8,7 +8,7 @@
   <style>
     body { 
       font-family: 'Segoe UI', Tahoma, sans-serif; 
-      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); /* Blue Gradient */
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       margin: 0; 
       padding: 20px; 
       min-height: 100vh;
@@ -17,284 +17,619 @@
       max-width: 1900px; 
       margin: 0 auto; 
       background: white; 
-      padding: 25px; 
-      border-radius: 12px; 
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
-    }
-    h2 { 
-      text-align: center; 
-      color: #3498db; /* Matching Blue */
-      margin-top: 0; 
-      font-size: 28px;
-      margin-bottom: 20px;
-    }
-    .filters { 
-      display: grid; 
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-      gap: 15px; 
-      margin: 20px 0; 
-      padding: 15px;
-      background: #e6f0fa; /* Light background for filters */
-      border-radius: 8px;
-    }
-    select, input { 
-      width: 100%; 
-      padding: 10px; 
-      border: 2px solid #b3d3ed; /* Light Blue Border */
-      border-radius: 6px; 
-      transition: all 0.3s; 
-      font-size: 14px;
-    }
-    select:focus, input:focus { 
-      outline: none; 
-      border-color: #3498db; 
-      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); 
-    }
-    button { 
-      width: 100%; 
-      padding: 12px; 
-      background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); /* Green for Action */
-      color: white; 
-      border: none; 
-      border-radius: 6px; 
-      font-size: 16px; 
-      font-weight: bold; 
-      cursor: pointer; 
-      transition: all 0.3s;
-    }
-    button:hover { 
-      transform: translateY(-2px); 
-      box-shadow: 0 6px 20px rgba(46, 204, 113, 0.4); 
-    }
-    /* Filter button specific style */
-    .filters button {
-        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-    }
-
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin-top: 20px; 
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    th, td { 
-      border: 1px solid #b3d3ed; 
-      padding: 12px 8px; 
-      text-align: right; 
-      font-size: 13px; 
-    }
-    th { 
-      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); /* Matching Blue Header */
-      color: white; 
-      position: sticky; 
-      top: 0; 
-      z-index: 10;
-      font-weight: bold;
-    }
-    tr:nth-child(even) { 
-      background-color: #e6f0fa; /* Light background for even rows */
-    }
-    tr:hover:not(.detail-row) { 
-      background-color: #b3d3ed; /* Hover background */
-      transition: background-color 0.3s; 
-    }
-    .edit-btn { 
-      background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); /* Orange for Edit */
-      color: white; 
-      border: none; 
-      padding: 6px 12px; 
-      border-radius: 4px; 
-      cursor: pointer; 
-      margin: 2px;
-      font-weight: bold;
-      transition: all 0.3s;
-      width: auto;
-    }
-    .edit-btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
-    }
-    .detail-btn {
-      background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); /* Purple for Details */
-    }
-    .detail-btn:hover {
-      box-shadow: 0 4px 12px rgba(155, 89, 182, 0.4);
-    }
-    .loading { 
-      text-align: center; 
-      padding: 40px; 
-      color: #3498db; 
-      font-size: 18px;
-    }
-    .error { 
-      color: #e74c3c; 
-      text-align: center; 
-      padding: 20px; 
-      font-size: 16px;
+      padding: 0; 
+      border-radius: 15px; 
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+      overflow: hidden;
     }
     
-    /* Modal Styles */
-    .modal { 
-      display: none; 
-      position: fixed; 
-      z-index: 1000; 
-      left: 0; 
-      top: 0; 
-      width: 100%; 
-      height: 100%; 
-      background: rgba(0,0,0,0.6); 
-      overflow-y: auto;
-      padding: 20px 0;
+    /* Header Styles */
+    .header {
+      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+      padding: 20px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
     }
-    .modal-content { 
-      background: white; 
-      margin: 10% auto; 
-      padding: 30px; 
-      width: 90%;
-      max-width: 550px; 
-      border-radius: 12px; 
-      max-height: 85vh; 
-      overflow-y: auto;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    }
-    .modal-content h3 {
-      color: #3498db;
-      text-align: center;
-      margin-bottom: 25px;
-      font-size: 24px;
-      border-bottom: 3px solid #3498db;
-      padding-bottom: 10px;
-    }
-    .modal label { 
-      display: block; 
-      margin: 12px 0 5px; 
+    .header h2 {
+      margin: 0;
+      font-size: 28px;
       font-weight: bold;
+    }
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .user-info {
+      text-align: left;
+    }
+    .user-info .role {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .logout-btn {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+    }
+    .logout-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: translateY(-2px);
+    }
+    
+    /* Main Content */
+    .content {
+      padding: 30px;
+    }
+    
+    /* Filters Section */
+    .filters-section {
+      background: #f8f9fa;
+      padding: 25px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border: 1px solid #e9ecef;
+    }
+    .filters-title {
+      color: #2c3e50;
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 22px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #3498db;
+    }
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .filter-group {
+      margin-bottom: 15px;
+    }
+    .filter-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
       color: #2c3e50;
       font-size: 14px;
     }
-    .modal input, .modal textarea, .modal select { 
-      width: 100%; 
-      padding: 10px; 
-      margin-bottom: 15px;
-      border: 2px solid #b3d3ed;
-      border-radius: 6px;
+    .filter-control {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #dee2e6;
+      border-radius: 8px;
       font-size: 14px;
       transition: all 0.3s;
-      box-sizing: border-box;
+      background: white;
     }
-    .modal input:focus, .modal textarea:focus, .modal select:focus {
-      border-color: #3498db;
-      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    .filter-control:focus {
       outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
     }
-    .modal button { 
-      width: auto; 
-      margin: 10px 5px 0; 
-      padding: 12px 30px;
-      font-size: 16px;
-    }
-    .modal .btn-save {
-      background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); /* Green Save */
-    }
-    .modal .btn-close {
-      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); /* Red Close */
-    }
-    .modal .button-group {
+    .action-buttons {
       display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
+      gap: 15px;
+      margin-top: 25px;
       padding-top: 20px;
-      border-top: 2px solid #b3d3ed;
+      border-top: 1px solid #dee2e6;
     }
-    .detail-row { 
-      display: none; 
-      background: #e6f0fa; 
+    .btn {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
-    .detail-row td { 
-      padding: 20px; 
-      line-height: 1.8;
-      font-size: 13px;
+    .btn-primary {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
+    }
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background: #5a6268;
+      transform: translateY(-2px);
     }
     
-    /* ألوان المقبول والمرفوض */
-    .approved-cell {
-      background-color: #e6ffe6;
-      color: #008000;
-      font-weight: bold;
+    /* Table Section */
+    .table-section {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
     }
-    .rejected-cell {
-      background-color: #ffe6e6;
-      color: #cc0000;
-      font-weight: bold;
+    .table-header {
+      padding: 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .table-header h3 {
+      margin: 0;
+      color: #2c3e50;
+      font-size: 20px;
+    }
+    .stats {
+      display: flex;
+      gap: 20px;
+      color: #6c757d;
+      font-size: 14px;
+    }
+    .stat-item {
+      background: white;
+      padding: 8px 15px;
+      border-radius: 20px;
+      border: 1px solid #dee2e6;
+    }
+    
+    /* Table Styles */
+    .table-container {
+      overflow-x: auto;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .data-table thead {
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    }
+    .data-table th {
+      padding: 15px 12px;
+      color: white;
+      font-weight: 600;
+      text-align: right;
+      border: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      white-space: nowrap;
+    }
+    .data-table tbody tr {
+      border-bottom: 1px solid #f1f3f4;
+      transition: all 0.3s;
+    }
+    .data-table tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+    .data-table td {
+      padding: 12px;
+      color: #495057;
+      text-align: right;
+      vertical-align: middle;
+    }
+    
+    /* Action Buttons in Table */
+    .action-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-sm {
+      padding: 6px 15px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+    .btn-edit {
+      background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      color: white;
+    }
+    .btn-edit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2);
+    }
+    .btn-details {
+      background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+      color: white;
+    }
+    .btn-details:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(108, 117, 125, 0.2);
+    }
+    
+    /* Status Badges */
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .status-approved {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-rejected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    /* Loading & Error States */
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #6c757d;
+      font-size: 16px;
+    }
+    .error {
+      text-align: center;
+      padding: 40px;
+      color: #dc3545;
+      background: #f8d7da;
+      border-radius: 10px;
+      margin: 20px;
+    }
+    .no-data {
+      text-align: center;
+      padding: 60px;
+      color: #6c757d;
+      font-size: 16px;
+      border-top: 1px solid #dee2e6;
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .modal-content {
+      background: white;
+      width: 90%;
+      max-width: 600px;
+      margin: 50px auto;
+      border-radius: 15px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .modal-header {
+      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+      padding: 25px 30px;
+      color: white;
+    }
+    .modal-header h3 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .modal-body {
+      padding: 30px;
+    }
+    .form-group {
+      margin-bottom: 25px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 14px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #dee2e6;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+    .modal-footer {
+      padding: 20px 30px;
+      background: #f8f9fa;
+      border-top: 1px solid #dee2e6;
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+    }
+    
+    /* Details Panel */
+    .details-panel {
+      display: none;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 10px;
+      margin: 20px;
+      padding: 30px;
+    }
+    .details-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #3498db;
+    }
+    .details-header h4 {
+      margin: 0;
+      color: #2c3e50;
+      font-size: 20px;
+    }
+    .close-details {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+    }
+    .details-section {
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+    .section-title {
+      color: #3498db;
+      margin-top: 0;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #dee2e6;
+      font-size: 18px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f8f9fa;
+    }
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      font-weight: 600;
+      color: #495057;
+    }
+    .info-value {
+      color: #6c757d;
+      text-align: left;
+      max-width: 60%;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .filters-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 768px) {
+      .filters-grid {
+        grid-template-columns: 1fr;
+      }
+      .header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+      }
+      .user-profile {
+        flex-direction: column;
+      }
+      .action-buttons {
+        flex-direction: column;
+      }
+      .btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>المراجعة الداخلية</h2>
-
-    <div class="filters">
-      <select id="filterBranch">
-        <option value="">الفرع (الكل)</option>
-      </select>
-      <select id="filterOfficer">
-        <option value="">اسم الأخصائي (الكل)</option>
-      </select>
-      <select id="filterReviewStatus">
-        <option value="لم تتم المراجعة" selected>لم تتم المراجعة</option>
-        <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
-        <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
-        <option value="مطلوب ارسال الملف على الميل">مطلوب ارسال الملف على الميل</option>
-        <option value="مرسل ميل بالملاحظات فى انتظار الرد">مرسل ميل بالملاحظات فى انتظار الرد</option>
-        <option value="مناقشه المبلغ">مناقشه المبلغ</option>
-        <option value="مطلوب تغيير الضامن">مطلوب تغيير الضامن</option>
-        <option value="مطلوب عمل استثناء الـ iScore">مطلوب عمل استثناء الـ iScore</option>
-        <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)">عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)</option>
-        <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي</option>
-        <option value="يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه">يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه</option>
-        <option value="سداد معجل">سداد معجل</option>
-        <option value="مرفوض من اداره الائتمان">مرفوض من اداره الائتمان</option>
-        <option value="">الكل</option>
-      </select>
-      <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
-      <input type="text" id="searchClientCode" placeholder="بحث بكود العميل" />
-      <button onclick="applyFilters()" style="grid-column: span 2;">تطبيق الفلاتر</button>
+    <!-- Header -->
+    <div class="header">
+      <h2>📋 لوحة المراجعة الداخلية</h2>
+      <div class="user-profile">
+        <div class="user-info">
+          <div class="name" id="userName">مراجع داخلي</div>
+          <div class="role" id="userRole">مراجعة داخلية</div>
+        </div>
+        <button class="logout-btn" onclick="logout()">🚪 تسجيل الخروج</button>
+      </div>
     </div>
 
-    <div id="tableContainer">
-      <div class="loading">جارٍ تحميل البيانات...</div>
+    <!-- Main Content -->
+    <div class="content">
+      <!-- Filters Section -->
+      <div class="filters-section">
+        <h3 class="filters-title">🔍 فلاتر البحث والتصفية</h3>
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label for="filterBranch">الفرع</label>
+            <select id="filterBranch" class="filter-control">
+              <option value="">الكل</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="filterOfficer">اسم الأخصائي</label>
+            <select id="filterOfficer" class="filter-control">
+              <option value="">الكل</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="filterReviewStatus">حالة المراجعة</label>
+            <select id="filterReviewStatus" class="filter-control">
+              <option value="لم تتم المراجعة" selected>لم تتم المراجعة</option>
+              <option value="تمت المراجعة مقبول">مقبول</option>
+              <option value="تمت المراجعة مرفوض">مرفوض</option>
+              <option value="مطلوب ارسال الملف على الميل">مطلوب إرسال ملف</option>
+              <option value="مرسل ميل بالملاحظات فى انتظار الرد">بانتظار الرد</option>
+              <option value="مناقشه المبلغ">مناقشة المبلغ</option>
+              <option value="مطلوب تغيير الضامن">تغيير الضامن</option>
+              <option value="مطلوب عمل استثناء الـ iScore">استثناء iScore</option>
+              <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)">تجاوز الحد</option>
+              <option value="سداد معجل">سداد معجل</option>
+              <option value="مرفوض من اداره الائتمان">مرفوض من الائتمان</option>
+              <option value="">الكل</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="searchNationalId">رقم البطاقة</label>
+            <input type="text" id="searchNationalId" class="filter-control" placeholder="ابحث برقم البطاقة...">
+          </div>
+          <div class="filter-group">
+            <label for="searchClientCode">كود العميل</label>
+            <input type="text" id="searchClientCode" class="filter-control" placeholder="ابحث بكود العميل...">
+          </div>
+          <div class="filter-group">
+            <label for="filterAmount">المبلغ (من)</label>
+            <input type="number" id="filterAmount" class="filter-control" placeholder="المبلغ من...">
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-primary" onclick="applyFilters()">
+            🔍 تطبيق الفلاتر
+          </button>
+          <button class="btn btn-secondary" onclick="resetFilters()">
+            🗑️ مسح الفلاتر
+          </button>
+          <button class="btn" onclick="exportToExcel()" style="background: #28a745; color: white;">
+            📊 تصدير للإكسل
+          </button>
+        </div>
+      </div>
+
+      <!-- Table Section -->
+      <div class="table-section">
+        <div class="table-header">
+          <h3>📋 سجلات المراجعة الداخلية</h3>
+          <div class="stats">
+            <div class="stat-item" id="totalRecords">إجمالي: 0</div>
+            <div class="stat-item" id="pendingRecords">قيد المراجعة: 0</div>
+            <div class="stat-item" id="approvedRecords">مقبول: 0</div>
+            <div class="stat-item" id="rejectedRecords">مرفوض: 0</div>
+          </div>
+        </div>
+        
+        <div class="table-container">
+          <div id="tableLoading" class="loading">
+            ⏳ جارٍ تحميل البيانات...
+          </div>
+          <div id="tableError" class="error" style="display: none;"></div>
+          <table class="data-table" id="dataTable" style="display: none;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>رقم البطاقة</th>
+                <th>كود العميل</th>
+                <th>اسم العميل</th>
+                <th>المشروع</th>
+                <th>المبلغ</th>
+                <th>الأخصائي</th>
+                <th>الفرع</th>
+                <th>حالة المراجعة</th>
+                <th>المتابعة</th>
+                <th>الإدارة</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <!-- سيتم ملؤه بالبيانات -->
+            </tbody>
+          </table>
+          <div id="noData" class="no-data" style="display: none;">
+            📭 لا توجد بيانات متاحة
+          </div>
+        </div>
+      </div>
+
+      <!-- Details Panel -->
+      <div class="details-panel" id="detailsPanel">
+        <div class="details-header">
+          <h4>📄 تفاصيل العملية</h4>
+          <button class="close-details" onclick="closeDetails()">✕ إغلاق</button>
+        </div>
+        <div class="details-grid" id="detailsContent">
+          <!-- سيتم ملؤه بالتفاصيل -->
+        </div>
+      </div>
     </div>
   </div>
 
-  <div id="editModal" class="modal">
+  <!-- Edit Modal -->
+  <div class="modal" id="editModal">
     <div class="modal-content">
-      <h3>تعديل المراجعة الداخلية</h3>
-      <input type="hidden" id="editRecordId" />
-      <label>القائم بالزيارة</label>
-      <input type="text" id="editVisitor" />
-      <label>حالة المراجعة</label>
-      <select id="editReviewStatus">
-        <option value="لم تتم المراجعة">لم تتم المراجعة</option>
-        <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
-        <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
-        <option value="تم الغاء الطلب من العميل">تم الغاء الطلب من العميل</option>
-        <option value="مطلوب ارسال الملف على الميل">مطلوب ارسال الملف على الميل</option>
-        <option value="مرسل ميل بالملاحظات فى انتظار الرد">مرسل ميل بالملاحظات فى انتظار الرد</option>
-        <option value="مناقشه المبلغ">مناقشه المبلغ</option>
-        <option value="مطلوب تغيير الضامن">مطلوب تغيير الضامن</option>
-        <option value="مطلوب عمل استثناء الـ iScore">مطلوب عمل استثناء الـ iScore</option>
-        <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)">عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)</option>
-        <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي</option>
-        <option value="يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه">يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه</option>
-        <option value="سداد معجل">سداد معجل</option>
-        <option value="مرفوض من اداره الائتمان">مرفوض من اداره الائتمان</option>
-      </select>
-      <label>ملاحظات المراجعة</label>
-      <textarea id="editReviewNotes" rows="3"></textarea>
-      <div class="button-group">
-        <button onclick="saveReview()" class="btn-save">حفظ</button>
-        <button onclick="closeModal()" class="btn-close">إغلاق</button>
+      <div class="modal-header">
+        <h3>✏️ تعديل المراجعة الداخلية</h3>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editRecordId" />
+        <div class="form-group">
+          <label>القائم بالزيارة</label>
+          <input type="text" id="editVisitor" class="form-control" placeholder="اسم القائم بالزيارة...">
+        </div>
+        <div class="form-group">
+          <label>حالة المراجعة</label>
+          <select id="editReviewStatus" class="form-control">
+            <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+            <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+            <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+            <option value="تم الغاء الطلب من العميل">تم الغاء الطلب من العميل</option>
+            <option value="مطلوب ارسال الملف على الميل">مطلوب ارسال الملف على الميل</option>
+            <option value="مرسل ميل بالملاحظات فى انتظار الرد">مرسل ميل بالملاحظات فى انتظار الرد</option>
+            <option value="مناقشه المبلغ">مناقشه المبلغ</option>
+            <option value="مطلوب تغيير الضامن">مطلوب تغيير الضامن</option>
+            <option value="مطلوب عمل استثناء الـ iScore">مطلوب عمل استثناء الـ iScore</option>
+            <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)">عدد القروض الموجودة للعميل أكبر من الحد المسموح به</option>
+            <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يُعتد بالاستعلام الحالي">تاريخ الاستعلام قديم - يحتاج استعلام جديد</option>
+            <option value="يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه">يرجى استكمال الملاحظات</option>
+            <option value="سداد معجل">سداد معجل</option>
+            <option value="مرفوض من اداره الائتمان">مرفوض من اداره الائتمان</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ملاحظات المراجعة</label>
+          <textarea id="editReviewNotes" class="form-control" rows="4" placeholder="أدخل ملاحظات المراجعة..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveReview()">💾 حفظ التغييرات</button>
+        <button class="btn btn-secondary" onclick="closeModal()">❌ إلغاء</button>
       </div>
     </div>
   </div>
@@ -307,43 +642,76 @@
 
     let allData = [];
     let userBranches = [];
+    let currentUser = null;
 
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
       if (!userId) {
-        alert("الرجاء تسجيل الدخول أولًا!");
+        alert("⚠️ الرجاء تسجيل الدخول أولًا!");
         window.location.href = "index.html";
         return;
       }
 
       const { data: user, error: userError } = await supabase
         .from('users')
-        .select('role, branches')
+        .select('*')
         .eq('id', userId)
         .single();
 
       if (userError || !user || user.role !== 'internal_reviewer') {
-        alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
+        alert("⛔ ليس لديك صلاحية الوصول إلى هذه الصفحة.");
         window.location.href = "index.html";
         return;
       }
+
+      currentUser = user;
       userBranches = user.branches || [];
+      
+      // عرض معلومات المستخدم
+      document.getElementById('userName').textContent = user.name || 'مراجع داخلي';
+      document.getElementById('userRole').textContent = 'مراجعة داخلية';
+      
       await loadData();
     }
 
     async function loadData() {
-      let query = supabase.from('operations_with_details').select('*');
+      showLoading();
       
-      // تطبيق فلتر الفروع إذا كانت محددة
-      if (userBranches && userBranches.length > 0) {
-        query = query.in('الفرع', userBranches);
+      try {
+        let query = supabase.from('operations_with_details').select('*');
+        
+        // تطبيق فلتر الفروع للمراجع الداخلي
+        if (userBranches && userBranches.length > 0) {
+          query = query.in('الفرع', userBranches);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        allData = data;
+        renderFilters();
+        applyFilters();
+        updateStats();
+        
+      } catch (err) {
+        showError("خطأ في تحميل البيانات: " + err.message);
       }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      if (error) throw error;
-      allData = data;
-      renderFilters();
-      applyFilters();
+    }
+
+    function showLoading() {
+      document.getElementById('tableLoading').style.display = 'block';
+      document.getElementById('dataTable').style.display = 'none';
+      document.getElementById('noData').style.display = 'none';
+      document.getElementById('tableError').style.display = 'none';
+    }
+
+    function showError(message) {
+      document.getElementById('tableLoading').style.display = 'none';
+      document.getElementById('dataTable').style.display = 'none';
+      document.getElementById('noData').style.display = 'none';
+      document.getElementById('tableError').style.display = 'block';
+      document.getElementById('tableError').innerHTML = `❌ ${message}`;
     }
 
     function renderFilters() {
@@ -351,7 +719,7 @@
       const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
 
       const branchSelect = document.getElementById('filterBranch');
-      branchSelect.innerHTML = '<option value="">الفرع (الكل)</option>';
+      branchSelect.innerHTML = '<option value="">الكل</option>';
       branches.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v;
@@ -360,7 +728,7 @@
       });
 
       const officerSelect = document.getElementById('filterOfficer');
-      officerSelect.innerHTML = '<option value="">اسم الأخصائي (الكل)</option>';
+      officerSelect.innerHTML = '<option value="">الكل</option>';
       officers.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v;
@@ -370,13 +738,12 @@
     }
 
     function applyFilters() {
-      document.querySelectorAll('[id^="detail-row-"]').forEach(el => el.remove());
-
       const branch = document.getElementById('filterBranch').value;
       const officer = document.getElementById('filterOfficer').value;
       const reviewStatus = document.getElementById('filterReviewStatus').value;
       const nationalId = document.getElementById('searchNationalId').value.trim();
       const clientCode = document.getElementById('searchClientCode').value.trim();
+      const amount = document.getElementById('filterAmount').value;
 
       let filtered = allData.filter(row => {
         if (branch && row["الفرع"] !== branch) return false;
@@ -384,86 +751,100 @@
         if (reviewStatus && row["المراجعة الداخلية"] !== reviewStatus) return false;
         if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
         if (clientCode && !row["كود_العميل"]?.includes(clientCode)) return false;
+        if (amount) {
+          const rowAmount = parseFloat(row["المبلغ المطلوب"] || 0);
+          const filterAmount = parseFloat(amount);
+          if (rowAmount < filterAmount) return false;
+        }
         return true;
       });
 
       renderTable(filtered);
+      updateStats(filtered);
     }
 
-    const getCellClass = (value) => {
-      if (!value) return '';
-      const lowerValue = value.toLowerCase();
-      // تشمل 'مقبول'
-      if (lowerValue.includes('مقبول')) return 'approved-cell';
-      // تشمل 'مرفوض' و 'ملغي' و 'الغاء'
-      if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي') || lowerValue.includes('الغاء')) return 'rejected-cell';
-      return '';
-    };
+    function resetFilters() {
+      document.getElementById('filterBranch').value = '';
+      document.getElementById('filterOfficer').value = '';
+      document.getElementById('filterReviewStatus').value = 'لم تتم المراجعة';
+      document.getElementById('searchNationalId').value = '';
+      document.getElementById('searchClientCode').value = '';
+      document.getElementById('filterAmount').value = '';
+      applyFilters();
+    }
 
+    function updateStats(data = allData) {
+      const total = data.length;
+      const pending = data.filter(row => row["المراجعة الداخلية"] === 'لم تتم المراجعة').length;
+      const approved = data.filter(row => row["المراجعة الداخلية"]?.includes('مقبول')).length;
+      const rejected = data.filter(row => row["المراجعة الداخلية"]?.includes('مرفوض') || 
+                                        row["المراجعة الداخلية"]?.includes('ملغي') || 
+                                        row["المراجعة الداخلية"]?.includes('الغاء')).length;
+
+      document.getElementById('totalRecords').textContent = `إجمالي: ${total}`;
+      document.getElementById('pendingRecords').textContent = `قيد المراجعة: ${pending}`;
+      document.getElementById('approvedRecords').textContent = `مقبول: ${approved}`;
+      document.getElementById('rejectedRecords').textContent = `مرفوض: ${rejected}`;
+    }
+
+    function getStatusBadge(status) {
+      if (!status) return '<span class="status-badge status-pending">غير محدد</span>';
+      
+      const lowerStatus = status.toLowerCase();
+      if (lowerStatus.includes('مقبول')) {
+        return '<span class="status-badge status-approved">✓ مقبول</span>';
+      } else if (lowerStatus.includes('مرفوض') || lowerStatus.includes('ملغي') || lowerStatus.includes('الغاء')) {
+        return '<span class="status-badge status-rejected">✗ مرفوض</span>';
+      } else if (lowerStatus.includes('لم تتم')) {
+        return '<span class="status-badge status-pending">⏳ قيد المراجعة</span>';
+      } else {
+        return `<span class="status-badge status-pending">${status}</span>`;
+      }
+    }
 
     function renderTable(data) {
       if (!data || data.length === 0) {
-        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
+        document.getElementById('tableLoading').style.display = 'none';
+        document.getElementById('dataTable').style.display = 'none';
+        document.getElementById('noData').style.display = 'block';
         return;
       }
 
-      let html = `
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>رقم بطاقة العميل</th>
-              <th>كود العميل</th>
-              <th>اسم العميل</th>
-              <th>الاسم من الإي سكور</th>
-              <th>المشروع</th>
-              <th>رقم بطاقة الضامن</th>
-              <th>اسم الضامن</th>
-              <th>المبلغ</th>
-              <th>الأخصائي</th>
-              <th>تم التحويل</th>
-              <th>المراجعة</th>
-              <th>المتابعة</th>
-              <th>الإدارة</th>
-              <th>رقم اللجنة</th>
-              <th>الإجراء</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-      `;
+      document.getElementById('tableLoading').style.display = 'none';
+      document.getElementById('dataTable').style.display = 'table';
+      document.getElementById('noData').style.display = 'none';
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
 
       data.forEach((row, idx) => {
-        const reviewClass = getCellClass(row["المراجعة الداخلية"]);
-        const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
-        const adminClass = getCellClass(row["الادارة"]);
-
-        html += `
-          <tr>
-            <td>${idx + 1}</td>
-            <td>${row["رقم البطاقة العميل"] || '—'}</td>
-            <td>${row["كود_العميل"] || '—'}</td>
-            <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
-            <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
-            <td>${row["المشروع"] || '—'}</td>
-            <td>${row["رقم بطاقة الضامن"] || '—'}</td>
-            <td>${row["اسم_الضامن"] || '—'}</td>
-            <td style="font-weight: bold; color: #e67e22;">${row["المبلغ المطلوب"] || '—'}</td>
-            <td>${row["اسم الاخصائى"] || '—'}</td>
-            <td>${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
-            <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
-            <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
-            <td class="${adminClass}">${row["الادارة"] || '—'}</td>
-            <td>${row["رقم اللجنة"] || '—'}</td>
-            <td>
-              <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل</button>
-              <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id}, event)">تفاصيل</button>
-            </td>
-          </tr>
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${row["رقم البطاقة العميل"] || '—'}</td>
+          <td><strong>${row["كود_العميل"] || '—'}</strong></td>
+          <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
+          <td>${row["المشروع"] || '—'}</td>
+          <td><strong style="color: #e67e22;">${formatNumber(row["المبلغ المطلوب"]) || '—'}</strong></td>
+          <td>${row["اسم الاخصائى"] || '—'}</td>
+          <td>${row["الفرع"] || '—'}</td>
+          <td>${getStatusBadge(row["المراجعة الداخلية"])}</td>
+          <td>${getStatusBadge(row["مسؤول المتابعة"])}</td>
+          <td>${getStatusBadge(row["الادارة"])}</td>
+          <td>
+            <div class="action-btns">
+              <button class="btn-sm btn-edit" onclick="openEditModal(${row.id})">✏️ تعديل</button>
+              <button class="btn-sm btn-details" onclick="showDetails(${row.id})">📄 تفاصيل</button>
+            </div>
+          </td>
         `;
+        tbody.appendChild(tr);
       });
+    }
 
-      html += `</tbody></table>`;
-      document.getElementById('tableContainer').innerHTML = html;
+    function formatNumber(num) {
+      if (!num) return '—';
+      return new Intl.NumberFormat('ar-EG').format(num);
     }
 
     function openEditModal(recordId) {
@@ -479,11 +860,9 @@
     }
 
     async function saveReview() {
-      const idValue = document.getElementById('editRecordId').value;
-      const id = parseInt(idValue);
-      
-      if (isNaN(id) || !idValue) {
-        alert("خطأ: لم يتم تحديد السجل بشكل صحيح");
+      const id = document.getElementById('editRecordId').value;
+      if (!id) {
+        alert("⚠️ لم يتم تحديد السجل!");
         return;
       }
 
@@ -493,116 +872,201 @@
         "ملاحظات المراجعة الداخلية": document.getElementById('editReviewNotes').value.trim() || null
       };
 
-      const { error } = await supabase
-        .from('operations')
-        .update(updates)
-        .eq('id', id);
+      try {
+        const { error } = await supabase
+          .from('operations')
+          .update(updates)
+          .eq('id', id);
 
-      if (error) {
-        alert("حدث خطأ أثناء الحفظ: " + error.message);
-        return;
+        if (error) throw error;
+
+        // تحديث البيانات المحلية
+        const idx = allData.findIndex(r => r.id == id);
+        if (idx !== -1) {
+          allData[idx] = { ...allData[idx], ...updates };
+        }
+
+        closeModal();
+        applyFilters();
+        showNotification('تم حفظ التغييرات بنجاح!', 'success');
+        
+      } catch (err) {
+        showNotification('حدث خطأ أثناء الحفظ: ' + err.message, 'error');
       }
+    }
 
-      const idx = allData.findIndex(r => r.id == id);
-      if (idx !== -1) {
-        allData[idx] = { ...allData[idx], ...updates };
-      }
+    function showDetails(recordId) {
+      const record = allData.find(r => r.id == recordId);
+      if (!record) return;
 
-      closeModal();
-      applyFilters();
-      alert("تم الحفظ بنجاح!");
+      const detailsContent = document.getElementById('detailsContent');
+      detailsContent.innerHTML = `
+        <div class="details-section">
+          <h5 class="section-title">📋 معلومات العملية</h5>
+          <div class="info-row">
+            <span class="info-label">رقم البطاقة:</span>
+            <span class="info-value">${record["رقم البطاقة العميل"] || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">كود العميل:</span>
+            <span class="info-value">${record["كود_العميل"] || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">اسم العميل:</span>
+            <span class="info-value">${record["اسم_العميل"] || record["اسم_العميل_من_التقييم"] || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">المبلغ المطلوب:</span>
+            <span class="info-value" style="color: #e67e22; font-weight: bold;">${formatNumber(record["المبلغ المطلوب"]) || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">عدد الأقساط:</span>
+            <span class="info-value">${record["عدد الاقساط"] || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">الفرع:</span>
+            <span class="info-value">${record["الفرع"] || '—'}</span>
+          </div>
+        </div>
+
+        <div class="details-section">
+          <h5 class="section-title">👥 معلومات الضامن</h5>
+          <div class="info-row">
+            <span class="info-label">اسم الضامن:</span>
+            <span class="info-value">${record["اسم_الضامن"] || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">رقم بطاقة الضامن:</span>
+            <span class="info-value">${record["رقم بطاقة الضامن"] || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">نتيجة تقييم الضامن:</span>
+            <span class="info-value">${record["نتيجة_تقييم_الضامن"] || '—'}</span>
+          </div>
+        </div>
+
+        <div class="details-section">
+          <h5 class="section-title">📊 حالة المراجعة</h5>
+          <div class="info-row">
+            <span class="info-label">حالة المراجعة:</span>
+            <span class="info-value">${getStatusBadge(record["المراجعة الداخلية"])}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">القائم بالزيارة:</span>
+            <span class="info-value">${record["القائم بالزياره"] || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ملاحظات المراجعة:</span>
+            <span class="info-value">${record["ملاحظات المراجعة الداخلية"] || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">حالة المتابعة:</span>
+            <span class="info-value">${getStatusBadge(record["مسؤول المتابعة"])}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">حالة الإدارة:</span>
+            <span class="info-value">${getStatusBadge(record["الادارة"])}</span>
+          </div>
+        </div>
+
+        <div class="details-section">
+          <h5 class="section-title">📅 معلومات إضافية</h5>
+          <div class="info-row">
+            <span class="info-label">الأخصائي:</span>
+            <span class="info-value">${record["اسم الاخصائى"] || '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">تاريخ الإدخال:</span>
+            <span class="info-value">${record["created_at"] ? new Date(record["created_at"]).toLocaleString('ar-EG') : '—'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">تم التحويل:</span>
+            <span class="info-value">${record["تم التحويل"] ? '✓ نعم' : '✗ لا'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">رقم اللجنة:</span>
+            <span class="info-value">${record["رقم اللجنة"] || '—'}</span>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('detailsPanel').style.display = 'block';
+      document.getElementById('detailsPanel').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function closeDetails() {
+      document.getElementById('detailsPanel').style.display = 'none';
     }
 
     function closeModal() {
       document.getElementById('editModal').style.display = 'none';
     }
 
-    function toggleDetail(recordId, event) {
-      const row = allData.find(r => r.id == recordId);
-      if (!row) {
-        console.error('Row not found:', recordId);
-        return;
-      }
-
-      const detailRowId = `detail-row-${recordId}`;
-      let detailRow = document.getElementById(detailRowId);
-      const targetRow = Array.from(document.getElementById('tableBody').querySelectorAll('tr:not(.detail-row)')).find(tr => {
-        return tr.outerHTML.includes(`openEditModal(${recordId})`);
-      });
-
-      // Toggle existing detail row
-      if (detailRow) {
-        if (detailRow.style.display === 'none' || detailRow.style.display === '') {
-          detailRow.style.display = 'table-row';
-          targetRow.querySelector('.detail-btn').textContent = 'إخفاء';
-        } else {
-          detailRow.style.display = 'none';
-          targetRow.querySelector('.detail-btn').textContent = 'تفاصيل';
-        }
-        return;
-      }
-
-      if (!targetRow) {
-        console.error('Target row not found for ID:', recordId);
-        return;
-      }
-
-      // Create and insert the new detail row
-      const detailRowEl = document.createElement('tr');
-      detailRowEl.id = detailRowId;
-      detailRowEl.className = 'detail-row';
-      detailRowEl.style.display = 'table-row';
-      detailRowEl.innerHTML = `
-        <td colspan="16" style="padding: 20px; background: #e6f0fa;">
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-            <div>
-              <strong style="color: #3498db; font-size: 16px;">📋 بيانات العملية:</strong><br><br>
-              <strong>المبلغ المطلوب:</strong> ${row["المبلغ المطلوب"] || '—'}<br>
-              <strong>عدد أيام التأخير:</strong> ${row["عدد ايام التاخير"] || '—'}<br>
-              <strong>عدد الأقساط:</strong> ${row["عدد الاقساط"] || '—'}<br>
-              <strong>المنطقة:</strong> ${row["المنطقه"] || '—'}<br>
-              <strong>الفرع:</strong> ${row["الفرع"] || '—'}<br>
-              <strong>القائم بالزيارة:</strong> ${row["القائم بالزياره"] || '—'}<br>
-              <strong>القائم بالإدخال:</strong> ${row["اسم القائم بالادخال"] || '—'}<br>
-              <strong>تاريخ الإدخال:</strong> ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br>
-              <strong>تم التحويل:</strong> ${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}<br>
-            </div>
-            <div>
-              <strong style="color: #3498db; font-size: 16px;">💰 بيانات القرض والتقييم (العميل):</strong><br><br>
-              <strong>تاريخ القرض:</strong> ${row["تاريخ_القرض"] || '—'}<br>
-              <strong>أخصائي القرض:</strong> ${row["اخصائى_القرض"] || '—'}<br>
-              <strong>كود العميل:</strong> ${row["كود_العميل"] || '—'}<br>
-              <strong>النشاط الثاني:</strong> ${row["النشاط_الثانى"] || '—'}<br>
-              <strong>فرع العميل:</strong> ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
-              <strong>نتيجة التقييم:</strong> ${row["نتيجة_التقييم"] || '—'}<br>
-              <strong>التقييم الرقمي:</strong> ${row["التقييم_الرقمى"] || '—'}<br>
-              <strong>الإحداثيات:</strong> ${row["احداثيات الموقع"] || '—'}<br>
-            </div>
-            <div>
-              <strong style="color: #3498db; font-size: 16px;">👥 بيانات الضامن والمراجعة:</strong><br><br>
-              <strong>اسم الضامن:</strong> ${row["اسم_الضامن"] || '—'}<br>
-              <strong>الاسم من I-Score (الضامن):</strong> ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
-              <strong>نتيجة التقييم (الضامن):</strong> ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
-              <strong>التقييم الرقمي (الضامن):</strong> ${row["تقييم_رقمى_الضامن"] || '—'}<br><br>
-              <strong>ملاحظات المراجعة الداخلية:</strong> ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
-              <strong>تعليق مسؤول المتابعة:</strong> ${row["تعليق مسؤول المتابعة"] || '—'}<br>
-              <strong>ملاحظات الإدارة:</strong> ${row["ملاحظات الادارة"] || '—'}<br>
-            </div>
-          </div>
-        </td>
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 10px;
+        color: white;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
       `;
-
-      targetRow.parentNode.insertBefore(detailRowEl, targetRow.nextSibling);
-      targetRow.querySelector('.detail-btn').textContent = 'إخفاء';
+      
+      if (type === 'success') {
+        notification.style.background = 'linear-gradient(135deg, #27ae60 0%, #219653 100%)';
+      } else if (type === 'error') {
+        notification.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+      } else {
+        notification.style.background = 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)';
+      }
+      
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
     }
 
+    function exportToExcel() {
+      // تنبيه بخصوص وظيفة التصدير
+      showNotification('وظيفة التصدير للإكسل قيد التطوير', 'info');
+    }
+
+    function logout() {
+      localStorage.removeItem('loggedInUserId');
+      window.location.href = "index.html";
+    }
+
+    // إضافة أنماط الحركات
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // إغلاق المودال بالنقر خارجها
     window.onclick = function(event) {
       const modal = document.getElementById('editModal');
       if (event.target == modal) closeModal();
     };
 
+    // تهيئة الصفحة
     init().catch(err => {
-      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
+      showError("خطأ في تحميل الصفحة: " + err.message);
     });
   </script>
 </body>

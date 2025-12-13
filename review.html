@@ -453,6 +453,13 @@
       </div>
       
       <div class="filter-group">
+        <label class="filter-label">الإدارة</label>
+        <select id="filterAdmin">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
         <label class="filter-label">اسم الأخصائي</label>
         <select id="filterOfficer">
           <option value="">الكل</option>
@@ -612,11 +619,13 @@
 
       const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
       const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
+      const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
       const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
       const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))].sort();
 
       const selects = [
         { id: 'filterSupervisor', data: supervisors },
+        { id: 'filterAdmin', data: admins },
         { id: 'filterOfficer', data: officers }
       ];
 
@@ -644,7 +653,7 @@
       });
 
       // إضافة مستمعات للفلاتر العامة
-      ['filterBranch', 'filterReview', 'filterSupervisor', 'filterOfficer', 'filterTransferred'].forEach(id => {
+      ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
         document.getElementById(id).addEventListener('change', applyAllFilters);
       });
     }
@@ -674,6 +683,7 @@
       const branch = document.getElementById('filterBranch').value;
       const review = document.getElementById('filterReview').value;
       const supervisor = document.getElementById('filterSupervisor').value;
+      const admin = document.getElementById('filterAdmin').value;
       const officer = document.getElementById('filterOfficer').value;
       const transferred = document.getElementById('filterTransferred').value;
 
@@ -682,6 +692,7 @@
         if (branch && row["الفرع"] !== branch) return false;
         if (review && row["المراجعة الداخلية"] !== review) return false;
         if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
+        if (admin && row["الادارة"] !== admin) return false;
         if (officer && row["اسم الاخصائى"] !== officer) return false;
         if (transferred !== '') {
           const isTransferred = row["تم التحويل"] === true;
@@ -741,6 +752,7 @@
       document.getElementById('filterBranch').value = '';
       document.getElementById('filterReview').value = '';
       document.getElementById('filterSupervisor').value = '';
+      document.getElementById('filterAdmin').value = '';
       document.getElementById('filterOfficer').value = '';
       document.getElementById('filterTransferred').value = '';
       
@@ -818,15 +830,36 @@
                   oninput="updateColumnFilter('clientName', this.value)"
                   onkeypress="searchOnEnter(event, 'clientName', this.value)" />
               </th>
-              <th>المشروع</th>
-              <th>رقم بطاقة الضامن</th>
-              <th>اسم الضامن</th>
+              <th>رقم الحساب</th>
+              <th>الإحداثيات</th>
+              <th>الاسم من I-Score</th>
+              <th>
+                المشروع
+                <input type="text" placeholder="اكتب واضغط Enter..." 
+                  value="${columnFilters.project}" 
+                  oninput="updateColumnFilter('project', this.value)"
+                  onkeypress="searchOnEnter(event, 'project', this.value)" />
+              </th>
+              <th>
+                رقم بطاقة الضامن
+                <input type="text" placeholder="اكتب واضغط Enter..." 
+                  value="${columnFilters.guarantorId}" 
+                  oninput="updateColumnFilter('guarantorId', this.value)"
+                  onkeypress="searchOnEnter(event, 'guarantorId', this.value)" />
+              </th>
+              <th>
+                اسم الضامن
+                <input type="text" placeholder="اكتب واضغط Enter..." 
+                  value="${columnFilters.guarantorName}" 
+                  oninput="updateColumnFilter('guarantorName', this.value)"
+                  onkeypress="searchOnEnter(event, 'guarantorName', this.value)" />
+              </th>
               <th>المبلغ</th>
               <th>الأخصائي</th>
-              <th>الفرع</th>
               <th>تم التحويل</th>
               <th>المراجعة</th>
               <th>المتابعة</th>
+              <th>الإدارة</th>
               <th>رقم اللجنة</th>
               <th>الإجراءات</th>
             </tr>
@@ -852,6 +885,7 @@
 
         const reviewClass = getCellClass(row["المراجعة الداخلية"]);
         const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
+        const adminClass = getCellClass(row["الادارة"]);
 
         html += `
           <tr>
@@ -859,15 +893,18 @@
             <td>${row["رقم البطاقة العميل"] || '—'}</td>
             <td>${row["كود_العميل"] || '—'}</td>
             <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
+            <td style="font-size: 10px;">${row["رقم_الحساب_من_التقييم"] || '—'}</td>
+            <td style="font-size: 9px;">${row["احداثيات الموقع"] ? row["احداثيات الموقع"].substring(0, 20) + '...' : '—'}</td>
+            <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
             <td>${row["المشروع"] || '—'}</td>
             <td>${row["رقم بطاقة الضامن"] || '—'}</td>
             <td>${row["اسم_الضامن"] || '—'}</td>
             <td style="font-weight: bold; color: #e67e22;">${row["المبلغ المطلوب"] || '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
-            <td>${row["الفرع"] || '—'}</td>
             <td>${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
             <td><span class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</span></td>
             <td><span class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</span></td>
+            <td><span class="${adminClass}">${row["الادارة"] || '—'}</span></td>
             <td>${row["رقم اللجنة"] || '—'}</td>
             <td>
               <button class="edit-btn" onclick="openEditModal(${row.id})">✏️ تعديل</button>
@@ -875,7 +912,7 @@
             </td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="15">
+            <td colspan="19">
               <div class="detail-container">
                 
                 <div class="detail-row-sections">
@@ -913,18 +950,34 @@
                   </div>
 
                   <div class="detail-section">
-                    <h3>👤 معلومات العميل</h3>
+                    <h3>💰 بيانات القرض</h3>
                     <div class="detail-item">
-                      <span class="detail-label">اسم العميل:</span>
-                      <span class="detail-value">${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</span>
+                      <span class="detail-label">تاريخ القرض:</span>
+                      <span class="detail-value">${row["تاريخ_القرض"] || '—'}</span>
                     </div>
+                    <div class="detail-item">
+                      <span class="detail-label">أخصائي القرض:</span>
+                      <span class="detail-value">${row["اخصائى_القرض"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">النشاط الثاني:</span>
+                      <span class="detail-value">${row["النشاط_الثانى"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">فرع العميل:</span>
+                      <span class="detail-value">${row["فرع_العميل_من_القروض"] || '—'}</span>
+                    </div>
+                  </div>
+
+                  <div class="detail-section">
+                    <h3>📊 تقييم العميل</h3>
                     <div class="detail-item">
                       <span class="detail-label">الاسم من I-Score:</span>
                       <span class="detail-value">${row["الاسم_من_الاي_سكور"] || '—'}</span>
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">المشروع:</span>
-                      <span class="detail-value">${row["المشروع"] || '—'}</span>
+                      <span class="detail-label">رقم الحساب:</span>
+                      <span class="detail-value">${row["رقم_الحساب_من_التقييم"] || '—'}</span>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">نتيجة التقييم:</span>
@@ -935,20 +988,24 @@
                       <span class="detail-value">${row["التقييم_الرقمى"] || '—'}</span>
                     </div>
                     <div class="detail-item">
+                      <span class="detail-label">تاريخ الاستعلام:</span>
+                      <span class="detail-value">${row["تاريخ_استعلام_العميل"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
+                      <span class="detail-value">${row["تعليق_استعلام_العميل"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
                       <span class="detail-label">الإحداثيات:</span>
                       <span class="detail-value" style="font-size: 9px;">${row["احداثيات الموقع"] || '—'}</span>
                     </div>
                   </div>
 
                   <div class="detail-section">
-                    <h3>👥 معلومات الضامن</h3>
+                    <h3>👥 تقييم الضامن</h3>
                     <div class="detail-item">
                       <span class="detail-label">اسم الضامن:</span>
                       <span class="detail-value">${row["اسم_الضامن"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">رقم بطاقة الضامن:</span>
-                      <span class="detail-value">${row["رقم بطاقة الضامن"] || '—'}</span>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">الاسم من I-Score:</span>
@@ -962,33 +1019,13 @@
                       <span class="detail-label">التقييم الرقمي:</span>
                       <span class="detail-value">${row["تقييم_رقمى_الضامن"] || '—'}</span>
                     </div>
-                  </div>
-
-                  <div class="detail-section">
-                    <h3>📊 معلومات إضافية</h3>
                     <div class="detail-item">
-                      <span class="detail-label">الأخصائي:</span>
-                      <span class="detail-value">${row["اسم الاخصائى"] || '—'}</span>
+                      <span class="detail-label">تاريخ الاستعلام:</span>
+                      <span class="detail-value">${row["تاريخ_استعلام_الضامن"] || '—'}</span>
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">القائم بالزيارة:</span>
-                      <span class="detail-value">${row["القائم بالزياره"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">القائم بالإدخال:</span>
-                      <span class="detail-value">${row["اسم القائم بالادخال"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">تاريخ الإدخال:</span>
-                      <span class="detail-value">${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">تم التحويل:</span>
-                      <span class="detail-value">${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">رقم اللجنة:</span>
-                      <span class="detail-value">${row["رقم اللجنة"] || '—'}</span>
+                      <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
+                      <span class="detail-value">${row["تعليق_استعلام_الضامن"] || '—'}</span>
                     </div>
                   </div>
 
@@ -1006,6 +1043,10 @@
                         <span class="detail-label">ملاحظات المراجعة:</span>
                         <span class="detail-value">${row["ملاحظات المراجعة الداخلية"] || '—'}</span>
                       </div>
+                      <div class="detail-item">
+                        <span class="detail-label">القائم بالزيارة:</span>
+                        <span class="detail-value">${row["القائم بالزياره"] || '—'}</span>
+                      </div>
                     </div>
                     <div>
                       <div class="detail-item">
@@ -1019,12 +1060,16 @@
                     </div>
                     <div>
                       <div class="detail-item">
-                        <span class="detail-label">القائم بالزيارة:</span>
-                        <span class="detail-value">${row["القائم بالزياره"] || '—'}</span>
+                        <span class="detail-label">الإدارة:</span>
+                        <span class="detail-value"><span class="${adminClass}">${row["الادارة"] || '—'}</span></span>
                       </div>
                       <div class="detail-item">
-                        <span class="detail-label">تاريخ الإدخال:</span>
-                        <span class="detail-value">${row["created_at"] ? new Date(row["created_at"]).toLocaleString('ar-EG') : '—'}</span>
+                        <span class="detail-label">ملاحظات الإدارة:</span>
+                        <span class="detail-value">${row["ملاحظات الادارة"] || '—'}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">تم التحويل:</span>
+                        <span class="detail-value">${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</span>
                       </div>
                     </div>
                   </div>

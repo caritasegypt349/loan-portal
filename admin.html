@@ -1,3 +1,5 @@
+[file name]: admin.html
+[file content begin]
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -64,6 +66,17 @@
       background: #f0f8f5;
       border-radius: 8px;
     }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .filter-label {
+      font-size: 13px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 2px;
+    }
     select, input { 
       width: 100%; 
       padding: 10px; 
@@ -76,6 +89,57 @@
       outline: none; 
       border-color: #16a085; 
       box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1); 
+    }
+    .committee-filter {
+      position: relative;
+      grid-column: span 2;
+    }
+    .committee-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: white;
+      border: 2px solid #16a085;
+      border-radius: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+      width: 100%;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .committee-dropdown.show {
+      display: block;
+    }
+    .committee-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .committee-item:hover {
+      background: #e8f6f3;
+    }
+    .committee-item input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+    }
+    .committee-toggle {
+      padding: 10px;
+      border: 2px solid #d5f4e6;
+      border-radius: 6px;
+      cursor: pointer;
+      background: white;
+      text-align: right;
+    }
+    .committee-toggle:hover {
+      border-color: #16a085;
+    }
+    .selected-committees {
+      font-size: 12px;
+      color: #16a085;
+      margin-top: 4px;
     }
     button { 
       width: 100%; 
@@ -113,6 +177,15 @@
       z-index: 10;
       font-weight: bold;
     }
+    th input, th select { 
+      width: 95%; 
+      padding: 6px; 
+      margin-top: 8px; 
+      border: 1px solid #fff; 
+      border-radius: 4px; 
+      font-size: 12px; 
+      background: rgba(255,255,255,0.95); 
+    }
     tr:nth-child(even) { 
       background-color: #f0f8f5; 
     }
@@ -142,6 +215,21 @@
     .detail-btn:hover {
       box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
     }
+    .expand-btn { 
+      background: linear-gradient(135deg, #1e8449 0%, #16a085 100%); 
+      color: white; 
+      border: none; 
+      padding: 6px 12px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      transition: all 0.3s; 
+      font-weight: bold; 
+      margin: 2px;
+    }
+    .expand-btn:hover { 
+      transform: scale(1.1); 
+      box-shadow: 0 4px 12px rgba(30, 132, 73, 0.4); 
+    }
     .loading { 
       text-align: center; 
       padding: 40px; 
@@ -155,7 +243,62 @@
       font-size: 16px;
     }
     
-    /* Modal Styles - محسّن */
+    /* تنسيقات التفاصيل الجديدة مثل view-only */
+    .detail-row { 
+      display: none; 
+      background: #f0f8f5; 
+    }
+    .detail-row td { 
+      padding: 20px; 
+      line-height: 1.8;
+    }
+    .detail-container {
+        padding: 10px;
+    }
+    .detail-row-sections {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px dashed #b2dfdb;
+    }
+    .detail-section h3 {
+        color: #1e8449;
+        font-size: 18px;
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #1e8449;
+        padding-bottom: 5px;
+    }
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 13px;
+    }
+    .detail-label {
+        font-weight: bold;
+        color: #2c3e50;
+        flex-basis: 50%;
+        text-align: right;
+        padding-left: 10px;
+    }
+    .detail-value {
+        flex-basis: 50%;
+        text-align: left;
+        color: #555;
+    }
+    .detail-section-full h3 {
+        color: #27ae60;
+        font-size: 18px;
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #27ae60;
+        padding-bottom: 5px;
+    }
+    
+    /* Modal Styles */
     .modal { 
       display: none; 
       position: fixed; 
@@ -229,22 +372,13 @@
       padding-top: 20px;
       border-top: 2px solid #d5f4e6;
     }
-    .detail-row { 
-      display: none; 
-      background: #f0f8f5; 
-    }
-    .detail-row td { 
-      padding: 20px; 
-      line-height: 1.8;
-      font-size: 13px;
-    }
     .form-grid { 
       display: grid; 
       grid-template-columns: repeat(2, 1fr); 
       gap: 15px; 
     }
     
-    /* ألوان المقبول والمرفوض - زي ما هي */
+    /* ألوان المقبول والمرفوض */
     .approved-cell {
       background-color: #e6ffe6;
       color: #008000;
@@ -272,29 +406,67 @@
       </div>
     </div>
 
-    <div class="filters">
-      <select id="filterBranch">
-        <option value="">الفرع (الكل)</option>
-      </select>
-      <select id="filterOfficer">
-        <option value="">اسم الأخصائي (الكل)</option>
-      </select>
-      <select id="filterReview">
-        <option value="">المراجعة الداخلية (الكل)</option>
-      </select>
-      <select id="filterSupervisor">
-        <option value="">مسؤول المتابعة (الكل)</option>
-      </select>
-      <select id="filterAdmin">
-        <option value="">الإدارة (الكل)</option>
-      </select>
-      <input type="text" id="searchNationalId" placeholder="بحث برقم البطاقة" />
-      <input type="text" id="searchClientCode" placeholder="بحث بكود العميل" />
-      <button onclick="applyFilters()" style="grid-column: span 2;">تطبيق الفلاتر</button>
+    <div class="filters" id="filters">
+      <div class="filter-group">
+        <label class="filter-label">الفرع</label>
+        <select id="filterBranch">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">المراجعة الداخلية</label>
+        <select id="filterReview">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">مسؤول المتابعة</label>
+        <select id="filterSupervisor">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">الإدارة</label>
+        <select id="filterAdmin">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">اسم الأخصائي</label>
+        <select id="filterOfficer">
+          <option value="">الكل</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">تم التحويل</label>
+        <select id="filterTransferred">
+          <option value="">الكل</option>
+          <option value="true">نعم</option>
+          <option value="false">لا</option>
+        </select>
+      </div>
+      
+      <div class="filter-group committee-filter">
+        <label class="filter-label">رقم اللجنة</label>
+        <div class="committee-toggle" onclick="toggleCommitteeDropdown()">
+          <span>اختر اللجان</span>
+          <div class="selected-committees" id="selectedCommitteesText"></div>
+        </div>
+        <div class="committee-dropdown" id="committeeDropdown"></div>
+      </div>
+      
+      <button onclick="resetFilters()" class="btn-apply" style="grid-column: span 2;">إعادة تعيين الفلاتر</button>
     </div>
 
-    <div id="tableContainer">
-      <div class="loading">جاري تحميل البيانات...</div>
+    <div class="table-wrapper">
+      <div id="tableContainer">
+        <div class="loading">جاري تحميل البيانات...</div>
+      </div>
     </div>
   </div>
 
@@ -425,6 +597,17 @@
     );
 
     let allData = [];
+    let filteredData = [];
+    let selectedCommittees = [];
+    let columnFilters = {
+      nationalId: '',
+      clientId: '',
+      clientName: '',
+      project: '',
+      guarantorId: '',
+      guarantorName: ''
+    };
+    let searchTimeout = null;
 
     async function init() {
       const userId = localStorage.getItem('loggedInUserId');
@@ -445,7 +628,15 @@
         window.location.href = "index.html";
         return;
       }
+      
       await loadData();
+      
+      // إغلاق dropdown اللجان عند الضغط خارجها
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.committee-filter')) {
+          document.getElementById('committeeDropdown').classList.remove('show');
+        }
+      });
     }
 
     async function loadData() {
@@ -455,28 +646,38 @@
         .order('created_at', { ascending: false });
       if (error) throw error;
       allData = data;
+      filteredData = [...allData];
       renderFilters();
-      applyFilters();
+      renderTable(filteredData);
+      updateStats(filteredData);
     }
 
     function renderFilters() {
-      const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v))];
-      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v))];
-      const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v))];
-      const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v))];
-      const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v))];
+      const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v && v.trim()))];
+      const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
+      const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
+      const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
+      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
+      const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))].sort();
+
+      // تحديث فلاتر الفرع
+      const branchSelect = document.getElementById('filterBranch');
+      branches.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        branchSelect.appendChild(opt);
+      });
 
       const selects = [
-        { id: 'filterBranch', data: branches },
-        { id: 'filterOfficer', data: officers },
         { id: 'filterReview', data: reviews },
         { id: 'filterSupervisor', data: supervisors },
-        { id: 'filterAdmin', data: admins }
+        { id: 'filterAdmin', data: admins },
+        { id: 'filterOfficer', data: officers }
       ];
 
       selects.forEach(item => {
         const select = document.getElementById(item.id);
-        select.innerHTML = `<option value="">${select.querySelector('option').textContent}</option>`;
         item.data.forEach(v => {
           const opt = document.createElement('option');
           opt.value = v;
@@ -484,32 +685,143 @@
           select.appendChild(opt);
         });
       });
+
+      // إنشاء checkboxes للجان
+      const dropdown = document.getElementById('committeeDropdown');
+      dropdown.innerHTML = '';
+      committees.forEach(committee => {
+        const div = document.createElement('div');
+        div.className = 'committee-item';
+        div.innerHTML = `
+          <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
+          <label for="comm_${committee}">${committee}</label>
+        `;
+        dropdown.appendChild(div);
+      });
+
+      // إضافة مستمعات للفلاتر العامة
+      ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
+        document.getElementById(id).addEventListener('change', applyAllFilters);
+      });
     }
 
-    function applyFilters() {
-      document.querySelectorAll('[id^="detail-row-"]').forEach(el => el.remove());
+    function toggleCommitteeDropdown() {
+      const dropdown = document.getElementById('committeeDropdown');
+      dropdown.classList.toggle('show');
+    }
 
+    function updateSelectedCommittees() {
+      const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
+      selectedCommittees = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+      
+      const text = document.getElementById('selectedCommitteesText');
+      if (selectedCommittees.length > 0) {
+        text.textContent = `تم اختيار ${selectedCommittees.length} لجنة`;
+      } else {
+        text.textContent = '';
+      }
+      
+      applyAllFilters();
+    }
+
+    function applyAllFilters() {
       const branch = document.getElementById('filterBranch').value;
-      const officer = document.getElementById('filterOfficer').value;
       const review = document.getElementById('filterReview').value;
       const supervisor = document.getElementById('filterSupervisor').value;
       const admin = document.getElementById('filterAdmin').value;
-      const nationalId = document.getElementById('searchNationalId').value.trim();
-      const clientCode = document.getElementById('searchClientCode').value.trim();
+      const officer = document.getElementById('filterOfficer').value;
+      const transferred = document.getElementById('filterTransferred').value;
 
-      let filtered = allData.filter(row => {
+      filteredData = allData.filter(row => {
+        // الفلاتر العامة
         if (branch && row["الفرع"] !== branch) return false;
-        if (officer && row["اسم الاخصائى"] !== officer) return false;
         if (review && row["المراجعة الداخلية"] !== review) return false;
         if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
         if (admin && row["الادارة"] !== admin) return false;
-        if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
-        if (clientCode && !row["كود_العميل"]?.includes(clientCode)) return false;
+        if (officer && row["اسم الاخصائى"] !== officer) return false;
+        if (transferred !== '') {
+          const isTransferred = row["تم التحويل"] === true;
+          if (transferred === 'true' && !isTransferred) return false;
+          if (transferred === 'false' && isTransferred) return false;
+        }
+        
+        // فلتر اللجان (multi-select)
+        if (selectedCommittees.length > 0) {
+          if (!selectedCommittees.includes(row["رقم اللجنة"])) return false;
+        }
+
+        // فلاتر الأعمدة
+        if (columnFilters.nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(columnFilters.nationalId)) return false;
+        if (columnFilters.clientId && !row["كود_العميل"]?.toLowerCase().includes(columnFilters.clientId)) return false;
+        if (columnFilters.clientName) {
+          const name1 = row["اسم_العميل"]?.toLowerCase() || '';
+          const name2 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
+          if (!name1.includes(columnFilters.clientName) && !name2.includes(columnFilters.clientName)) return false;
+        }
+        if (columnFilters.project && !row["المشروع"]?.toLowerCase().includes(columnFilters.project)) return false;
+        if (columnFilters.guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(columnFilters.guarantorId)) return false;
+        if (columnFilters.guarantorName && !row["اسم_الضامن"]?.toLowerCase().includes(columnFilters.guarantorName)) return false;
+
         return true;
       });
 
-      renderTable(filtered);
-      updateStats(filtered);
+      renderTable(filteredData);
+      updateStats(filteredData);
+    }
+
+    function updateColumnFilter(field, value) {
+      columnFilters[field] = value.toLowerCase();
+      
+      // إلغاء البحث السابق
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      // الانتظار 600ms قبل البحث
+      searchTimeout = setTimeout(() => {
+        applyAllFilters();
+      }, 1000);
+    }
+    
+    function searchOnEnter(event, field, value) {
+      if (event.key === 'Enter') {
+        if (searchTimeout) {
+          clearTimeout(searchTimeout);
+        }
+        columnFilters[field] = value.toLowerCase();
+        applyAllFilters();
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('filterBranch').value = '';
+      document.getElementById('filterReview').value = '';
+      document.getElementById('filterSupervisor').value = '';
+      document.getElementById('filterAdmin').value = '';
+      document.getElementById('filterOfficer').value = '';
+      document.getElementById('filterTransferred').value = '';
+      
+      // إعادة تعيين checkboxes اللجان
+      const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = false);
+      selectedCommittees = [];
+      document.getElementById('selectedCommitteesText').textContent = '';
+      
+      // إعادة تعيين فلاتر الأعمدة
+      columnFilters = {
+        nationalId: '',
+        clientId: '',
+        clientName: '',
+        project: '',
+        guarantorId: '',
+        guarantorName: ''
+      };
+      
+      filteredData = [...allData];
+      renderTable(filteredData);
+      updateStats(filteredData);
     }
 
     function updateStats(data) {
@@ -524,8 +836,10 @@
     }
 
     function renderTable(data) {
+      const container = document.getElementById('tableContainer');
+      
       if (!data || data.length === 0) {
-        document.getElementById('tableContainer').innerHTML = '<div class="loading">لا توجد بيانات</div>';
+        container.innerHTML = '<div class="loading">لا توجد بيانات</div>';
         return;
       }
 
@@ -542,15 +856,51 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>رقم بطاقة العميل</th>
-              <th>كود العميل</th>
-              <th>اسم العميل</th>
+              <th>
+                رقم بطاقة العميل
+                <input type="text" placeholder="اكتب واضغط Enter..." 
+                  value="${columnFilters.nationalId}" 
+                  oninput="updateColumnFilter('nationalId', this.value)"
+                  onkeypress="searchOnEnter(event, 'nationalId', this.value)" />
+              </th>
+              <th>
+                كود العميل
+                <input type="text" placeholder="اكتب واضغط Enter..." 
+                  value="${columnFilters.clientId}" 
+                  oninput="updateColumnFilter('clientId', this.value)"
+                  onkeypress="searchOnEnter(event, 'clientId', this.value)" />
+              </th>
+              <th>
+                اسم العميل
+                <input type="text" placeholder="اكتب واضغط Enter..." 
+                  value="${columnFilters.clientName}" 
+                  oninput="updateColumnFilter('clientName', this.value)"
+                  onkeypress="searchOnEnter(event, 'clientName', this.value)" />
+              </th>
               <th>رقم الحساب</th>
               <th>الإحداثيات</th>
               <th>الاسم من I-Score</th>
-              <th>المشروع</th>
-              <th>رقم بطاقة الضامن</th>
-              <th>اسم الضامن</th>
+              <th>
+                المشروع
+                <input type="text" placeholder="اكتب واضغط Enter..." 
+                  value="${columnFilters.project}" 
+                  oninput="updateColumnFilter('project', this.value)"
+                  onkeypress="searchOnEnter(event, 'project', this.value)" />
+              </th>
+              <th>
+                رقم بطاقة الضامن
+                <input type="text" placeholder="اكتب واضغط Enter..." 
+                  value="${columnFilters.guarantorId}" 
+                  oninput="updateColumnFilter('guarantorId', this.value)"
+                  onkeypress="searchOnEnter(event, 'guarantorId', this.value)" />
+              </th>
+              <th>
+                اسم الضامن
+                <input type="text" placeholder="اكتب واضغط Enter..." 
+                  value="${columnFilters.guarantorName}" 
+                  oninput="updateColumnFilter('guarantorName', this.value)"
+                  onkeypress="searchOnEnter(event, 'guarantorName', this.value)" />
+              </th>
               <th>المبلغ</th>
               <th>الأخصائي</th>
               <th>تم التحويل</th>
@@ -590,14 +940,195 @@
             <td>${row["رقم اللجنة"] || '—'}</td>
             <td>
               <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل الكل</button>
-              <button class="edit-btn detail-btn" onclick="toggleDetail(${row.id})">تفاصيل</button>
+              <button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button>
+            </td>
+          </tr>
+          <tr class="detail-row" id="detail-${idx}">
+            <td colspan="18">
+              <div class="detail-container">
+                
+                <div class="detail-row-sections">
+                  
+                  <div class="detail-section">
+                    <h3>📋 معلومات العملية</h3>
+                    <div class="detail-item">
+                      <span class="detail-label">عدد أيام التأخير:</span>
+                      <span class="detail-value">${row["عدد ايام التاخير"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">عدد الأقساط:</span>
+                      <span class="detail-value">${row["عدد الاقساط"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">المنطقة:</span>
+                      <span class="detail-value">${row["المنطقه"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">الفرع:</span>
+                      <span class="detail-value">${row["الفرع"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">القائم بالزيارة:</span>
+                      <span class="detail-value">${row["القائم بالزياره"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">القائم بالإدخال:</span>
+                      <span class="detail-value">${row["اسم القائم بالادخال"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">تاريخ الإدخال:</span>
+                      <span class="detail-value">${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}</span>
+                    </div>
+                  </div>
+
+                  <div class="detail-section">
+                    <h3>💰 بيانات القرض</h3>
+                    <div class="detail-item">
+                      <span class="detail-label">تاريخ القرض:</span>
+                      <span class="detail-value">${row["تاريخ_القرض"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">أخصائي القرض:</span>
+                      <span class="detail-value">${row["اخصائى_القرض"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">كود العميل:</span>
+                      <span class="detail-value">${row["كود_العميل"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">النشاط الثاني:</span>
+                      <span class="detail-value">${row["النشاط_الثانى"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">فرع العميل:</span>
+                      <span class="detail-value">${row["فرع_العميل_من_القروض"] || '—'}</span>
+                    </div>
+                  </div>
+
+                  <div class="detail-section">
+                    <h3>📊 تقييم العميل</h3>
+                    <div class="detail-item">
+                      <span class="detail-label">الاسم من I-Score:</span>
+                      <span class="detail-value">${row["الاسم_من_الاي_سكور"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">رقم الحساب:</span>
+                      <span class="detail-value">${row["رقم_الحساب_من_التقييم"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">نتيجة التقييم:</span>
+                      <span class="detail-value">${row["نتيجة_التقييم"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">التقييم الرقمي:</span>
+                      <span class="detail-value">${row["التقييم_الرقمى"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">تاريخ الاستعلام:</span>
+                      <span class="detail-value">${row["تاريخ_استعلام_العميل"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label" style="font-weight: bold; color: #e67e22;">تعليق الاستعلام:</span>
+                      <span class="detail-value">${row["تعليق_استعلام_العميل"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">الإحداثيات:</span>
+                      <span class="detail-value" style="font-size: 9px;">${row["احداثيات الموقع"] || '—'}</span>
+                    </div>
+                  </div>
+
+                  <div class="detail-section">
+                    <h3>👥 تقييم الضامن</h3>
+                    <div class="detail-item">
+                      <span class="detail-label">اسم الضامن:</span>
+                      <span class="detail-value">${row["اسم_الضامن"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">الاسم من I-Score:</span>
+                      <span class="detail-value">${row["اسم_الضامن_من_الاي_سكور"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">نتيجة التقييم:</span>
+                      <span class="detail-value">${row["نتيجة_تقييم_الضامن"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">التقييم الرقمي:</span>
+                      <span class="detail-value">${row["تقييم_رقمى_الضامن"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">تاريخ الاستعلام:</span>
+                      <span class="detail-value">${row["تاريخ_استعلام_الضامن"] || '—'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label" style="font-weight: bold; color: #e67e22;">تعليق الاستعلام:</span>
+                      <span class="detail-value">${row["تعليق_استعلام_الضامن"] || '—'}</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                <div class="detail-section-full">
+                  <h3>✅ المراجعة والمتابعة</h3>
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                    <div>
+                      <div class="detail-item">
+                        <span class="detail-label">المراجعة الداخلية:</span>
+                        <span class="detail-value">${row["المراجعة الداخلية"] || '—'}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">ملاحظات المراجعة:</span>
+                        <span class="detail-value">${row["ملاحظات المراجعة الداخلية"] || '—'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="detail-item">
+                        <span class="detail-label">مسؤول المتابعة:</span>
+                        <span class="detail-value">${row["مسؤول المتابعة"] || '—'}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">تعليق المتابعة:</span>
+                        <span class="detail-value">${row["تعليق مسؤول المتابعة"] || '—'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="detail-item">
+                        <span class="detail-label">الإدارة:</span>
+                        <span class="detail-value">${row["الادارة"] || '—'}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">ملاحظات الإدارة:</span>
+                        <span class="detail-value">${row["ملاحظات الادارة"] || '—'}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">تم التحويل:</span>
+                        <span class="detail-value">${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
             </td>
           </tr>
         `;
       });
 
       html += `</tbody></table>`;
-      document.getElementById('tableContainer').innerHTML = html;
+      container.innerHTML = html;
+    }
+
+    function toggleDetail(index, event) {
+      const detailRow = document.getElementById(`detail-${index}`);
+      const btn = event.target;
+      if (detailRow.style.display === 'none' || !detailRow.style.display) {
+        detailRow.style.display = 'table-row';
+        btn.textContent = 'إخفاء';
+        btn.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+      } else {
+        detailRow.style.display = 'none';
+        btn.textContent = 'تفاصيل';
+        btn.style.background = 'linear-gradient(135deg, #1e8449 0%, #16a085 100%)';
+      }
     }
 
     function openEditModal(recordId) {
@@ -616,8 +1147,6 @@
       document.getElementById('editCommittee').value = record["رقم اللجنة"] || '';
       document.getElementById('editVisitor').value = record["القائم بالزياره"] || '';
       document.getElementById('editEntryBy').value = record["اسم القائم بالادخال"] || '';
-
-      // تم حذف حقول تعليقات الاستعلام من هنا لأنها بيانات تقييم غير قابلة للتعديل
       
       document.getElementById('editReview').value = record["المراجعة الداخلية"] || 'لم تتم المراجعة';
       document.getElementById('editSupervisor').value = record["مسؤول المتابعة"] || 'لم تتم المراجعة';
@@ -670,115 +1199,19 @@
         return;
       }
 
+      // تحديث البيانات المحلية
       const idx = allData.findIndex(r => r.id == id);
       if (idx !== -1) {
         allData[idx] = { ...allData[idx], ...updates };
       }
 
       closeModal();
-      applyFilters();
+      applyAllFilters();
       alert("تم الحفظ بنجاح!");
     }
 
     function closeModal() {
       document.getElementById('editModal').style.display = 'none';
-    }
-
-    function toggleDetail(recordId) {
-      const row = allData.find(r => r.id == recordId);
-      if (!row) {
-        console.error('Row not found:', recordId);
-        return;
-      }
-
-      const detailRowId = `detail-row-${recordId}`;
-      let detailRow = document.getElementById(detailRowId);
-
-      // Toggle existing detail row
-      if (detailRow) {
-        if (detailRow.style.display === 'none' || detailRow.style.display === '') {
-          detailRow.style.display = 'table-row';
-        } else {
-          detailRow.style.display = 'none';
-        }
-        return;
-      }
-
-      const tableBody = document.getElementById('tableBody');
-      if (!tableBody) {
-        console.error('Table body not found');
-        return;
-      }
-
-      // Find the row to insert the details after
-      const rows = tableBody.querySelectorAll('tr:not(.detail-row)');
-      let targetRow = null;
-      
-      rows.forEach((tr) => {
-        const buttons = tr.querySelectorAll('button');
-        buttons.forEach(btn => {
-          if (btn.onclick && btn.onclick.toString().includes(`toggleDetail(${recordId})`)) {
-            targetRow = tr;
-          }
-        });
-      });
-
-      if (!targetRow) {
-        console.error('Target row not found for ID:', recordId);
-        return;
-      }
-
-      // Create and insert the new detail row
-      const detailRowEl = document.createElement('tr');
-      detailRowEl.id = detailRowId;
-      detailRowEl.className = 'detail-row';
-      detailRowEl.style.display = 'table-row';
-      detailRowEl.innerHTML = `
-        <td colspan="18" style="padding: 20px; background: #f0f8f5;">
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-            <div>
-              <strong style="color: #16a085; font-size: 16px;">📋 بيانات العملية:</strong><br><br>
-              <strong>المبلغ المطلوب:</strong> ${row["المبلغ المطلوب"] || '—'}<br>
-              <strong>عدد أيام التأخير:</strong> ${row["عدد ايام التاخير"] || '—'}<br>
-              <strong>عدد الأقساط:</strong> ${row["عدد الاقساط"] || '—'}<br>
-              <strong>المنطقة:</strong> ${row["المنطقه"] || '—'}<br>
-              <strong>الفرع:</strong> ${row["الفرع"] || '—'}<br>
-              <strong>القائم بالزيارة:</strong> ${row["القائم بالزياره"] || '—'}<br>
-              <strong>القائم بالإدخال:</strong> ${row["اسم القائم بالادخال"] || '—'}<br>
-              <strong>تاريخ الإدخال:</strong> ${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}<br>
-            </div>
-            <div>
-              <strong style="color: #16a085; font-size: 16px;">💰 بيانات القرض:</strong><br><br>
-              <strong>تاريخ القرض:</strong> ${row["تاريخ_القرض"] || '—'}<br>
-              <strong>أخصائي القرض:</strong> ${row["اخصائى_القرض"] || '—'}<br>
-              <strong>كود العميل:</strong> ${row["كود_العميل"] || '—'}<br>
-              <strong>النشاط الثاني:</strong> ${row["النشاط_الثانى"] || '—'}<br>
-              <strong>فرع العميل:</strong> ${row["فرع_العميل_من_القروض"] || '—'}<br><br>
-              <strong style="color: #16a085; font-size: 16px;">📊 تقييم العميل:</strong><br><br>
-              <strong>الاسم من I-Score:</strong> ${row["الاسم_من_الاي_سكور"] || '—'}<br>
-              <strong>رقم الحساب:</strong> ${row["رقم_الحساب_من_التقييم"] || '—'}<br>
-              <strong>نتيجة التقييم:</strong> ${row["نتيجة_التقييم"] || '—'}<br>
-              <strong>التقييم الرقمي:</strong> ${row["التقييم_الرقمى"] || '—'}<br>
-              <strong style="color: #e67e22;">تعليق الاستعلام (العميل):</strong> ${row["تعليق_استعلام_العميل"] || '—'}<br>
-            </div>
-            <div>
-              <strong style="color: #16a085; font-size: 16px;">👥 تقييم الضامن:</strong><br><br>
-              <strong>اسم الضامن:</strong> ${row["اسم_الضامن"] || '—'}<br>
-              <strong>الاسم من I-Score:</strong> ${row["اسم_الضامن_من_الاي_سكور"] || '—'}<br>
-              <strong>نتيجة التقييم:</strong> ${row["نتيجة_تقييم_الضامن"] || '—'}<br>
-              <strong>التقييم الرقمي:</strong> ${row["تقييم_رقمى_الضامن"] || '—'}<br>
-              <strong style="color: #e67e22;">تعليق الاستعلام (الضامن):</strong> ${row["تعليق_استعلام_الضامن"] || '—'}<br><br>
-              <strong style="color: #16a085; font-size: 16px;">✅ المراجعة والمتابعة:</strong><br><br>
-              <strong>ملاحظات المراجعة:</strong> ${row["ملاحظات المراجعة الداخلية"] || '—'}<br>
-              <strong>تعليق المتابعة:</strong> ${row["تعليق مسؤول المتابعة"] || '—'}<br>
-              <strong>ملاحظات الإدارة:</strong> ${row["ملاحظات الادارة"] || '—'}<br>
-              <strong>تم التحويل:</strong> ${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}<br>
-            </div>
-          </div>
-        </td>
-      `;
-
-      targetRow.parentNode.insertBefore(detailRowEl, targetRow.nextSibling);
     }
 
     window.onclick = function(event) {
@@ -792,3 +1225,4 @@
   </script>
 </body>
 </html>
+[file content end]

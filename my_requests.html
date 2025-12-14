@@ -2,19 +2,511 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>طلبات التعديل الخاصة بي</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
-    .approved { color: green; font-weight: bold; }
-    .rejected { color: red; font-weight: bold; }
-    .pending { color: orange; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #3498db;
+    }
+    
+    .filters {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    select, input {
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      min-width: 200px;
+    }
+    
+    select:focus, input:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    
+    th {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      text-align: right;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+    
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+      text-align: right;
+    }
+    
+    tr:hover {
+      background-color: #f8f9fa;
+    }
+    
+    .status-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      display: inline-block;
+      text-align: center;
+      min-width: 100px;
+    }
+    
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+    
+    .status-approved {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status-rejected {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .action-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .view-btn {
+      background: #3498db;
+      color: white;
+    }
+    
+    .view-btn:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-size: 16px;
+    }
+    
+    .no-data {
+      text-align: center;
+      padding: 50px;
+      color: #7f8c8d;
+      font-size: 16px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    
+    .no-data i {
+      font-size: 48px;
+      color: #bdc3c7;
+      margin-bottom: 15px;
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(3px);
+    }
+    
+    .modal-content {
+      background-color: white;
+      margin: 5% auto;
+      padding: 30px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+    
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f1f1f1;
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      color: #2c3e50;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #95a5a6;
+      cursor: pointer;
+      padding: 5px;
+      transition: color 0.3s;
+    }
+    
+    .close-btn:hover {
+      color: #e74c3c;
+    }
+    
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 25px;
+      margin: 20px 0;
+    }
+    
+    .detail-section {
+      padding: 20px;
+      border-radius: 8px;
+      background: #f8f9fa;
+    }
+    
+    .detail-section h4 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #2c3e50;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .detail-item {
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    
+    .detail-label {
+      font-weight: 600;
+      color: #555;
+      flex: 1;
+    }
+    
+    .detail-value {
+      flex: 2;
+      text-align: left;
+      color: #333;
+    }
+    
+    .notes-section {
+      background: #fff8e1;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #ffc107;
+    }
+    
+    .comparison-section {
+      margin: 25px 0;
+    }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .old-data {
+      background: #ffebee;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #ffcdd2;
+    }
+    
+    .new-data {
+      background: #e8f5e8;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #c8e6c9;
+    }
+    
+    .data-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    .data-item {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #ddd;
+    }
+    
+    .data-key {
+      font-weight: 600;
+      color: #555;
+      display: inline-block;
+      width: 45%;
+    }
+    
+    .data-value {
+      color: #333;
+      display: inline-block;
+      width: 53%;
+      text-align: left;
+    }
+    
+    .change-indicator {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-right: 8px;
+      text-align: center;
+      line-height: 20px;
+      font-size: 12px;
+    }
+    
+    .changed {
+      background: #ff9800;
+      color: white;
+    }
+    
+    .unchanged {
+      background: #bdbdbd;
+      color: white;
+    }
+    
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 25px;
+    }
+    
+    .stat-item {
+      text-align: center;
+      flex: 1;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: #7f8c8d;
+      margin-top: 5px;
+    }
+    
+    @media (max-width: 768px) {
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      select, input {
+        width: 100%;
+      }
+      
+      .details-grid,
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: 20px;
+      }
+      
+      .stats-bar {
+        flex-wrap: wrap;
+      }
+      
+      .stat-item {
+        flex: 0 0 50%;
+        margin-bottom: 15px;
+      }
+    }
   </style>
 </head>
 <body>
-  <h2>طلبات التعديل الخاصة بي</h2>
-  <div id="requestsTable">جارٍ التحميل...</div>
+  <div class="container">
+    <h2>📋 طلبات التعديل الخاصة بي</h2>
+    
+    <div class="filters">
+      <select id="statusFilter" onchange="filterRequests()">
+        <option value="">جميع الحالات</option>
+        <option value="Pending">معلّق</option>
+        <option value="Approved">مقبول</option>
+        <option value="Rejected">مرفوض</option>
+      </select>
+      
+      <input type="text" id="searchInput" placeholder="🔍 بحث برقم الطلب أو السجل..." onkeyup="filterRequests()" />
+    </div>
+    
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-value" id="totalRequests">0</div>
+        <div class="stat-label">إجمالي الطلبات</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="pendingRequests">0</div>
+        <div class="stat-label">طلبات معلقة</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="approvedRequests">0</div>
+        <div class="stat-label">طلبات مقبولة</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="rejectedRequests">0</div>
+        <div class="stat-label">طلبات مرفوضة</div>
+      </div>
+    </div>
+    
+    <div id="requestsTable">
+      <div class="loading">جارٍ تحميل طلباتك...</div>
+    </div>
+  </div>
+
+  <!-- Modal for Request Details -->
+  <div id="detailsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>تفاصيل طلب التعديل رقم <span id="modalRequestId"></span></h3>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      
+      <div class="details-grid">
+        <div class="detail-section">
+          <h4>معلومات الطلب</h4>
+          <div class="detail-item">
+            <span class="detail-label">رقم السجل:</span>
+            <span class="detail-value" id="modalOperationId"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">الحالة:</span>
+            <span class="detail-value" id="modalStatus"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">تاريخ الطلب:</span>
+            <span class="detail-value" id="modalCreatedAt"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">تاريخ المراجعة:</span>
+            <span class="detail-value" id="modalReviewedAt"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">تمت المراجعة بواسطة:</span>
+            <span class="detail-value" id="modalReviewedBy"></span>
+          </div>
+        </div>
+        
+        <div class="detail-section">
+          <h4>معلومات المستخدم</h4>
+          <div class="detail-item">
+            <span class="detail-label">اسم مقدم الطلب:</span>
+            <span class="detail-value" id="modalRequesterName"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">دور مقدم الطلب:</span>
+            <span class="detail-value" id="modalRequesterRole"></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">سبب الطلب:</span>
+            <span class="detail-value" id="modalRequestReason"></span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="notes-section">
+        <h4>📝 ملاحظات الطلب</h4>
+        <p id="modalNotes"></p>
+      </div>
+      
+      <div class="comparison-section">
+        <h4>🔄 مقارنة التغييرات</h4>
+        <div class="comparison-grid">
+          <div class="old-data">
+            <div class="data-title">البيانات الأصلية (قبل التعديل)</div>
+            <div id="modalOldData"></div>
+          </div>
+          <div class="new-data">
+            <div class="data-title">البيانات المطلوبة (بعد التعديل)</div>
+            <div id="modalNewData"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px;">
+        <button class="action-btn view-btn" onclick="closeModal()">إغلاق</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const supabase = window.supabase.createClient(
@@ -22,53 +514,112 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
     );
 
-    async function loadMyRequests() {
-      const userId = localStorage.getItem('loggedInUserId');
-      if (!userId) {
-        alert("الرجاء تسجيل الدخول!");
+    let allRequests = [];
+    let currentUserId = null;
+
+    async function init() {
+      currentUserId = localStorage.getItem('loggedInUserId');
+      if (!currentUserId) {
+        alert("الرجاء تسجيل الدخول أولاً!");
         window.location.href = "index.html";
         return;
       }
 
+      // تحميل بيانات المستخدم
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('full_name, role')
+        .eq('id', currentUserId)
+        .single();
+
+      if (userError) {
+        console.error('خطأ في تحميل بيانات المستخدم:', userError);
+      }
+
+      await loadMyRequests();
+    }
+
+    async function loadMyRequests() {
+      document.getElementById('requestsTable').innerHTML = '<div class="loading">جارٍ تحميل طلباتك...</div>';
+
       const { data, error } = await supabase
         .from('edit_requests')
         .select('*')
-        .eq('requester_id', userId)
+        .eq('requester_id', currentUserId)
         .order('created_at', { ascending: false });
 
       if (error) {
-        document.getElementById('requestsTable').innerHTML = "خطأ: " + error.message;
+        document.getElementById('requestsTable').innerHTML = 
+          '<div class="no-data">❌ حدث خطأ في تحميل البيانات: ' + error.message + '</div>';
         return;
       }
 
-      let html = `<table>
-        <thead>
-          <tr>
-            <th>رقم الطلب</th>
-            <th>السجل</th>
-            <th>الحالة</th>
-            <th>التاريخ</th>
-            <th>التفاصيل</th>
-          </tr>
-        </thead>
-        <tbody>`;
+      allRequests = data;
+      updateStats();
+      renderTable(allRequests);
+    }
 
-      data.forEach(req => {
-        const statusClass = 
-          req.status === 'Approved' ? 'approved' :
-          req.status === 'Rejected' ? 'rejected' : 'pending';
+    function updateStats() {
+      const total = allRequests.length;
+      const pending = allRequests.filter(r => r.status === 'Pending').length;
+      const approved = allRequests.filter(r => r.status === 'Approved').length;
+      const rejected = allRequests.filter(r => r.status === 'Rejected').length;
+
+      document.getElementById('totalRequests').textContent = total;
+      document.getElementById('pendingRequests').textContent = pending;
+      document.getElementById('approvedRequests').textContent = approved;
+      document.getElementById('rejectedRequests').textContent = rejected;
+    }
+
+    function renderTable(requests) {
+      if (!requests || requests.length === 0) {
+        document.getElementById('requestsTable').innerHTML = `
+          <div class="no-data">
+            📭 لا توجد طلبات تعديل
+            <p style="margin-top: 15px; color: #666; font-size: 14px;">
+              يمكنك تقديم طلبات تعديل من خلال صفحة "طلب تعديل بيانات عملية"
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>رقم الطلب</th>
+              <th>رقم السجل</th>
+              <th>الحالة</th>
+              <th>تاريخ الطلب</th>
+              <th>آخر تحديث</th>
+              <th>الإجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      requests.forEach(req => {
+        const statusClass = req.status === 'Pending' ? 'status-pending' :
+                          req.status === 'Approved' ? 'status-approved' : 'status-rejected';
         
-        const statusText = 
-          req.status === 'Approved' ? '✅ تم القبول' :
-          req.status === 'Rejected' ? '❌ مرفض' : 'قيد الانتظار';
+        const statusText = req.status === 'Pending' ? '⏳ معلّق' :
+                          req.status === 'Approved' ? '✅ مقبول' : '❌ مرفوض';
+        
+        const updatedAt = req.approved_at || req.updated_at || req.created_at;
 
         html += `
           <tr>
-            <td>${req.id}</td>
+            <td><strong>#${req.id}</strong></td>
             <td>${req.operation_id}</td>
-            <td class="${statusClass}">${statusText}</td>
-            <td>${new Date(req.created_at).toLocaleDateString('ar-EG')}</td>
-            <td><button onclick="showDetails(${req.id})">عرض</button></td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td>${formatDate(req.created_at)}</td>
+            <td>${formatDate(updatedAt)}</td>
+            <td>
+              <button class="action-btn view-btn" onclick="showDetails(${req.id})">
+                عرض التفاصيل
+              </button>
+            </td>
           </tr>
         `;
       });
@@ -77,7 +628,142 @@
       document.getElementById('requestsTable').innerHTML = html;
     }
 
-    loadMyRequests();
+    function filterRequests() {
+      const statusFilter = document.getElementById('statusFilter').value;
+      const searchText = document.getElementById('searchInput').value.toLowerCase();
+
+      let filtered = allRequests;
+
+      if (statusFilter) {
+        filtered = filtered.filter(req => req.status === statusFilter);
+      }
+
+      if (searchText) {
+        filtered = filtered.filter(req => 
+          req.id.toString().includes(searchText) ||
+          req.operation_id.toString().includes(searchText) ||
+          (req.notes && req.notes.toLowerCase().includes(searchText))
+        );
+      }
+
+      renderTable(filtered);
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '—';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    async function showDetails(requestId) {
+      const request = allRequests.find(r => r.id === requestId);
+      if (!request) return;
+
+      // تحديث المعلومات الأساسية
+      document.getElementById('modalRequestId').textContent = request.id;
+      document.getElementById('modalOperationId').textContent = request.operation_id;
+      document.getElementById('modalCreatedAt').textContent = formatDate(request.created_at);
+      document.getElementById('modalReviewedAt').textContent = request.approved_at ? formatDate(request.approved_at) : '—';
+      document.getElementById('modalReviewedBy').textContent = request.approved_by || '—';
+      document.getElementById('modalRequesterName').textContent = request.requested_by || '—';
+      document.getElementById('modalRequesterRole').textContent = request.requester_role || '—';
+      document.getElementById('modalNotes').textContent = request.notes || 'لا توجد ملاحظات';
+      
+      // سبب الطلب (مختصر من الملاحظات)
+      const shortReason = request.notes ? 
+        (request.notes.length > 100 ? request.notes.substring(0, 100) + '...' : request.notes) : 
+        'لم يتم تحديد سبب';
+      document.getElementById('modalRequestReason').textContent = shortReason;
+
+      // حالة الطلب مع تنسيق
+      const statusMap = {
+        'Pending': '<span class="status-pending">⏳ معلّق</span>',
+        'Approved': '<span class="status-approved">✅ مقبول</span>',
+        'Rejected': '<span class="status-rejected">❌ مرفوض</span>'
+      };
+      document.getElementById('modalStatus').innerHTML = statusMap[request.status] || request.status;
+
+      // عرض البيانات القديمة والجديدة
+      displayComparisonData(request.old_value, 'modalOldData');
+      displayComparisonData(request.new_value, 'modalNewData');
+
+      // إظهار المودال
+      document.getElementById('detailsModal').style.display = 'block';
+    }
+
+    function displayComparisonData(data, elementId) {
+      const container = document.getElementById(elementId);
+      container.innerHTML = '';
+
+      // تحويل البيانات إذا كانت نصًا
+      let dataObj = data;
+      if (typeof data === 'string') {
+        try {
+          dataObj = JSON.parse(data);
+        } catch (e) {
+          dataObj = { 'البيانات': data };
+        }
+      }
+
+      if (!dataObj || typeof dataObj !== 'object') {
+        container.innerHTML = '<div class="data-item">لا توجد بيانات</div>';
+        return;
+      }
+
+      // عرض البيانات
+      for (const [key, value] of Object.entries(dataObj)) {
+        const div = document.createElement('div');
+        div.className = 'data-item';
+        
+        const keySpan = document.createElement('span');
+        keySpan.className = 'data-key';
+        keySpan.textContent = key + ':';
+        
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'data-value';
+        valueSpan.textContent = value === null || value === undefined ? '—' : value;
+        
+        div.appendChild(keySpan);
+        div.appendChild(valueSpan);
+        container.appendChild(div);
+      }
+
+      if (Object.keys(dataObj).length === 0) {
+        container.innerHTML = '<div class="data-item">لا توجد بيانات</div>';
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('detailsModal').style.display = 'none';
+    }
+
+    // إغلاق المودال عند النقر خارج المحتوى
+    window.onclick = function(event) {
+      const modal = document.getElementById('detailsModal');
+      if (event.target === modal) {
+        closeModal();
+      }
+    };
+
+    // إغلاق المودال بمفتاح ESC
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    });
+
+    // بدء التطبيق
+    init().catch(error => {
+      console.error('خطأ في التطبيق:', error);
+      document.getElementById('requestsTable').innerHTML = 
+        '<div class="no-data">❌ حدث خطأ غير متوقع. الرجاء تحديث الصفحة.</div>';
+    });
   </script>
 </body>
 </html>

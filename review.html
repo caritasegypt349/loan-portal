@@ -1191,5 +1191,93 @@
       document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
     });
   </script>
+<!-- تضمين المكون -->
+<div id="modal-container"></div>
+
+<script>
+  // تحميل المكون عند بدء التشغيل
+  async function loadReusableModal() {
+    try {
+      const response = await fetch('reusable-followup.html');
+      const html = await response.text();
+      document.getElementById('modal-container').innerHTML = html;
+      
+      const script = document.createElement('script');
+      script.src = 'reusable-followup.js';
+      script.onload = function() {
+        console.log('✅ تم تحميل مكون المتابعة الموحد');
+      };
+      document.head.appendChild(script);
+    } catch (error) {
+      console.error('خطأ في تحميل المكون:', error);
+    }
+  }
+  
+  // استبدال دالة openEditModal القديمة
+  window.openEditModal = function(recordId) {
+    const record = allData.find(r => r.id == recordId);
+    if (!record) return;
+    
+    // فتح المودال الموحد
+    if (window.ReusableFollowup) {
+      ReusableFollowup.openModal(
+        recordId,
+        'review', // نوع الصفحة
+        record["المراجعة الداخلية"] || '',
+        record["ملاحظات المراجعة الداخلية"] || '',
+        saveReviewCallback // دالة الحفظ الخاصة بالصفحة
+      );
+    } else {
+      // فتح المودال القديم كبديل
+      openOldReviewModal(recordId);
+    }
+  };
+  
+  // دالة الحفظ الخاصة بصفحة المراجعة
+  async function saveReviewCallback(recordId, status, comment, extraData) {
+    const updates = {
+      "القائم بالزياره": extraData.visitor || null,
+      "المراجعة الداخلية": status,
+      "ملاحظات المراجعة الداخلية": comment.trim() || null
+    };
+    
+    const { error } = await supabase
+      .from('operations')
+      .update(updates)
+      .eq('id', recordId);
+    
+    if (error) {
+      alert("حدث خطأ أثناء الحفظ: " + error.message);
+      return;
+    }
+    
+    // تحديث البيانات المحلية
+    const idx = allData.findIndex(r => r.id == recordId);
+    if (idx !== -1) {
+      allData[idx] = { ...allData[idx], ...updates };
+    }
+    
+    applyAllFilters();
+    alert("✅ تم حفظ المراجعة بنجاح");
+  }
+  
+  // دالة المودال القديم
+  function openOldReviewModal(recordId) {
+    const record = allData.find(r => r.id == recordId);
+    if (!record) return;
+    
+    document.getElementById('editRecordId').value = record.id;
+    document.getElementById('editVisitor').value = record["القائم بالزياره"] || '';
+    document.getElementById('editReviewStatus').value = record["المراجعة الداخلية"] || 'لم تتم المراجعة';
+    document.getElementById('editReviewNotes').value = record["ملاحظات المراجعة الداخلية"] || '';
+    
+    document.getElementById('editModal').style.display = 'block';
+  }
+  
+  // تحميل المكون عند بدء التشغيل
+  document.addEventListener('DOMContentLoaded', function() {
+    loadReusableModal();
+  });
+</script>
 </body>
 </html>

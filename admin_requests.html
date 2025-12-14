@@ -64,6 +64,7 @@
       <h3>مقارنة طلب التعديل (<span id="modal-request-id"></span>)</h3>
       <p>
         <strong>مقدم الطلب:</strong> <span id="modal-requester-name"></span> (<span id="modal-requester-id"></span>) | 
+        <strong>دور مقدم الطلب:</strong> <span id="modal-requester-role"></span> |
         <strong>تاريخ الطلب:</strong> <span id="modal-request-date"></span>
       </p>
 
@@ -175,6 +176,7 @@
               <th>رقم الطلب</th>
               <th>رقم العملية</th>
               <th>مقدم الطلب</th>
+              <th>دور مقدم الطلب</th>
               <th>تاريخ الطلب</th>
               <th>الحالة</th>
               <th>الإجراء</th>
@@ -193,6 +195,7 @@
             <td>${row.id}</td>
             <td>${row.operation_id}</td>
             <td>${row.requested_by}</td>
+            <td>${row.requester_role || 'غير محدد'}</td>
             <td>${new Date(row.created_at).toLocaleDateString('ar-EG')}</td>
             <td><span class="action-btn status-${row.status}">${statusText}</span></td>
             <td>
@@ -215,8 +218,9 @@
       document.getElementById('modal-request-id').textContent = request.id;
       document.getElementById('modal-requester-name').textContent = request.requested_by;
       document.getElementById('modal-requester-id').textContent = request.requester_id;
+      document.getElementById('modal-requester-role').textContent = request.requester_role || 'غير محدد';
       document.getElementById('modal-request-date').textContent = new Date(request.created_at).toLocaleString('ar-EG');
-      document.getElementById('modal-notes').textContent = request.notes;
+      document.getElementById('modal-notes').textContent = request.notes || 'لا توجد ملاحظات';
       
       renderComparisonData(request.old_value, 'old-values');
       renderComparisonData(request.new_value, 'new-values');
@@ -229,10 +233,17 @@
       
       if (request.status === 'Pending') {
         statusDisplay.textContent = 'الحالة: معلق - مطلوب مراجعة';
+        statusDisplay.style.color = '#f39c12';
         approveBtn.style.display = 'inline-block';
         rejectBtn.style.display = 'inline-block';
+      } else if (request.status === 'Approved') {
+        statusDisplay.textContent = `الحالة: مقبول ✅`;
+        statusDisplay.style.color = '#2ecc71';
+        approveBtn.style.display = 'none';
+        rejectBtn.style.display = 'none';
       } else {
-        statusDisplay.textContent = `الحالة: ${request.status === 'Approved' ? 'مقبول' : 'مرفوض'}`;
+        statusDisplay.textContent = `الحالة: مرفوض ❌`;
+        statusDisplay.style.color = '#e74c3c';
         approveBtn.style.display = 'none';
         rejectBtn.style.display = 'none';
       }
@@ -243,12 +254,29 @@
     function renderComparisonData(data, elementId) {
       const container = document.getElementById(elementId);
       container.innerHTML = '';
-      for (const key in data) {
-        if (data.hasOwnProperty(key)) {
-          const p = document.createElement('p');
-          p.innerHTML = `<strong>${key}:</strong> ${data[key] === null ? '—' : data[key]}`;
-          container.appendChild(p);
+      
+      // إذا كانت البيانات نصًا، حاول تحويلها إلى JSON
+      let dataObj = data;
+      if (typeof data === 'string') {
+        try {
+          dataObj = JSON.parse(data);
+        } catch (e) {
+          dataObj = { 'البيانات': data };
         }
+      }
+      
+      // إذا كانت البيانات object، اعرضها
+      if (typeof dataObj === 'object' && dataObj !== null) {
+        for (const key in dataObj) {
+          if (dataObj.hasOwnProperty(key)) {
+            const p = document.createElement('p');
+            const value = dataObj[key];
+            p.innerHTML = `<strong>${key}:</strong> ${value === null || value === undefined ? '—' : value}`;
+            container.appendChild(p);
+          }
+        }
+      } else {
+        container.innerHTML = '<p>لا توجد بيانات للمقارنة</p>';
       }
     }
 
@@ -258,33 +286,74 @@
     }
     
     async function approveRequest(requestId) {
-      if (!confirm("هل أنت متأكد من قبول طلب التعديل؟")) return;
+      if (!confirm("هل أنت متأكد من قبول طلب التعديل وتطبيق التغييرات؟")) return;
 
       const request = allRequests.find(r => r.id === requestId);
-      if (!request) return;
+      if (!request) {
+        alert("لم يتم العثور على الطلب!");
+        return;
+      }
       
       try {
-        // تحديث جدول العمليات
-        const { error: updateError } = await supabase
-          .from('operations')
-          .update(request.new_value)
-          .eq('id', request.operation_id);
-
-        if (updateError) throw updateError;
+        // ✅ تأكد أن new_value هو object وليس string
+        let newData = request.new_value;
         
-        // تحديث حالة الطلب
+        // إذا كان new_value نصًا، حوله إلى object
+        if (typeof newData === 'string') {
+          try {
+            newData = JSON.parse(newData);
+          } catch (e) {
+            console.error('خطأ في تحويل JSON:', e);
+            alert('خطأ في تنسيق البيانات. الرجاء التحقق من الطلب.');
+            return;
+          }
+        }
+        
+        // ✅ تسجيل البيانات للتصحيح
+        console.log('بيانات التحديث:', {
+          operation_id: request.operation_id,
+          newData: newData,
+          keys: Object.keys(newData)
+        });
+        
+        // ✅ تحديث جدول العمليات
+        const { data: updateResult, error: updateError } = await supabase
+          .from('operations')
+          .update(newData)
+          .eq('id', request.operation_id)
+          .select();  // إضافة select لرؤية النتيجة
+
+        if (updateError) {
+          console.error('خطأ في تحديث العمليات:', updateError);
+          throw new Error(`خطأ في تحديث العمليات: ${updateError.message}`);
+        }
+
+        if (!updateResult || updateResult.length === 0) {
+          throw new Error('لم يتم تحديث أي سجل، ربما operation_id غير صحيح');
+        }
+        
+        // ✅ تحديث حالة الطلب مع معلومات الموافقة
         const { error: statusError } = await supabase
           .from('edit_requests')
-          .update({ status: 'Approved' })
+          .update({ 
+            status: 'Approved',
+            approved_by: loggedInUser.full_name,
+            approved_at: new Date().toISOString(),
+            notified: true
+          })
           .eq('id', requestId);
 
-        if (statusError) throw statusError;
+        if (statusError) {
+          console.error('خطأ في تحديث حالة الطلب:', statusError);
+          throw statusError;
+        }
 
-        alert(`تمت الموافقة على الطلب رقم ${requestId}.`);
+        alert(`✅ تمت الموافقة على الطلب رقم ${requestId} وتطبيق التعديلات بنجاح.`);
         closeModal();
         await loadRequests();
       } catch (e) {
-        alert("حدث خطأ أثناء الموافقة: " + e.message);
+        console.error('حدث خطأ:', e);
+        alert(`❌ فشل الموافقة: ${e.message}\n\nتحقق من وحدة التحكم (F12) للمزيد من التفاصيل.`);
       }
     }
 
@@ -294,16 +363,25 @@
       try {
         const { error: statusError } = await supabase
           .from('edit_requests')
-          .update({ status: 'Rejected' })
+          .update({ 
+            status: 'Rejected',
+            approved_by: loggedInUser.full_name,
+            approved_at: new Date().toISOString(),
+            notified: true
+          })
           .eq('id', requestId);
 
-        if (statusError) throw statusError;
+        if (statusError) {
+          console.error('خطأ في تحديث حالة الطلب:', statusError);
+          throw statusError;
+        }
 
-        alert(`تم رفض الطلب رقم ${requestId}.`);
+        alert(`✅ تم رفض الطلب رقم ${requestId}.`);
         closeModal();
         await loadRequests();
       } catch (e) {
-        alert("حدث خطأ أثناء الرفض: " + e.message);
+        console.error('حدث خطأ:', e);
+        alert("❌ حدث خطأ أثناء الرفض: " + e.message);
       }
     }
 
@@ -313,6 +391,7 @@
 
     init().catch(err => {
       console.error('خطأ:', err);
+      document.getElementById('requestsContainer').innerHTML = `<div class="status-Rejected">خطأ في التحميل: ${err.message}</div>`;
     });
   </script>
 </body>

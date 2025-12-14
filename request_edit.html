@@ -36,6 +36,22 @@
     .detail-row td { padding: 15px; background: #f8f9fa; font-size: 12px; }
     .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .read-only { background: #eee; color: #555; }
+    .disabled-field { 
+      background: #f5f5f5 !important; 
+      color: #999 !important; 
+      cursor: not-allowed !important; 
+    }
+    .permission-message {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .permission-admin { background: #e8f6f3; color: #1d8348; border: 1px solid #a3e4d7; }
+    .permission-specialist { background: #e8f4fc; color: #1a5276; border: 1px solid #aed6f1; }
+    .permission-data-entry { background: #fef9e7; color: #7d6608; border: 1px solid #f9e79f; }
+    .permission-other { background: #f4ecf7; color: #6c3483; border: 1px solid #d7bde2; }
   </style>
 </head>
 <body>
@@ -54,6 +70,8 @@
       <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #3498db; color: white;">تطبيق الفلاتر</button>
     </div>
 
+    <div id="permissionMessage" class="permission-message"></div>
+
     <div id="tableContainer">
       <div class="loading">جارٍ تحميل البيانات...</div>
     </div>
@@ -64,6 +82,8 @@
       <h3>طلب تعديل بيانات السجل</h3>
       <input type="hidden" id="editRecordId" />
       <p style="color:red; font-weight:bold;">**ستقوم بإرسال طلب التعديل للمدير، لن يتم تطبيق التعديلات إلا بعد موافقته.**</p>
+      
+      <div id="modalPermissionMessage" class="permission-message"></div>
       
       <div class="form-grid">
         <div>
@@ -108,18 +128,25 @@
           <label>الإدارة</label>
           <input type="text" id="currentAdmin" class="read-only" readonly />
           
+          <label>القائم بالزيارة (الحالي)</label>
+          <input type="text" id="currentVisitor" class="read-only" readonly />
+          
+          <label>اسم القائم بالإدخال (الحالي)</label>
+          <input type="text" id="currentDataEntry" class="read-only" readonly />
+          
           <label>ملاحظات على الطلب (مهم: يجب ذكر سبب التعديل بوضوح)</label>
           <textarea id="requestNotes" rows="6" placeholder="الرجاء كتابة سبب طلب التعديل هنا" required></textarea>
         </div>
       </div>
       
-      <button onclick="submitEditRequest()" style="background:#3498db;color:white;">إرسال طلب التعديل</button>
-      <button onclick="closeModal()" style="background:#e74c3c;color:white;">إلغاء</button>
+      <div style="text-align: center; margin-top: 20px;">
+        <button onclick="submitEditRequest()" style="background:#3498db;color:white; padding: 10px 20px;">إرسال طلب التعديل</button>
+        <button onclick="closeModal()" style="background:#e74c3c;color:white; padding: 10px 20px;">إلغاء</button>
+      </div>
     </div>
   </div>
 
   <script>
-    // ✅ تم إصلاح المسافات وتوحيد استخدام full_name
     const supabase = window.supabase.createClient(
       'https://akjyrmmqsnxdbkslxmvb.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
@@ -136,7 +163,6 @@
         return;
       }
 
-      // ✅ select full_name كما هو في الجدول
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('id, full_name, role, branches')
@@ -150,7 +176,6 @@
         return;
       }
 
-      // ✅ تعيين الاسم الكامل
       loggedInUser = {
         id: user.id,
         name: user.full_name,
@@ -158,7 +183,48 @@
         branches: user.branches
       };
 
+      // عرض رسالة الصلاحيات
+      showPermissionMessage();
+      
       await loadData();
+    }
+
+    function showPermissionMessage() {
+      const permissionMessage = document.getElementById('permissionMessage');
+      const roleMessages = {
+        'admin': {
+          text: 'أنت مدير - يمكنك تعديل جميع الحقول',
+          class: 'permission-admin'
+        },
+        'أخصائي': {
+          text: 'أنت أخصائي - يمكنك تعديل بيانات العميل والضامن والمشروع والفرع',
+          class: 'permission-specialist'
+        },
+        'مدخل بيانات': {
+          text: 'أنت مدخل بيانات - يمكنك تعديل البيانات الأساسية',
+          class: 'permission-data-entry'
+        },
+        'مراجع': {
+          text: 'أنت مراجع - يمكنك فقط تعديل حقل المراجعة الداخلية',
+          class: 'permission-other'
+        },
+        'متابعة': {
+          text: 'أنت مسؤول متابعة - يمكنك فقط تعديل حقل المتابعة',
+          class: 'permission-other'
+        },
+        'إدارة': {
+          text: 'أنت إدارة - يمكنك فقط تعديل حقل الإدارة',
+          class: 'permission-other'
+        }
+      };
+      
+      const message = roleMessages[loggedInUser.role] || {
+        text: 'صلاحياتك محدودة في التعديل',
+        class: 'permission-other'
+      };
+      
+      permissionMessage.textContent = message.text;
+      permissionMessage.className = `permission-message ${message.class}`;
     }
 
     async function loadData() {
@@ -168,7 +234,18 @@
         .from('operations_with_details')
         .select('*');
         
-      if (loggedInUser.role !== 'admin' && loggedInUser.branches) {
+      // ✅ تصفية حسب الصلاحيات
+      if (loggedInUser.role === 'مراجع') {
+        // المراجعون يرون فقط السجلات التي تحتاج مراجعة
+        query = query.eq('المراجعة الداخلية', 'لم تتم المراجعة');
+      } else if (loggedInUser.role === 'متابعة') {
+        // المتابعة يرون فقط السجلات التي تمت مراجعتها
+        query = query.eq('المراجعة الداخلية', 'تمت المراجعة مقبول');
+      } else if (loggedInUser.role === 'إدارة') {
+        // الإدارة ترى فقط السجلات التي تمت متابعتها
+        query = query.eq('مسؤول المتابعة', 'تمت المراجعة مقبول');
+      } else if (loggedInUser.role !== 'admin' && loggedInUser.branches) {
+        // الموظفين يرون فقط فروعهم
         query = query.in('الفرع', loggedInUser.branches);
       }
         
@@ -281,6 +358,7 @@
       const record = allData.find(r => r.id == recordId);
       if (!record) return;
 
+      // ✅ ملء البيانات
       document.getElementById('editRecordId').value = record.id;
       document.getElementById('editNationalId').value = record["رقم البطاقة العميل"] || '';
       document.getElementById('editGuarantorId').value = record["رقم بطاقة الضامن"] || '';
@@ -295,9 +373,94 @@
       document.getElementById('currentReview').value = record["المراجعة الداخلية"] || '';
       document.getElementById('currentSupervisor').value = record["مسؤول المتابعة"] || '';
       document.getElementById('currentAdmin').value = record["الادارة"] || '';
+      document.getElementById('currentVisitor').value = record["القائم بالزياره"] || '';
+      document.getElementById('currentDataEntry').value = record["اسم القائم بالادخال"] || '';
       document.getElementById('requestNotes').value = '';
 
+      // ✅ تطبيق الصلاحيات
+      setupEditModalPermissions();
+      
       document.getElementById('editModal').style.display = 'block';
+    }
+
+    function setupEditModalPermissions() {
+      const role = loggedInUser.role;
+      
+      // الحقول التي يمكن تعديلها حسب الدور
+      const editableFields = {
+        'admin': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
+                  'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee'],
+        'أخصائي': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
+                   'editInstallments', 'editOfficer', 'editRegion', 'editBranch'],
+        'مدخل بيانات': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
+                        'editInstallments', 'editOfficer', 'editRegion', 'editBranch'],
+        'مراجع': [], // المراجعين لا يمكنهم تعديل البيانات الأساسية
+        'متابعة': [], // المتابعة لا يمكنهم تعديل البيانات الأساسية
+        'إدارة': []   // الإدارة لا يمكنهم تعديل البيانات الأساسية
+      };
+      
+      // رسائل الصلاحيات في المودال
+      const roleModalMessages = {
+        'admin': {
+          text: 'أنت مدير - يمكنك تعديل جميع الحقول',
+          class: 'permission-admin'
+        },
+        'أخصائي': {
+          text: 'أنت أخصائي - يمكنك تعديل بيانات العميل والضامن والمشروع والفرع',
+          class: 'permission-specialist'
+        },
+        'مدخل بيانات': {
+          text: 'أنت مدخل بيانات - يمكنك تعديل البيانات الأساسية',
+          class: 'permission-data-entry'
+        },
+        'مراجع': {
+          text: 'أنت مراجع - يمكنك فقط تعديل حقل المراجعة الداخلية (يجب استخدام صفحة المراجعة الخاصة)',
+          class: 'permission-other'
+        },
+        'متابعة': {
+          text: 'أنت مسؤول متابعة - يمكنك فقط تعديل حقل المتابعة (يجب استخدام صفحة المتابعة الخاصة)',
+          class: 'permission-other'
+        },
+        'إدارة': {
+          text: 'أنت إدارة - يمكنك فقط تعديل حقل الإدارة (يجب استخدام صفحة الإدارة الخاصة)',
+          class: 'permission-other'
+        }
+      };
+      
+      // عرض رسالة الصلاحيات في المودال
+      const modalMessage = document.getElementById('modalPermissionMessage');
+      const message = roleModalMessages[role] || {
+        text: 'صلاحياتك محدودة في التعديل',
+        class: 'permission-other'
+      };
+      
+      modalMessage.textContent = message.text;
+      modalMessage.className = `permission-message ${message.class}`;
+      
+      // جعل جميع الحقول غير قابلة للتعديل أولاً
+      const allFields = ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
+                        'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee'];
+      
+      allFields.forEach(fieldId => {
+        const element = document.getElementById(fieldId);
+        if (element) {
+          element.disabled = true;
+          element.classList.add('disabled-field');
+          element.title = "غير مسموح لك بتعديل هذا الحقل بناءً على صلاحياتك";
+        }
+      });
+      
+      // تمكين الحقول المسموح بها حسب الدور
+      if (editableFields[role]) {
+        editableFields[role].forEach(fieldId => {
+          const element = document.getElementById(fieldId);
+          if (element) {
+            element.disabled = false;
+            element.classList.remove('disabled-field');
+            element.title = "";
+          }
+        });
+      }
     }
 
     function closeModal() {
@@ -318,18 +481,22 @@
         return;
       }
       
+      // ✅ البيانات الجديدة بحيث تتطابق مع أسماء أعمدة جدول operations
       const newValues = {
         "رقم البطاقة العميل": document.getElementById('editNationalId').value.trim(),
         "رقم بطاقة الضامن": document.getElementById('editGuarantorId').value.trim(),
         "المشروع": document.getElementById('editProject').value.trim(),
-        "المبلغ المطلوب": parseFloat(document.getElementById('editAmount').value) || null,
-        "عدد الاقساط": parseInt(document.getElementById('editInstallments').value) || null,
+        "المبلغ المطلوب": document.getElementById('editAmount').value ? parseFloat(document.getElementById('editAmount').value) : null,
+        "عدد الاقساط": document.getElementById('editInstallments').value ? parseInt(document.getElementById('editInstallments').value) : null,
         "اسم الاخصائى": document.getElementById('editOfficer').value.trim(),
         "المنطقه": document.getElementById('editRegion').value.trim(),
         "الفرع": document.getElementById('editBranch').value.trim(),
         "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
+        "القائم بالزياره": record["القائم بالزياره"] || '',
+        "اسم القائم بالادخال": record["اسم القائم بالادخال"] || loggedInUser.name,
       };
       
+      // ✅ البيانات القديمة
       const oldValues = {
         "رقم البطاقة العميل": record["رقم البطاقة العميل"],
         "رقم بطاقة الضامن": record["رقم بطاقة الضامن"],
@@ -340,25 +507,46 @@
         "المنطقه": record["المنطقه"],
         "الفرع": record["الفرع"],
         "رقم اللجنة": record["رقم اللجنة"],
+        "القائم بالزياره": record["القائم بالزياره"] || '',
+        "اسم القائم بالادخال": record["اسم القائم بالادخال"] || '',
       };
 
+      // ✅ التحقق من وجود تغيير فعلي
       let hasChanged = false;
       for (const key in newValues) {
-        if (String(newValues[key]) !== String(oldValues[key])) {
+        const oldVal = oldValues[key] === null || oldValues[key] === undefined ? '' : String(oldValues[key]);
+        const newVal = newValues[key] === null || newValues[key] === undefined ? '' : String(newValues[key]);
+        if (newVal.trim() !== oldVal.trim()) {
           hasChanged = true;
           break;
         }
       }
 
       if (!hasChanged) {
-        alert("الرجاء تعديل قيمة واحدة على الأقل.");
+        alert("لم تقم بتغيير أي قيمة. الرجاء تعديل قيمة واحدة على الأقل.");
         return;
       }
       
+      // ✅ التحقق من صحة رقم البطاقة (14 رقمًا)
+      const nationalId = newValues["رقم البطاقة العميل"];
+      const guarantorId = newValues["رقم بطاقة الضامن"];
+      
+      if (nationalId && (nationalId.length !== 14 || !/^\d+$/.test(nationalId))) {
+        alert("رقم بطاقة العميل يجب أن يكون 14 رقمًا فقط.");
+        return;
+      }
+      
+      if (guarantorId && (guarantorId.length !== 14 || !/^\d+$/.test(guarantorId))) {
+        alert("رقم بطاقة الضامن يجب أن يكون 14 رقمًا فقط.");
+        return;
+      }
+      
+      // ✅ إعداد بيانات الطلب
       const requestData = {
         operation_id: id,
         requester_id: loggedInUser.id,
         requested_by: loggedInUser.name,
+        requester_role: loggedInUser.role,
         old_value: oldValues,
         new_value: newValues,
         notes: notes,
@@ -366,15 +554,25 @@
       };
       
       try {
-        const { error } = await supabase.from('edit_requests').insert([requestData]);
-        if (error) throw error;
+        console.log('بيانات الطلب المرسلة:', requestData);
         
-        alert("تم إرسال طلب التعديل بنجاح!");
+        const { data, error } = await supabase
+          .from('edit_requests')
+          .insert([requestData])
+          .select();
+          
+        if (error) {
+          console.error('خطأ في إرسال الطلب:', error);
+          throw error;
+        }
+        
+        console.log('تم إرسال الطلب بنجاح:', data);
+        alert("✅ تم إرسال طلب التعديل بنجاح!");
         closeModal();
-        applyFilters();
+        await loadData(); // إعادة تحميل البيانات
       } catch (e) {
-        alert("خطأ: " + e.message);
-        console.error(e);
+        console.error('حدث خطأ:', e);
+        alert("❌ خطأ في إرسال الطلب: " + e.message);
       }
     }
     

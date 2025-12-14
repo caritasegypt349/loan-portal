@@ -84,6 +84,12 @@
       font-weight: bold;
       text-align: center;
       display: block;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .page-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     .page-btn.review { background: #e67e22; }
     .page-btn.team { background: #9b59b6; }
@@ -91,6 +97,11 @@
     .page-btn.admin { background: #e74c3c; }
     .page-btn.financing { background: #1abc9c; }
     .page-btn.view { background: #9b59b6; }
+    .page-btn.logout { 
+      background: #95a5a6; 
+      grid-column: span 2;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -120,21 +131,40 @@
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
+    // دالة للتحقق من صحة UUID
+    function isValidUUID(uuid) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(uuid);
+    }
+
+    // دالة لإصلاح localStorage
+    function fixLocalStorage() {
+      const userId = localStorage.getItem('loggedInUserId');
+      
+      if (userId && !isValidUUID(userId)) {
+        console.warn('تم العثور على userId غير صالح في localStorage:', userId);
+        localStorage.clear();
+        alert('تم تسجيل الخروج تلقائياً بسبب بيانات غير صالحة. الرجاء تسجيل الدخول مرة أخرى.');
+        window.location.reload();
+      }
+    }
+
     async function login() {
-      const email = document.getElementById('username').value.trim();
+      const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
       const errorDiv = document.getElementById('errorMessage');
 
-      if (!email || !password) {
+      if (!username || !password) {
         errorDiv.textContent = "الرجاء إدخال اسم المستخدم وكلمة السر";
         return;
       }
 
       try {
+        // ✅ البحث باستخدام username
         const { data, error } = await supabase
           .from('users')
-          .select('id, full_name, role, branches')
-          .eq('id', email)
+          .select('id, full_name, role, branches, username')
+          .eq('username', username)
           .eq('password_hash', password)
           .single();
 
@@ -143,8 +173,21 @@
           return;
         }
 
-        localStorage.setItem('loggedInUserId', data.id);
+        // ✅ الحصول على UUID الحقيقي
+        const userId = data.id;
+        
+        console.log('تم تسجيل الدخول:', {
+          userId: userId,
+          username: data.username,
+          name: data.full_name,
+          role: data.role
+        });
+        
+        // ✅ حفظ البيانات بشكل صحيح
+        localStorage.setItem('loggedInUserId', userId);
         localStorage.setItem('loggedInUser', data.full_name);
+        localStorage.setItem('loggedInUserRole', data.role);
+        localStorage.setItem('loggedInUsername', data.username);
 
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('userFullName').textContent = data.full_name;
@@ -153,7 +196,7 @@
 
       } catch (err) {
         errorDiv.textContent = "حدث خطأ أثناء الاتصال. حاول لاحقاً.";
-        console.error(err);
+        console.error('تفاصيل الخطأ:', err);
       }
     }
 
@@ -163,49 +206,148 @@
 
       const pages = [];
 
-      // كل الأدوار يحصلون على "عرض البيانات"
-      pages.push({ label: "عرض البيانات", url: "view-only.html", cls: "page-btn view" });
+      // كل الأدوار يحصلون على "عرض البيانات" و"طلباتي"
+      pages.push({ label: "📊 عرض البيانات", url: "view-only.html", cls: "page-btn view" });
+      pages.push({ label: "📋 طلباتي", url: "my_requests.html", cls: "page-btn" });
 
-      // كل الأدوار يحصلون على "طلباتي"
-      pages.push({ label: "طلباتي", url: "my_requests.html", cls: "page-btn" });
+      // خريطة الأدوار
+      const roleMap = {
+        'admin': 'مدير',
+        'data_entry': 'مدخل بيانات',
+        'financing_officer': 'أخصائي تمويل',
+        'team_leader': 'قائد فريق',
+        'internal_reviewer': 'مراجع داخلي',
+        'followup_supervisor': 'مشرف متابعة',
+        'إدارة': 'إدارة',
+        'أخصائي': 'أخصائي',
+        'مراجع': 'مراجع',
+        'متابعة': 'متابعة',
+        'مدخل بيانات': 'مدخل بيانات'
+      };
 
-      // باقي الصفحات حسب الدور
-      if (role === 'data_entry') {
-        pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
-        pages.push({ label: "طلب تعديل", url: "request_edit.html", cls: "page-btn" });
+      // عرض الدور الحالي
+      const roleDisplay = roleMap[role] || role;
+      pages.push({ 
+        label: `🎭 دورك: ${roleDisplay}`, 
+        url: "#", 
+        cls: "page-btn",
+        onclick: (e) => {
+          e.preventDefault();
+          alert(`دورك الحالي: ${roleDisplay}\n\nيمكنك الوصول للصفحات المخصصة لدورك فقط.`);
+        }
+      });
+
+      // الصفحات حسب الدور
+      if (role === 'admin' || role === 'مدير') {
+        pages.push({ label: "➕ إدخال بيانات", url: "entry.html", cls: "page-btn" });
+        pages.push({ label: "🔍 المراجعة", url: "review.html", cls: "page-btn review" });
+        pages.push({ label: "📋 المتابعة", url: "supervise.html", cls: "page-btn supervise" });
+        pages.push({ label: "⚙️ لوحة الإدارة", url: "admin.html", cls: "page-btn admin" });
+        pages.push({ label: "✏️ طلب تعديل", url: "request_edit.html", cls: "page-btn" });
+        pages.push({ label: "✅ إدارة طلبات التعديل", url: "admin_requests.html", cls: "page-btn admin" });
       }
-      else if (role === 'financing_officer') {
-        pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
-        pages.push({ label: "إدارة التمويل", url: "financing.html", cls: "page-btn financing" });
+      else if (role === 'data_entry' || role === 'مدخل بيانات') {
+        pages.push({ label: "➕ إدخال بيانات", url: "entry.html", cls: "page-btn" });
+        pages.push({ label: "✏️ طلب تعديل", url: "request_edit.html", cls: "page-btn" });
       }
-      else if (role === 'team_leader') {
-        pages.push({ label: "عرض فريق العمل", url: "team-view.html", cls: "page-btn team" });
+      else if (role === 'financing_officer' || role === 'أخصائي تمويل' || role === 'أخصائي') {
+        pages.push({ label: "➕ إدخال بيانات", url: "entry.html", cls: "page-btn" });
+        pages.push({ label: "💰 إدارة التمويل", url: "financing.html", cls: "page-btn financing" });
+        pages.push({ label: "✏️ طلب تعديل", url: "request_edit.html", cls: "page-btn" });
       }
-      else if (role === 'internal_reviewer') {
-        pages.push({ label: "المراجعة الداخلية", url: "review.html", cls: "page-btn review" });
-        pages.push({ label: "طلب تعديل", url: "request_edit.html", cls: "page-btn" });
+      else if (role === 'team_leader' || role === 'قائد فريق') {
+        pages.push({ label: "👥 عرض فريق العمل", url: "team-view.html", cls: "page-btn team" });
       }
-      else if (role === 'followup_supervisor') {
-        pages.push({ label: "متابعة العمليات", url: "supervise.html", cls: "page-btn supervise" });
+      else if (role === 'internal_reviewer' || role === 'مراجع داخلي' || role === 'مراجع') {
+        pages.push({ label: "🔍 المراجعة الداخلية", url: "review.html", cls: "page-btn review" });
+        pages.push({ label: "✏️ طلب تعديل", url: "request_edit.html", cls: "page-btn" });
       }
-      else if (role === 'admin') {
-        pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
-        pages.push({ label: "المراجعة", url: "review.html", cls: "page-btn review" });
-        pages.push({ label: "المتابعة", url: "supervise.html", cls: "page-btn supervise" });
-        pages.push({ label: "لوحة الإدارة", url: "admin.html", cls: "page-btn admin" });
-        pages.push({ label: "طلب تعديل", url: "request_edit.html", cls: "page-btn" });
-        pages.push({ label: "إدارة طلبات التعديل", url: "admin_requests.html", cls: "page-btn admin" });
+      else if (role === 'followup_supervisor' || role === 'مشرف متابعة' || role === 'متابعة') {
+        pages.push({ label: "📋 متابعة العمليات", url: "supervise.html", cls: "page-btn supervise" });
+        pages.push({ label: "✏️ طلب تعديل", url: "request_edit.html", cls: "page-btn" });
+      }
+      else if (role === 'إدارة') {
+        pages.push({ label: "🏛️ الإدارة المركزية", url: "admin.html", cls: "page-btn admin" });
       }
 
+      // زر تسجيل الخروج
+      pages.push({ 
+        label: "🚪 تسجيل الخروج", 
+        url: "#", 
+        cls: "page-btn logout",
+        onclick: function(e) {
+          e.preventDefault();
+          if (confirm('هل تريد تسجيل الخروج؟')) {
+            localStorage.clear();
+            window.location.reload();
+          }
+        }
+      });
+
+      // إنشاء الأزرار
       pages.forEach(page => {
         const btn = document.createElement('a');
         btn.href = page.url;
         btn.className = page.cls;
         btn.textContent = page.label;
-        btn.target = "_blank";
+        
+        if (page.onclick) {
+          btn.onclick = page.onclick;
+        }
+        
+        if (page.url !== "#") {
+          btn.target = "_blank";
+        }
+        
         buttonsDiv.appendChild(btn);
       });
     }
+
+    // التحقق من تسجيل الدخول عند تحميل الصفحة
+    async function checkLoginStatus() {
+      const userId = localStorage.getItem('loggedInUserId');
+      const userName = localStorage.getItem('loggedInUser');
+      const userRole = localStorage.getItem('loggedInUserRole');
+      
+      if (userId && userName && userRole) {
+        if (!isValidUUID(userId)) {
+          localStorage.clear();
+          return;
+        }
+        
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('full_name, role')
+            .eq('id', userId)
+            .single();
+          
+          if (error || !data) {
+            localStorage.clear();
+            return;
+          }
+          
+          if (data.full_name !== userName || data.role !== userRole) {
+            localStorage.setItem('loggedInUser', data.full_name);
+            localStorage.setItem('loggedInUserRole', data.role);
+          }
+          
+          document.getElementById('loginSection').style.display = 'none';
+          document.getElementById('userFullName').textContent = data.full_name;
+          renderPageButtons(data.role);
+          document.getElementById('dashboardSection').style.display = 'block';
+          
+        } catch (err) {
+          console.error('خطأ في التحقق من حالة الدخول:', err);
+        }
+      }
+    }
+
+    // استدعاء الدوال عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+      fixLocalStorage();
+      checkLoginStatus();
+    });
   </script>
 </body>
 </html>

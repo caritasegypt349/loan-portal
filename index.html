@@ -118,8 +118,8 @@
         <label for="password">كلمة السر</label>
         <input type="password" id="password" placeholder="أدخل كلمة السر" autocomplete="current-password" />
       </div>
-      <button onclick="login()">دخول</button>
-      <button onclick="clearAllSessions()" class="btn-clear">إغلاق جميع الجلسات المفتوحة</button>
+      <button id="loginBtn">دخول</button>
+      <button id="clearBtn" class="btn-clear">إغلاق جميع الجلسات المفتوحة</button>
       <div id="errorMessage" class="error"></div>
     </div>
 
@@ -156,6 +156,7 @@
       }, 3000);
     }
 
+    // دالة تسجيل الدخول
     async function login() {
       const email = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
@@ -196,6 +197,7 @@
       }
     }
 
+    // دالة عرض الأزرار حسب الدور
     function renderPageButtons(role) {
       const buttonsDiv = document.getElementById('pageButtons');
       buttonsDiv.innerHTML = '';
@@ -245,6 +247,17 @@
         buttonsDiv.appendChild(btn);
       });
     }
+
+    // ربط الأحداث بالأزرار
+    document.getElementById('loginBtn').addEventListener('click', login);
+    document.getElementById('clearBtn').addEventListener('click', clearAllSessions);
+    
+    // السماح بالضغط على Enter للدخول
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        login();
+      }
+    });
   </script>
 </body>
 </html>

@@ -3,37 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>عرض البيانات التفصيلي - النسخة المصلحة</title>
+  <title>عرض البيانات التفصيلي - النسخة الأصلية الكاملة</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* التنسيقات الأصلية الخاصة بك */
     body { font-family: 'Segoe UI', Tahoma, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; }
     .container { max-width: 1900px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
-    h2 { text-align: center; color: #2c3e50; font-size: 28px; margin-bottom: 20px; }
+    h2 { text-align: center; color: #2c3e50; font-size: 28px; margin-bottom: 10px; }
     
     /* الإحصائيات */
     .stats { display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; }
-    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border-radius: 8px; text-align: center; min-width: 200px; }
+    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
     .stat-card .value { font-size: 24px; font-weight: bold; }
 
-    /* الفلاتر */
-    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0; }
-    .filter-group { display: flex; flex-direction: column; gap: 5px; }
-    select, input { padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px; }
+    /* الجدول والفلاتر */
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+    select, input { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; }
     
-    /* الجدول */
-    .table-wrapper { overflow-x: auto; margin-top: 20px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #e0e0e0; padding: 12px 8px; text-align: right; font-size: 13px; }
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { border: 1px solid #e0e0e0; padding: 10px 5px; text-align: right; font-size: 12px; }
     th { background: #764ba2; color: white; position: sticky; top: 0; }
     
+    /* ألوان الحالة */
     .approved-cell { background-color: #e6ffe6 !important; color: #008000; font-weight: bold; }
     .rejected-cell { background-color: #ffe6e6 !important; color: #cc0000; font-weight: bold; }
     
-    .expand-btn { background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+    /* نظام القسيمة والتفاصيل */
     .detail-row { display: none; background: #f0f4f8; }
+    .detail-container { padding: 20px; }
+    .detail-row-sections { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .detail-section h3 { color: #764ba2; font-size: 16px; border-bottom: 2px solid #764ba2; padding-bottom: 5px; margin-bottom: 10px; }
+    .detail-item { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; border-bottom: 1px solid #eee; }
+    .detail-label { font-weight: bold; color: #2c3e50; }
     
-    .loading { text-align: center; padding: 40px; font-size: 18px; color: #666; }
+    .expand-btn { background: #667eea; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+    .loading { text-align: center; padding: 50px; font-size: 20px; color: #666; }
   </style>
 </head>
 <body>
@@ -41,49 +45,25 @@
     <h2>عرض البيانات التفصيلي</h2>
 
     <div class="stats">
-      <div class="stat-card">
-        <div class="label">إجمالي السجلات</div>
-        <div class="value" id="totalRecords">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">مجموع المبالغ المطلوب</div>
-        <div class="value" id="totalAmount">0</div>
-      </div>
+      <div class="stat-card"><div class="label">إجمالي السجلات</div><div class="value" id="totalRecords">0</div></div>
+      <div class="stat-card"><div class="label">مجموع المبالغ</div><div class="value" id="totalAmount">0</div></div>
     </div>
 
     <div class="filters">
-      <div class="filter-group">
-        <label>الفرع</label>
-        <select id="filterBranch"><option value="">الكل</option></select>
-      </div>
-      <div class="filter-group">
-        <label>المراجعة الداخلية</label>
-        <select id="filterReview"><option value="">الكل</option></select>
-      </div>
-      <div class="filter-group">
-        <label>مسؤول المتابعة</label>
-        <select id="filterSupervisor"><option value="">الكل</option></select>
-      </div>
-      <div class="filter-group">
-        <label>تم التحويل</label>
-        <select id="filterTransferred">
-          <option value="">الكل</option>
-          <option value="true">نعم</option>
-          <option value="false">لا</option>
-        </select>
-      </div>
-      <button onclick="resetFilters()" style="background:#95a5a6; color:white; border:none; border-radius:6px; cursor:pointer;">إعادة تعيين</button>
+      <input type="text" id="searchClient" placeholder="بحث باسم العميل...">
+      <select id="filterBranch"><option value="">كل الفروع</option></select>
+      <select id="filterReview"><option value="">حالة المراجعة</option></select>
+      <button onclick="location.reload()" style="background:#95a5a6; color:white; border:none; border-radius:6px; cursor:pointer;">تحديث البيانات</button>
     </div>
 
-    <div class="table-wrapper" id="tableContainer">
-      <div class="loading">جاري جلب البيانات من النظام...</div>
+    <div class="table-wrapper" id="tableContent">
+      <div class="loading">جاري جلب البيانات...</div>
     </div>
   </div>
 
   <script>
     (function() {
       "use strict";
-
       const S_URL = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
       const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
       const _db = window.supabase.createClient(S_URL, S_KEY);
@@ -92,115 +72,104 @@
       const userBranches = JSON.parse(localStorage.getItem('userBranches') || "[]");
       const userRole = localStorage.getItem('userRole');
 
-      async function loadData() {
+      async function fetchData() {
         try {
-          // جلب البيانات مع فلترة الفروع إذا لم يكن أدمن
           let query = _db.from('operations_with_details').select('*');
-          
           if (userRole !== 'admin' && userRole !== 'followup_supervisor' && userBranches.length > 0) {
             query = query.in('الفرع', userBranches);
           }
-
           const { data, error } = await query.order('created_at', { ascending: false });
           if (error) throw error;
-
           allData = data;
-          populateFilterOptions();
-          renderTable(allData);
-          updateStats(allData);
-        } catch (err) {
-          document.getElementById('tableContainer').innerHTML = `<div style="color:red; text-align:center;">خطأ في تحميل البيانات: ${err.message}</div>`;
+          
+          // ملء الفلاتر
+          const branches = [...new Set(data.map(i => i["الفرع"]))];
+          const branchSel = document.getElementById('filterBranch');
+          branches.forEach(b => { if(b) branchSel.innerHTML += `<option value="${b}">${b}</option>`; });
+
+          renderTable(data);
+          updateStats(data);
+        } catch (e) {
+          document.getElementById('tableContent').innerHTML = `<div style="color:red; text-align:center;">خطأ: ${e.message}</div>`;
         }
-      }
-
-      function populateFilterOptions() {
-        const branches = [...new Set(allData.map(item => item["الفرع"]))];
-        const reviews = [...new Set(allData.map(item => item["المراجعة الداخلية"]))];
-        
-        const branchSelect = document.getElementById('filterBranch');
-        branches.forEach(b => { if(b) branchSelect.innerHTML += `<option value="${b}">${b}</option>`; });
-        
-        const reviewSelect = document.getElementById('filterReview');
-        reviews.forEach(r => { if(r) reviewSelect.innerHTML += `<option value="${r}">${r}</option>`; });
-
-        // إضافة مستمعات الأحداث للفلاتر
-        document.querySelectorAll('select').forEach(select => {
-          select.addEventListener('change', applyFilters);
-        });
-      }
-
-      function applyFilters() {
-        const branch = document.getElementById('filterBranch').value;
-        const review = document.getElementById('filterReview').value;
-        const transferred = document.getElementById('filterTransferred').value;
-
-        const filtered = allData.filter(row => {
-          return (!branch || row["الفرع"] === branch) &&
-                 (!review || row["المراجعة الداخلية"] === review) &&
-                 (transferred === "" || String(row["تم التحويل"]) === transferred);
-        });
-
-        renderTable(filtered);
-        updateStats(filtered);
-      }
-
-      function updateStats(data) {
-        document.getElementById('totalRecords').textContent = data.length.toLocaleString('ar-EG');
-        const total = data.reduce((sum, row) => sum + (parseFloat(row["المبلغ المطلوب"]) || 0), 0);
-        document.getElementById('totalAmount').textContent = total.toLocaleString('ar-EG') + " ج.م";
       }
 
       function renderTable(data) {
-        const container = document.getElementById('tableContainer');
-        if (data.length === 0) {
-          container.innerHTML = '<div class="loading">لا توجد سجلات مطابقة للبحث</div>';
-          return;
-        }
-
+        const container = document.getElementById('tableContent');
         let html = `<table><thead><tr>
-          <th>#</th><th>اسم العميل</th><th>الفرع</th><th>المبلغ</th>
-          <th>المراجعة</th><th>المتابعة</th><th>تم التحويل</th><th>رقم اللجنة</th><th>إجراء</th>
+          <th>#</th><th>بطاقة العميل</th><th>كود العميل</th><th>اسم العميل</th><th>المشروع</th>
+          <th>بطاقة الضامن</th><th>اسم الضامن</th><th>المبلغ</th><th>الأخصائي</th>
+          <th>المراجعة</th><th>المتابعة</th><th>الإدارة</th><th>اللجنة</th><th>التفاصيل</th>
         </tr></thead><tbody>`;
 
         data.forEach((row, idx) => {
-          const reviewClass = (row["المراجعة الداخلية"] || "").includes("مقبول") ? "approved-cell" : (row["المراجعة الداخلية"] || "").includes("مرفوض") ? "rejected-cell" : "";
-          
+          const rClass = (row["المراجعة الداخلية"] || "").includes("مقبول") ? "approved-cell" : (row["المراجعة الداخلية"] || "").includes("مرفوض") ? "rejected-cell" : "";
+          const sClass = (row["مسؤول المتابعة"] || "").includes("مقبول") ? "approved-cell" : (row["مسؤول المتابعة"] || "").includes("مرفوض") ? "rejected-cell" : "";
+
           html += `
             <tr>
               <td>${idx + 1}</td>
+              <td>${row["رقم البطاقة العميل"] || '—'}</td>
+              <td>${row["كود_العميل"] || '—'}</td>
               <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
-              <td>${row["الفرع"] || '—'}</td>
-              <td style="font-weight:bold;">${row["المبلغ المطلوب"] || 0}</td>
-              <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
-              <td>${row["مسؤول المتابعة"] || '—'}</td>
-              <td>${row["تم التحويل"] ? "✅ نعم" : "❌ لا"}</td>
+              <td>${row["المشروع"] || '—'}</td>
+              <td>${row["رقم بطاقة الضامن"] || '—'}</td>
+              <td>${row["اسم_الضامن"] || '—'}</td>
+              <td style="font-weight:bold; color:#667eea;">${row["المبلغ المطلوب"] || 0}</td>
+              <td>${row["اسم الاخصائى"] || '—'}</td>
+              <td class="${rClass}">${row["المراجعة الداخلية"] || '—'}</td>
+              <td class="${sClass}">${row["مسؤول المتابعة"] || '—'}</td>
+              <td>${row["الادارة"] || '—'}</td>
               <td>${row["رقم اللجنة"] || '—'}</td>
-              <td><button class="expand-btn" onclick="this.parentElement.parentElement.nextElementSibling.style.display = (this.parentElement.parentElement.nextElementSibling.style.display === 'table-row' ? 'none' : 'table-row')">تفاصيل</button></td>
+              <td><button class="expand-btn" onclick="toggleRow(${idx})">عرض</button></td>
             </tr>
-            <tr class="detail-row">
-              <td colspan="9">
-                <div style="padding:15px; display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                  <div><strong>رقم البطاقة:</strong> ${row["رقم البطاقة العميل"] || '—'}</div>
-                  <div><strong>اسم الأخصائي:</strong> ${row["اسم الاخصائى"] || '—'}</div>
-                  <div><strong>ملاحظات المراجعة:</strong> ${row["ملاحظات المراجعة الداخلية"] || '—'}</div>
-                  <div><strong>تعليق المتابعة:</strong> ${row["تعليق مسؤول المتابعة"] || '—'}</div>
+            <tr class="detail-row" id="row-${idx}">
+              <td colspan="14">
+                <div class="detail-container">
+                  <div class="detail-row-sections">
+                    <div class="detail-section">
+                      <h3>📋 معلومات العملية</h3>
+                      <div class="detail-item"><span class="detail-label">الفرع:</span> <span>${row["الفرع"]}</span></div>
+                      <div class="detail-item"><span class="detail-label">أيام التأخير:</span> <span>${row["عدد ايام التاخير"]}</span></div>
+                      <div class="detail-item"><span class="detail-label">الإحداثيات:</span> <span style="font-size:9px;">${row["احداثيات الموقع"]}</span></div>
+                    </div>
+                    <div class="detail-section">
+                      <h3>📊 تقييم العميل</h3>
+                      <div class="detail-item"><span class="detail-label">رقم الحساب:</span> <span>${row["رقم_الحساب_من_التقييم"]}</span></div>
+                      <div class="detail-item"><span class="detail-label">نتيجة التقييم:</span> <span>${row["نتيجة_التقييم"]}</span></div>
+                      <div class="detail-item"><span class="detail-label">تعليق الاستعلام:</span> <span>${row["تعليق_استعلام_العميل"]}</span></div>
+                    </div>
+                    <div class="detail-section">
+                      <h3>👥 تقييم الضامن</h3>
+                      <div class="detail-item"><span class="detail-label">اسم الضامن I-Score:</span> <span>${row["اسم_الضامن_من_الاي_سكور"]}</span></div>
+                      <div class="detail-item"><span class="detail-label">التقييم الرقمي:</span> <span>${row["تقييم_رقمى_الضامن"]}</span></div>
+                    </div>
+                    <div class="detail-section">
+                      <h3>✅ ملاحظات الإدارة</h3>
+                      <div class="detail-item"><span class="detail-label">ملاحظات المراجعة:</span> <span>${row["ملاحظات المراجعة الداخلية"]}</span></div>
+                      <div class="detail-item"><span class="detail-label">تعليق المتابعة:</span> <span>${row["تعليق مسؤول المتابعة"]}</span></div>
+                    </div>
+                  </div>
                 </div>
               </td>
-            </tr>
-          `;
+            </tr>`;
         });
-
-        html += "</tbody></table>";
+        html += `</tbody></table>`;
         container.innerHTML = html;
       }
 
-      window.resetFilters = () => {
-        document.querySelectorAll('select').forEach(s => s.value = "");
-        renderTable(allData);
-        updateStats(allData);
+      window.toggleRow = (idx) => {
+        const row = document.getElementById(`row-${idx}`);
+        row.style.display = (row.style.display === 'table-row') ? 'none' : 'table-row';
       };
 
-      loadData();
+      function updateStats(data) {
+        document.getElementById('totalRecords').textContent = data.length;
+        const total = data.reduce((s, r) => s + (parseFloat(r["المبلغ المطلوب"]) || 0), 0);
+        document.getElementById('totalAmount').textContent = total.toLocaleString() + " ج.م";
+      }
+
+      fetchData();
     })();
   </script>
 </body>

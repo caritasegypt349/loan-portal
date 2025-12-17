@@ -55,8 +55,21 @@
     button:hover {
       background: #2980b9;
     }
+    .btn-clear {
+      background: #e74c3c;
+      margin-top: 10px;
+    }
+    .btn-clear:hover {
+      background: #c0392b;
+    }
     .error {
       color: #e74c3c;
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .success {
+      color: #27ae60;
       text-align: center;
       margin-top: 10px;
       font-weight: bold;
@@ -106,6 +119,7 @@
         <input type="password" id="password" placeholder="أدخل كلمة السر" autocomplete="current-password" />
       </div>
       <button onclick="login()">دخول</button>
+      <button onclick="clearAllSessions()" class="btn-clear">إغلاق جميع الجلسات المفتوحة</button>
       <div id="errorMessage" class="error"></div>
     </div>
 
@@ -116,9 +130,13 @@
   </div>
 
   <script>
-    const supabaseUrl = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
-    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    // تحقق إذا كان supabase متعرف مسبقاً
+    if (!window.supabaseClient) {
+      const supabaseUrl = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
+      window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    }
+    const supabase = window.supabaseClient;
 
     async function login() {
       const email = document.getElementById('username').value.trim();
@@ -126,6 +144,7 @@
       const errorDiv = document.getElementById('errorMessage');
 
       if (!email || !password) {
+        errorDiv.className = 'error';
         errorDiv.textContent = "الرجاء إدخال اسم المستخدم وكلمة السر";
         return;
       }
@@ -139,6 +158,7 @@
           .single();
 
         if (error || !data) {
+          errorDiv.className = 'error';
           errorDiv.textContent = "بيانات الدخول غير صحيحة";
           return;
         }
@@ -152,6 +172,7 @@
         document.getElementById('dashboardSection').style.display = 'block';
 
       } catch (err) {
+        errorDiv.className = 'error';
         errorDiv.textContent = "حدث خطأ أثناء الاتصال. حاول لاحقاً.";
         console.error(err);
       }
@@ -206,7 +227,24 @@
         buttonsDiv.appendChild(btn);
       });
     }
+
+    // دالة إغلاق جميع الجلسات
+    function clearAllSessions() {
+      const errorDiv = document.getElementById('errorMessage');
+      
+      // مسح جميع البيانات من localStorage
+      localStorage.clear();
+      
+      // مسح جميع البيانات من sessionStorage
+      sessionStorage.clear();
+      
+      errorDiv.className = 'success';
+      errorDiv.textContent = "تم إغلاق جميع الجلسات بنجاح! يمكنك الآن تسجيل الدخول مرة أخرى.";
+      
+      setTimeout(() => {
+        errorDiv.textContent = '';
+      }, 3000);
+    }
   </script>
 </body>
-
 </html>

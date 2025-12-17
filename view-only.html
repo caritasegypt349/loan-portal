@@ -363,35 +363,11 @@
   </div>
 
   <script>
-    // التحقق من الجلسة أولاً
-    function validateSession() {
-      const userId = localStorage.getItem('loggedInUserId');
-      const userFullName = localStorage.getItem('loggedInUser');
-      
-      if (!userId || !userFullName) {
-        alert("الجلسة منتهية أو غير صالحة. يرجى تسجيل الدخول مرة أخرى.");
-        window.location.href = "index.html";
-        return false;
-      }
-      
-      return true;
-    }
-
-    // تعريف Supabase مرة واحدة فقط
-    let supabase;
-    try {
-      if (window.supabase) {
-        supabase = window.supabase.createClient(
-          'https://akjyrmmqsnxdbkslxmvb.supabase.co',
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
-        );
-      } else {
-        throw new Error('مكتبة Supabase لم تحمل');
-      }
-    } catch (error) {
-      console.error('فشل في تهيئة قاعدة البيانات:', error);
-      alert('خطأ في تحميل قاعدة البيانات. يرجى تحديث الصفحة.');
-    }
+    // ** تم الحفاظ على سطري الاتصال كما هما بناءً على طلبك **
+    const supabase = window.supabase.createClient(
+      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+    );
 
     let allData = [];
     let userRole = '';
@@ -409,22 +385,12 @@
     let searchTimeout = null;
 
     async function init() {
-      // التحقق من الجلسة أولاً
-      if (!validateSession()) {
-        return;
-      }
-
       const userId = localStorage.getItem('loggedInUserId');
-      const userFullName = localStorage.getItem('loggedInUser');
-      
-      if (!userId || !userFullName) {
+      if (!userId) {
         alert("الرجاء تسجيل الدخول أولًا!");
         window.location.href = "index.html";
         return;
       }
-
-      // عرض اسم المستخدم في العنوان أو في مكان ما إذا أردت
-      // document.title = `عرض البيانات التفصيلي - ${userFullName}`;
 
       const { data: user, error } = await supabase
         .from('users')
@@ -951,10 +917,8 @@
       }
     }
 
-    // بدء التطبيق
     init().catch(err => {
       document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
-      console.error('خطأ في التطبيق:', err);
     });
   </script>
 </body>

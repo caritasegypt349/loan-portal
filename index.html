@@ -105,7 +105,7 @@
         <label for="password">كلمة السر</label>
         <input type="password" id="password" placeholder="أدخل كلمة السر" autocomplete="current-password" />
       </div>
-      <button onclick="login()">دخول</button>
+      <button id="loginBtn">دخول</button>
       <div id="errorMessage" class="error"></div>
     </div>
 
@@ -116,9 +116,14 @@
   </div>
 
   <script>
-    const supabaseUrl = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
-    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    // ** الحل: استخدام متغير مختلف لتجنب التعارض **
+    const mySupabase = window.supabase.createClient(
+      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+    );
+
+    // تغيير الزر لاستخدام addEventListener بدلاً من onclick
+    document.getElementById('loginBtn').addEventListener('click', login);
 
     async function login() {
       const email = document.getElementById('username').value.trim();
@@ -131,7 +136,7 @@
       }
 
       try {
-        const { data, error } = await supabase
+        const { data, error } = await mySupabase
           .from('users')
           .select('id, full_name, role, branches')
           .eq('id', email)
@@ -145,6 +150,9 @@
 
         localStorage.setItem('loggedInUserId', data.id);
         localStorage.setItem('loggedInUser', data.full_name);
+        // إضافة بيانات إضافية قد تحتاجها الصفحات الأخرى
+        localStorage.setItem('userRole', data.role);
+        localStorage.setItem('userBranches', JSON.stringify(data.branches || []));
 
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('userFullName').textContent = data.full_name;
@@ -208,5 +216,4 @@
     }
   </script>
 </body>
-
 </html>

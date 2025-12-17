@@ -172,7 +172,8 @@
   </div>
 
   <script>
-    const supabase = window.supabase.createClient(
+    // **التغيير الوحيد: تغيير اسم المتغير من supabase إلى db**
+    const db = window.supabase.createClient(
       'https://akjyrmmqsnxdbkslxmvb.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
     );
@@ -190,7 +191,8 @@
       document.getElementById('entry_by_display').value = userFullName;
 
       try {
-        const { data, error } = await supabase
+        // **التغيير هنا: استخدم db بدلاً من supabase**
+        const { data, error } = await db
           .from('users')
           .select('branches')
           .eq('id', userId)
@@ -234,7 +236,8 @@
       }
 
       try {
-        const { data, error } = await supabase
+        // **التغيير هنا: استخدم db بدلاً من supabase**
+        const { data, error } = await db
           .from('operations')
           .select('id, المشروع, created_at')
           .eq('رقم البطاقة العميل', nationalId)
@@ -269,7 +272,8 @@
       }
 
       try {
-        const { data, error } = await supabase
+        // **التغيير هنا: استخدم db بدلاً من supabase**
+        const { data, error } = await db
           .from('operations')
           .select('id, المشروع, created_at')
           .eq('رقم بطاقة الضامن', guarantorId)
@@ -309,9 +313,10 @@
       }
 
       try {
+        // **التغيير هنا: استخدم db بدلاً من supabase**
         const [loanRes, assessRes] = await Promise.all([
-          supabase.from('loans').select('اسم العميل عربى, تاريخ القرض, اخصائى القرض, كود العميل, النشاط الثانى, "الفرع الحالى للعميل"').eq('الرقم القومى', nid).single(),
-          supabase.from('assessments').select('الاسم, "السم المرسل من الاى سكور", "نتيجة التقييم", "سبب 2", "التقييم الرقمى", "احداثيات الموقع"').eq('رقم_البطاقة', nid).single()
+          db.from('loans').select('اسم العميل عربى, تاريخ القرض, اخصائى القرض, كود العميل, النشاط الثانى, "الفرع الحالى للعميل"').eq('الرقم القومى', nid).single(),
+          db.from('assessments').select('الاسم, "السم المرسل من الاى سكور", "نتيجة التقييم", "سبب 2", "التقييم الرقمى", "احداثيات الموقع"').eq('رقم_البطاقة', nid).single()
         ]);
 
         let html = '';
@@ -361,7 +366,8 @@
       }
 
       try {
-        const { data, error } = await supabase
+        // **التغيير هنا: استخدم db بدلاً من supabase**
+        const { data, error } = await db
           .from('assessments')
           .select('الاسم, "السم المرسل من الاى سكور", "التقييم الرقمى", "نتيجة التقييم", "سبب 2"')
           .eq('رقم_البطاقة', gid)
@@ -426,7 +432,8 @@
       }
 
       try {
-        const { error } = await supabase.from('operations').insert([data]);
+        // **التغيير هنا: استخدم db بدلاً من supabase**
+        const { error } = await db.from('operations').insert([data]);
         if (error) throw error;
 
         alert("تم الحفظ بنجاح!");

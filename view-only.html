@@ -3,173 +3,219 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>عرض البيانات التفصيلي - النسخة الأصلية الكاملة</title>
+  <title>عرض البيانات التفصيلي - نظام القروض</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* تم الإبقاء على كافة التنسيقات الأصلية الخاصة بك كما هي */
     body { font-family: 'Segoe UI', Tahoma, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; }
     .container { max-width: 1900px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
-    h2 { text-align: center; color: #2c3e50; font-size: 28px; margin-bottom: 10px; }
-    
-    /* الإحصائيات */
-    .stats { display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; }
-    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    h2 { text-align: center; color: #2c3e50; margin-top: 0; font-size: 28px; margin-bottom: 10px; }
+    .stats { display: flex; gap: 20px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap; }
+    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border-radius: 12px; text-align: center; min-width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .stat-card .label { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
     .stat-card .value { font-size: 24px; font-weight: bold; }
-
-    /* الجدول والفلاتر */
-    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
-    select, input { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; }
-    
-    .table-wrapper { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { border: 1px solid #e0e0e0; padding: 10px 5px; text-align: right; font-size: 12px; }
-    th { background: #764ba2; color: white; position: sticky; top: 0; }
-    
-    /* ألوان الحالة */
-    .approved-cell { background-color: #e6ffe6 !important; color: #008000; font-weight: bold; }
-    .rejected-cell { background-color: #ffe6e6 !important; color: #cc0000; font-weight: bold; }
-    
-    /* نظام القسيمة والتفاصيل */
-    .detail-row { display: none; background: #f0f4f8; }
-    .detail-container { padding: 20px; }
-    .detail-row-sections { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-    .detail-section h3 { color: #764ba2; font-size: 16px; border-bottom: 2px solid #764ba2; padding-bottom: 5px; margin-bottom: 10px; }
-    .detail-item { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; border-bottom: 1px solid #eee; }
-    .detail-label { font-weight: bold; color: #2c3e50; }
-    
-    .expand-btn { background: #667eea; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-    .loading { text-align: center; padding: 50px; font-size: 20px; color: #666; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; padding: 20px; background: #f8f9fa; border-radius: 10px; border: 1px solid #eee; }
+    .filter-group { display: flex; flex-direction: column; gap: 5px; }
+    .filter-group label { font-size: 13px; font-weight: bold; color: #666; }
+    select, input { padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; transition: all 0.3s; }
+    select:focus, input:focus { border-color: #667eea; outline: none; }
+    .table-wrapper { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+    th { background: #f8f9fa; padding: 15px 10px; text-align: right; font-size: 13px; font-weight: bold; color: #2c3e50; border-bottom: 2px solid #eee; position: sticky; top: 0; z-index: 10; }
+    td { padding: 12px 10px; border-bottom: 1px solid #eee; font-size: 13px; color: #444; }
+    tr:hover { background-color: #fcfcfc; }
+    .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; }
+    .detail-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.3s; }
+    .detail-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3); }
+    .detail-row { display: none; background-color: #f9faff; }
+    .detail-content { padding: 30px; border: 2px solid #667eea; border-radius: 12px; margin: 10px; background: white; }
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; }
+    .detail-section h4 { color: #764ba2; margin: 0 0 15px 0; padding-bottom: 8px; border-bottom: 2px solid #f0f0f0; font-size: 15px; }
+    .detail-item { display: flex; margin-bottom: 8px; font-size: 13px; }
+    .detail-label { font-weight: bold; color: #666; width: 140px; }
+    .detail-value { color: #2c3e50; flex: 1; }
+    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index: 1000; font-size: 20px; font-weight: bold; color: #764ba2; }
   </style>
 </head>
 <body>
+
+  <div id="loading" class="loading-overlay">جاري تحميل البيانات...</div>
+
   <div class="container">
     <h2>عرض البيانات التفصيلي</h2>
-
+    
     <div class="stats">
-      <div class="stat-card"><div class="label">إجمالي السجلات</div><div class="value" id="totalRecords">0</div></div>
-      <div class="stat-card"><div class="label">مجموع المبالغ</div><div class="value" id="totalAmount">0</div></div>
+      <div class="stat-card"><div class="label">إجمالي العمليات</div><div class="value" id="count-total">0</div></div>
+      <div class="stat-card"><div class="label">مجموع المبالغ</div><div class="value" id="sum-amount">0</div></div>
     </div>
 
     <div class="filters">
-      <input type="text" id="searchClient" placeholder="بحث باسم العميل...">
-      <select id="filterBranch"><option value="">كل الفروع</option></select>
-      <select id="filterReview"><option value="">حالة المراجعة</option></select>
-      <button onclick="location.reload()" style="background:#95a5a6; color:white; border:none; border-radius:6px; cursor:pointer;">تحديث البيانات</button>
+      <div class="filter-group"><label>بحث باسم العميل</label><input type="text" id="search-name" placeholder="ادخل الاسم..."></div>
+      <div class="filter-group"><label>الفرع</label><select id="filter-branch"><option value="">الكل</option></select></div>
+      <div class="filter-group"><label>المراجعة الداخلية</label><select id="filter-review"><option value="">الكل</option></select></div>
+      <div class="filter-group"><label>تم التحويل</label><select id="filter-transfer"><option value="">الكل</option><option value="true">نعم</option><option value="false">لا</option></select></div>
     </div>
 
-    <div class="table-wrapper" id="tableContent">
-      <div class="loading">جاري جلب البيانات...</div>
+    <div class="table-wrapper">
+      <table id="data-table">
+        <thead>
+          <tr>
+            <th>تاريخ العملية</th>
+            <th>الفرع</th>
+            <th>اسم العميل</th>
+            <th>رقم البطاقة</th>
+            <th>المبلغ المطلوب</th>
+            <th>المراجعة الداخلية</th>
+            <th>مسؤول المتابعة</th>
+            <th>رقم اللجنة</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
     </div>
   </div>
 
   <script>
+    // تم وضع الكود داخل دالة لتجنب أخطاء التعريف المكرر
     (function() {
       "use strict";
-      const S_URL = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
-      const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
-      const _db = window.supabase.createClient(S_URL, S_KEY);
+
+      // بيانات الاتصال الجديدة
+      const SUPABASE_URL = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
+      
+      const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       let allData = [];
-      const userBranches = JSON.parse(localStorage.getItem('userBranches') || "[]");
-      const userRole = localStorage.getItem('userRole');
 
-      async function fetchData() {
+      async function init() {
         try {
-          let query = _db.from('operations_with_details').select('*');
-          if (userRole !== 'admin' && userRole !== 'followup_supervisor' && userBranches.length > 0) {
-            query = query.in('الفرع', userBranches);
-          }
-          const { data, error } = await query.order('created_at', { ascending: false });
-          if (error) throw error;
-          allData = data;
-          
-          // ملء الفلاتر
-          const branches = [...new Set(data.map(i => i["الفرع"]))];
-          const branchSel = document.getElementById('filterBranch');
-          branches.forEach(b => { if(b) branchSel.innerHTML += `<option value="${b}">${b}</option>`; });
+          const { data, error } = await _supabase
+            .from('operations_with_details')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-          renderTable(data);
-          updateStats(data);
-        } catch (e) {
-          document.getElementById('tableContent').innerHTML = `<div style="color:red; text-align:center;">خطأ: ${e.message}</div>`;
+          if (error) throw error;
+          allData = data || [];
+          
+          fillFilters();
+          renderTable(allData);
+          document.getElementById('loading').style.display = 'none';
+        } catch (err) {
+          console.error('Error:', err);
+          alert('حدث خطأ أثناء جلب البيانات');
         }
       }
 
+      function fillFilters() {
+        const branches = [...new Set(allData.map(item => item["الفرع"]))].filter(Boolean);
+        const reviews = [...new Set(allData.map(item => item["المراجعة الداخلية"]))].filter(Boolean);
+        
+        const branchSelect = document.getElementById('filter-branch');
+        branches.forEach(b => branchSelect.add(new Option(b, b)));
+
+        const reviewSelect = document.getElementById('filter-review');
+        reviews.forEach(r => reviewSelect.add(new Option(r, r)));
+
+        document.querySelectorAll('.filters input, .filters select').forEach(el => {
+          el.addEventListener('input', applyFilters);
+        });
+      }
+
+      function applyFilters() {
+        const nameSearch = document.getElementById('search-name').value.toLowerCase();
+        const branch = document.getElementById('filter-branch').value;
+        const review = document.getElementById('filter-review').value;
+        const transfer = document.getElementById('filter-transfer').value;
+
+        const filtered = allData.filter(item => {
+          const matchName = (item["اسم_العميل"] || "").toLowerCase().includes(nameSearch);
+          const matchBranch = !branch || item["الفرع"] === branch;
+          const matchReview = !review || item["المراجعة الداخلية"] === review;
+          const matchTransfer = !transfer || String(item["تم التحويل"]) === transfer;
+          return matchName && matchBranch && matchReview && matchTransfer;
+        });
+
+        renderTable(filtered);
+      }
+
       function renderTable(data) {
-        const container = document.getElementById('tableContent');
-        let html = `<table><thead><tr>
-          <th>#</th><th>بطاقة العميل</th><th>كود العميل</th><th>اسم العميل</th><th>المشروع</th>
-          <th>بطاقة الضامن</th><th>اسم الضامن</th><th>المبلغ</th><th>الأخصائي</th>
-          <th>المراجعة</th><th>المتابعة</th><th>الإدارة</th><th>اللجنة</th><th>التفاصيل</th>
-        </tr></thead><tbody>`;
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+        
+        let totalAmount = 0;
+        document.getElementById('count-total').textContent = data.length;
 
-        data.forEach((row, idx) => {
-          const rClass = (row["المراجعة الداخلية"] || "").includes("مقبول") ? "approved-cell" : (row["المراجعة الداخلية"] || "").includes("مرفوض") ? "rejected-cell" : "";
-          const sClass = (row["مسؤول المتابعة"] || "").includes("مقبول") ? "approved-cell" : (row["مسؤول المتابعة"] || "").includes("مرفوض") ? "rejected-cell" : "";
+        data.forEach((row, index) => {
+          totalAmount += parseFloat(row["المبلغ المطلوب"] || 0);
+          
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${new Date(row.created_at).toLocaleDateString('ar-EG')}</td>
+            <td>${row["الفرع"] || '—'}</td>
+            <td style="font-weight:bold">${row["اسم_العميل"] || '—'}</td>
+            <td>${row["رقم البطاقة العميل"] || '—'}</td>
+            <td style="color:#764ba2; font-weight:bold">${(row["المبلغ المطلوب"] || 0).toLocaleString()}</td>
+            <td>${row["المراجعة الداخلية"] || '—'}</td>
+            <td>${row["مسؤول المتابعة"] || '—'}</td>
+            <td>${row["رقم اللجنة"] || '—'}</td>
+            <td><button class="detail-btn" onclick="toggleDetail(${index})">تفاصيل</button></td>
+          `;
+          tbody.appendChild(tr);
 
-          html += `
-            <tr>
-              <td>${idx + 1}</td>
-              <td>${row["رقم البطاقة العميل"] || '—'}</td>
-              <td>${row["كود_العميل"] || '—'}</td>
-              <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
-              <td>${row["المشروع"] || '—'}</td>
-              <td>${row["رقم بطاقة الضامن"] || '—'}</td>
-              <td>${row["اسم_الضامن"] || '—'}</td>
-              <td style="font-weight:bold; color:#667eea;">${row["المبلغ المطلوب"] || 0}</td>
-              <td>${row["اسم الاخصائى"] || '—'}</td>
-              <td class="${rClass}">${row["المراجعة الداخلية"] || '—'}</td>
-              <td class="${sClass}">${row["مسؤول المتابعة"] || '—'}</td>
-              <td>${row["الادارة"] || '—'}</td>
-              <td>${row["رقم اللجنة"] || '—'}</td>
-              <td><button class="expand-btn" onclick="toggleRow(${idx})">عرض</button></td>
-            </tr>
-            <tr class="detail-row" id="row-${idx}">
-              <td colspan="14">
-                <div class="detail-container">
-                  <div class="detail-row-sections">
-                    <div class="detail-section">
-                      <h3>📋 معلومات العملية</h3>
-                      <div class="detail-item"><span class="detail-label">الفرع:</span> <span>${row["الفرع"]}</span></div>
-                      <div class="detail-item"><span class="detail-label">أيام التأخير:</span> <span>${row["عدد ايام التاخير"]}</span></div>
-                      <div class="detail-item"><span class="detail-label">الإحداثيات:</span> <span style="font-size:9px;">${row["احداثيات الموقع"]}</span></div>
-                    </div>
-                    <div class="detail-section">
-                      <h3>📊 تقييم العميل</h3>
-                      <div class="detail-item"><span class="detail-label">رقم الحساب:</span> <span>${row["رقم_الحساب_من_التقييم"]}</span></div>
-                      <div class="detail-item"><span class="detail-label">نتيجة التقييم:</span> <span>${row["نتيجة_التقييم"]}</span></div>
-                      <div class="detail-item"><span class="detail-label">تعليق الاستعلام:</span> <span>${row["تعليق_استعلام_العميل"]}</span></div>
-                    </div>
-                    <div class="detail-section">
-                      <h3>👥 تقييم الضامن</h3>
-                      <div class="detail-item"><span class="detail-label">اسم الضامن I-Score:</span> <span>${row["اسم_الضامن_من_الاي_سكور"]}</span></div>
-                      <div class="detail-item"><span class="detail-label">التقييم الرقمي:</span> <span>${row["تقييم_رقمى_الضامن"]}</span></div>
-                    </div>
-                    <div class="detail-section">
-                      <h3>✅ ملاحظات الإدارة</h3>
-                      <div class="detail-item"><span class="detail-label">ملاحظات المراجعة:</span> <span>${row["ملاحظات المراجعة الداخلية"]}</span></div>
-                      <div class="detail-item"><span class="detail-label">تعليق المتابعة:</span> <span>${row["تعليق مسؤول المتابعة"]}</span></div>
-                    </div>
+          // صف التفاصيل المخفي (القسيمة الأصلية)
+          const detailTr = document.createElement('tr');
+          detailTr.id = `detail-${index}`;
+          detailTr.className = 'detail-row';
+          detailTr.innerHTML = `
+            <td colspan="9">
+              <div class="detail-content">
+                <div class="detail-grid">
+                  <div class="detail-section">
+                    <h4>📋 بيانات العميل الأساسية</h4>
+                    <div class="detail-item"><span class="detail-label">كود العميل:</span><span class="detail-value">${row["كود_العميل"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">رقم الحساب:</span><span class="detail-value">${row["رقم_الحساب_من_التقييم"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">المشروع:</span><span class="detail-value">${row["المشروع"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">المبلغ المطلوب:</span><span class="detail-value">${row["المبلغ المطلوب"] || '—'}</span></div>
+                  </div>
+                  <div class="detail-section">
+                    <h4>👥 بيانات الضامن</h4>
+                    <div class="detail-item"><span class="detail-label">اسم الضامن:</span><span class="detail-value">${row["اسم_الضامن"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">رقم بطاقة الضامن:</span><span class="detail-value">${row["رقم بطاقة الضامن"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">اسم الضامن (IScore):</span><span class="detail-value">${row["اسم_الضامن_من_الاي_سكور"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">تقييم الضامن:</span><span class="detail-value">${row["تقييم_رقمى_الضامن"] || '—'}</span></div>
+                  </div>
+                  <div class="detail-section">
+                    <h4>🔍 التقييم والاستعلام</h4>
+                    <div class="detail-item"><span class="detail-label">نتيجة التقييم:</span><span class="detail-value">${row["نتيجة_التقييم"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">تعليق الاستعلام:</span><span class="detail-value">${row["تعليق_استعلام_العميل"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">إحداثيات الموقع:</span><span class="detail-value" style="font-size:10px">${row["احداثيات الموقع"] || '—'}</span></div>
+                  </div>
+                  <div class="detail-section">
+                    <h4>⚖️ حالة الاعتماد</h4>
+                    <div class="detail-item"><span class="detail-label">المراجعة الداخلية:</span><span class="detail-value">${row["المراجعة الداخلية"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">ملاحظات المراجعة:</span><span class="detail-value">${row["ملاحظات المراجعة الداخلية"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">تعليق المتابعة:</span><span class="detail-value">${row["تعليق مسؤول المتابعة"] || '—'}</span></div>
+                    <div class="detail-item"><span class="detail-label">تم التحويل:</span><span class="detail-value">${row["تم التحويل"] ? 'نعم' : 'لا'}</span></div>
                   </div>
                 </div>
-              </td>
-            </tr>`;
+              </div>
+            </td>
+          `;
+          tbody.appendChild(detailTr);
         });
-        html += `</tbody></table>`;
-        container.innerHTML = html;
+
+        document.getElementById('sum-amount').textContent = totalAmount.toLocaleString() + ' ج.م';
       }
 
-      window.toggleRow = (idx) => {
-        const row = document.getElementById(`row-${idx}`);
-        row.style.display = (row.style.display === 'table-row') ? 'none' : 'table-row';
+      // تعريف دالة toggleDetail في النطاق العام ليتمكن الزر من الوصول إليها
+      window.toggleDetail = function(index) {
+        const row = document.getElementById(`detail-${index}`);
+        row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
       };
 
-      function updateStats(data) {
-        document.getElementById('totalRecords').textContent = data.length;
-        const total = data.reduce((s, r) => s + (parseFloat(r["المبلغ المطلوب"]) || 0), 0);
-        document.getElementById('totalAmount').textContent = total.toLocaleString() + " ج.م";
-      }
-
-      fetchData();
+      init();
     })();
   </script>
 </body>

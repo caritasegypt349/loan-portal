@@ -138,6 +138,24 @@
     }
     const supabase = window.supabaseClient;
 
+    // دالة إغلاق جميع الجلسات
+    function clearAllSessions() {
+      const errorDiv = document.getElementById('errorMessage');
+      
+      // مسح جميع البيانات من localStorage
+      localStorage.clear();
+      
+      // مسح جميع البيانات من sessionStorage
+      sessionStorage.clear();
+      
+      errorDiv.className = 'success';
+      errorDiv.textContent = "تم إغلاق جميع الجلسات بنجاح! يمكنك الآن تسجيل الدخول مرة أخرى.";
+      
+      setTimeout(() => {
+        errorDiv.textContent = '';
+      }, 3000);
+    }
+
     async function login() {
       const email = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
@@ -226,24 +244,6 @@
         btn.target = "_blank";
         buttonsDiv.appendChild(btn);
       });
-    }
-
-    // دالة إغلاق جميع الجلسات
-    function clearAllSessions() {
-      const errorDiv = document.getElementById('errorMessage');
-      
-      // مسح جميع البيانات من localStorage
-      localStorage.clear();
-      
-      // مسح جميع البيانات من sessionStorage
-      sessionStorage.clear();
-      
-      errorDiv.className = 'success';
-      errorDiv.textContent = "تم إغلاق جميع الجلسات بنجاح! يمكنك الآن تسجيل الدخول مرة أخرى.";
-      
-      setTimeout(() => {
-        errorDiv.textContent = '';
-      }, 3000);
     }
   </script>
 </body>

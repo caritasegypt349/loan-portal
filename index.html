@@ -99,13 +99,13 @@
       <h2>تسجيل الدخول إلى نظام التمويل</h2>
       <div class="form-group">
         <label for="username">اسم المستخدم (المعرف)</label>
-        <input type="text" id="username" placeholder="مثال: test@example.com" autocomplete="username" />
+        <input type="text" id="username" placeholder="مثال: admin@example.com" autocomplete="username" />
       </div>
       <div class="form-group">
         <label for="password">كلمة السر</label>
         <input type="password" id="password" placeholder="أدخل كلمة السر" autocomplete="current-password" />
       </div>
-      <button onclick="login()">دخول</button>
+      <button id="loginButton">دخول</button>
       <div id="errorMessage" class="error"></div>
     </div>
 
@@ -116,15 +116,17 @@
   </div>
 
   <script>
+    // تعريف المتغيرات مرة واحدة فقط
     const supabaseUrl = 'https://akjyrmmqsnxdbkslxmvb.supabase.co';
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-    // دالة بسيطة للتشفير (Base64) - لاستخدامها لاحقاً إذا أردت
+    // دالة بسيطة للتشفير (Base64)
     function simpleEncrypt(text) {
       return btoa(text);
     }
 
+    // دالة تسجيل الدخول
     async function login() {
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
@@ -136,21 +138,21 @@
       }
 
       try {
-        // المحاولة الأولى: البحث باستخدام id (اسم المستخدم)
+        console.log("محاولة الدخول باسم:", username);
+        
         const { data, error } = await supabase
           .from('users')
           .select('id, full_name, role, branches')
           .eq('id', username)
-          .eq('password_hash', password) // كلمة المرور نص عادي كما في الجدول
+          .eq('password_hash', password)
           .single();
 
         if (error) {
-          // إذا كان الخطأ "لا توجد سجلات" (PGRST116) أو أي خطأ آخر
+          console.error("خطأ في Supabase:", error);
           if (error.code === 'PGRST116') {
             errorDiv.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة";
           } else {
             errorDiv.textContent = "حدث خطأ في الاتصال بالخادم";
-            console.error("Supabase error:", error);
           }
           return;
         }
@@ -160,24 +162,27 @@
           return;
         }
 
-        // تخزين بيانات المستخدم في localStorage
+        console.log("تم الدخول بنجاح:", data);
+        
+        // تخزين بيانات المستخدم
         localStorage.setItem('loggedInUserId', data.id);
         localStorage.setItem('loggedInUser', data.full_name);
         localStorage.setItem('userRole', data.role);
         localStorage.setItem('userBranches', JSON.stringify(data.branches || []));
 
-        // إخفاء قسم الدخول وإظهار لوحة التحكم
+        // إظهار لوحة التحكم
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('userFullName').textContent = data.full_name;
         renderPageButtons(data.role);
         document.getElementById('dashboardSection').style.display = 'block';
 
       } catch (err) {
+        console.error("خطأ غير متوقع:", err);
         errorDiv.textContent = "حدث خطأ غير متوقع. حاول لاحقاً.";
-        console.error("Login error:", err);
       }
     }
 
+    // دالة لعرض أزرار الصفحات حسب الصلاحية
     function renderPageButtons(role) {
       const buttonsDiv = document.getElementById('pageButtons');
       buttonsDiv.innerHTML = '';
@@ -218,7 +223,7 @@
         pages.push({ label: "إدارة طلبات التعديل", url: "admin_requests.html", cls: "page-btn admin" });
       }
 
-      // إضافة الأزرار إلى الصفحة
+      // إضافة الأزرار
       pages.forEach(page => {
         const btn = document.createElement('a');
         btn.href = page.url;
@@ -229,8 +234,8 @@
       });
     }
 
-    // فحص إذا كان المستخدم مسجلاً بالفعل
-    window.addEventListener('DOMContentLoaded', function() {
+    // عند تحميل الصفحة، تحقق إذا كان المستخدم مسجلاً
+    document.addEventListener('DOMContentLoaded', function() {
       const loggedInUser = localStorage.getItem('loggedInUser');
       const userRole = localStorage.getItem('userRole');
       
@@ -240,6 +245,16 @@
         renderPageButtons(userRole);
         document.getElementById('dashboardSection').style.display = 'block';
       }
+      
+      // إضافة حدث النقر على زر الدخول
+      document.getElementById('loginButton').addEventListener('click', login);
+      
+      // إضافة إمكانية الدخول بالضغط على Enter
+      document.getElementById('password').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          login();
+        }
+      });
     });
   </script>
 </body>

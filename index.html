@@ -61,6 +61,12 @@
       margin-top: 10px;
       font-weight: bold;
     }
+    .success {
+      color: #27ae60;
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
     .dashboard {
       text-align: center;
     }
@@ -91,10 +97,35 @@
     .page-btn.admin { background: #e74c3c; }
     .page-btn.financing { background: #1abc9c; }
     .page-btn.view { background: #9b59b6; }
+    /* زر الخروج */
+    .logout-btn {
+      background: #e74c3c;
+      margin-top: 20px;
+      width: 100%;
+    }
+    .logout-btn:hover {
+      background: #c0392b;
+    }
+    /* رسالة خروج تلقائي */
+    .auto-logout {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+      padding: 10px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      text-align: center;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- رسالة خروج تلقائي -->
+    <div id="autoLogoutMessage" class="auto-logout" style="display: none;">
+      ✓ تم تسجيل الخروج من الجلسات السابقة تلقائياً
+    </div>
+    
     <div id="loginSection">
       <h2>تسجيل الدخول إلى نظام التمويل</h2>
       <div class="form-group">
@@ -112,18 +143,51 @@
     <div id="dashboardSection" style="display:none;" class="dashboard">
       <div class="welcome">مرحباً، <span id="userFullName"></span>!</div>
       <div class="btn-grid" id="pageButtons"></div>
-      </div>
+      <!-- زر الخروج الاختياري -->
+      <button id="logoutBtn" class="logout-btn">تسجيل خروج</button>
+    </div>
   </div>
 
   <script>
-    // ** الحل: استخدام متغير مختلف لتجنب التعارض **
+    // ========== 1. تسجيل خروج تلقائي عند فتح الصفحة ==========
+    (function autoLogoutOnLoad() {
+      // عندما تفتح index.html، سجل الخروج من الجلسات القديمة
+      const wasLoggedIn = localStorage.getItem('loggedInUserId');
+      
+      if (wasLoggedIn) {
+        // عرض رسالة الخروج التلقائي
+        document.getElementById('autoLogoutMessage').style.display = 'block';
+        
+        // مسح البيانات القديمة
+        localStorage.removeItem('loggedInUserId');
+        localStorage.removeItem('loggedInUser');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userBranches');
+        localStorage.removeItem('sessionId');
+        
+        // إخفاء الرسالة بعد 3 ثواني
+        setTimeout(() => {
+          document.getElementById('autoLogoutMessage').style.display = 'none';
+        }, 3000);
+        
+        console.log("تم تسجيل الخروج التلقائي من الجلسة السابقة");
+      }
+    })();
+
+    // ========== 2. الاتصال بقاعدة البيانات ==========
     const mySupabase = window.supabase.createClient(
       'https://akjyrmmqsnxdbkslxmvb.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
     );
 
-    // تغيير الزر لاستخدام addEventListener بدلاً من onclick
+    // ========== 3. دالة تسجيل الدخول ==========
     document.getElementById('loginBtn').addEventListener('click', login);
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    // السماح بالدخول بالزر Enter
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') login();
+    });
 
     async function login() {
       const email = document.getElementById('username').value.trim();
@@ -132,10 +196,14 @@
 
       if (!email || !password) {
         errorDiv.textContent = "الرجاء إدخال اسم المستخدم وكلمة السر";
+        errorDiv.className = 'error';
         return;
       }
 
       try {
+        errorDiv.textContent = "جارٍ التحقق...";
+        errorDiv.className = 'success';
+        
         const { data, error } = await mySupabase
           .from('users')
           .select('id, full_name, role, branches')
@@ -144,27 +212,66 @@
           .single();
 
         if (error || !data) {
-          errorDiv.textContent = "بيانات الدخول غير صحيحة";
+          errorDiv.textContent = "اسم المستخدم أو كلمة السر غير صحيحة";
+          errorDiv.className = 'error';
           return;
         }
 
+        // ========== 4. تخزين بيانات الجلسة الجديدة ==========
         localStorage.setItem('loggedInUserId', data.id);
         localStorage.setItem('loggedInUser', data.full_name);
-        // إضافة بيانات إضافية قد تحتاجها الصفحات الأخرى
         localStorage.setItem('userRole', data.role);
         localStorage.setItem('userBranches', JSON.stringify(data.branches || []));
+        
+        // إنشاء رمز جلسة فريد لمنع التعارض
+        const sessionId = 'fin_sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('sessionId', sessionId);
+        
+        // إضافة وقت انتهاء الجلسة (8 ساعات)
+        const expiryTime = new Date().getTime() + (8 * 60 * 60 * 1000);
+        localStorage.setItem('sessionExpiry', expiryTime);
 
-        document.getElementById('loginSection').style.display = 'none';
-        document.getElementById('userFullName').textContent = data.full_name;
-        renderPageButtons(data.role);
-        document.getElementById('dashboardSection').style.display = 'block';
+        errorDiv.textContent = "✓ تم تسجيل الدخول بنجاح";
+        errorDiv.className = 'success';
+        
+        // الانتقال إلى لوحة التحكم
+        setTimeout(() => {
+          document.getElementById('loginSection').style.display = 'none';
+          document.getElementById('userFullName').textContent = data.full_name;
+          renderPageButtons(data.role);
+          document.getElementById('dashboardSection').style.display = 'block';
+        }, 500);
 
       } catch (err) {
         errorDiv.textContent = "حدث خطأ أثناء الاتصال. حاول لاحقاً.";
+        errorDiv.className = 'error';
         console.error(err);
       }
     }
 
+    // ========== 5. دالة تسجيل الخروج ==========
+    function logout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        // مسح جميع بيانات الجلسة
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // إظهار رسالة تأكيد
+        document.getElementById('errorMessage').textContent = "✓ تم تسجيل الخروج بنجاح";
+        document.getElementById('errorMessage').className = 'success';
+        
+        // العودة إلى صفحة الدخول بعد ثانية
+        setTimeout(() => {
+          document.getElementById('dashboardSection').style.display = 'none';
+          document.getElementById('loginSection').style.display = 'block';
+          document.getElementById('errorMessage').textContent = '';
+          document.getElementById('username').value = '';
+          document.getElementById('password').value = '';
+        }, 1000);
+      }
+    }
+
+    // ========== 6. عرض أزرار الصفحات حسب الدور ==========
     function renderPageButtons(role) {
       const buttonsDiv = document.getElementById('pageButtons');
       buttonsDiv.innerHTML = '';
@@ -214,6 +321,18 @@
         buttonsDiv.appendChild(btn);
       });
     }
+
+    // ========== 7. تحميل تلقائي إذا كان هناك جلسة (للتجربة) ==========
+    window.addEventListener('DOMContentLoaded', function() {
+      // هذا فقط للتجربة - يمكن إزالته
+      const debugUser = localStorage.getItem('loggedInUserId');
+      if (debugUser && window.location.search.includes('debug')) {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('userFullName').textContent = localStorage.getItem('loggedInUser') || 'مستخدم تجريبي';
+        renderPageButtons(localStorage.getItem('userRole') || 'data_entry');
+        document.getElementById('dashboardSection').style.display = 'block';
+      }
+    });
   </script>
 </body>
 </html>

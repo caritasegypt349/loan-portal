@@ -98,8 +98,8 @@
     <div id="loginSection">
       <h2>تسجيل الدخول إلى نظام التمويل</h2>
       <div class="form-group">
-        <label for="username">اسم المستخدم</label>
-        <input type="text" id="username" placeholder="مثال: mixel" autocomplete="username" />
+        <label for="username">اسم المستخدم (المعرف)</label>
+        <input type="text" id="username" placeholder="مثال: test@example.com" autocomplete="username" />
       </div>
       <div class="form-group">
         <label for="password">كلمة السر</label>
@@ -120,40 +120,61 @@
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
+    // دالة بسيطة للتشفير (Base64) - لاستخدامها لاحقاً إذا أردت
+    function simpleEncrypt(text) {
+      return btoa(text);
+    }
+
     async function login() {
-      const email = document.getElementById('username').value.trim();
+      const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
       const errorDiv = document.getElementById('errorMessage');
 
-      if (!email || !password) {
+      if (!username || !password) {
         errorDiv.textContent = "الرجاء إدخال اسم المستخدم وكلمة السر";
         return;
       }
 
       try {
+        // المحاولة الأولى: البحث باستخدام id (اسم المستخدم)
         const { data, error } = await supabase
           .from('users')
           .select('id, full_name, role, branches')
-          .eq('id', email)
-          .eq('password_hash', password)
+          .eq('id', username)
+          .eq('password_hash', password) // كلمة المرور نص عادي كما في الجدول
           .single();
 
-        if (error || !data) {
-          errorDiv.textContent = "بيانات الدخول غير صحيحة";
+        if (error) {
+          // إذا كان الخطأ "لا توجد سجلات" (PGRST116) أو أي خطأ آخر
+          if (error.code === 'PGRST116') {
+            errorDiv.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة";
+          } else {
+            errorDiv.textContent = "حدث خطأ في الاتصال بالخادم";
+            console.error("Supabase error:", error);
+          }
           return;
         }
 
+        if (!data) {
+          errorDiv.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة";
+          return;
+        }
+
+        // تخزين بيانات المستخدم في localStorage
         localStorage.setItem('loggedInUserId', data.id);
         localStorage.setItem('loggedInUser', data.full_name);
+        localStorage.setItem('userRole', data.role);
+        localStorage.setItem('userBranches', JSON.stringify(data.branches || []));
 
+        // إخفاء قسم الدخول وإظهار لوحة التحكم
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('userFullName').textContent = data.full_name;
         renderPageButtons(data.role);
         document.getElementById('dashboardSection').style.display = 'block';
 
       } catch (err) {
-        errorDiv.textContent = "حدث خطأ أثناء الاتصال. حاول لاحقاً.";
-        console.error(err);
+        errorDiv.textContent = "حدث خطأ غير متوقع. حاول لاحقاً.";
+        console.error("Login error:", err);
       }
     }
 
@@ -197,6 +218,7 @@
         pages.push({ label: "إدارة طلبات التعديل", url: "admin_requests.html", cls: "page-btn admin" });
       }
 
+      // إضافة الأزرار إلى الصفحة
       pages.forEach(page => {
         const btn = document.createElement('a');
         btn.href = page.url;
@@ -206,6 +228,19 @@
         buttonsDiv.appendChild(btn);
       });
     }
+
+    // فحص إذا كان المستخدم مسجلاً بالفعل
+    window.addEventListener('DOMContentLoaded', function() {
+      const loggedInUser = localStorage.getItem('loggedInUser');
+      const userRole = localStorage.getItem('userRole');
+      
+      if (loggedInUser && userRole) {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('userFullName').textContent = loggedInUser;
+        renderPageButtons(userRole);
+        document.getElementById('dashboardSection').style.display = 'block';
+      }
+    });
   </script>
 </body>
 </html>

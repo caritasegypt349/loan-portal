@@ -6,6 +6,7 @@
   <title>عرض البيانات التفصيلي - نظام القروض</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* احتفظ بنفس الـ CSS كما هو */
     body { 
       font-family: 'Segoe UI', Tahoma, sans-serif; 
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -222,8 +223,6 @@
       color: #667eea;
       margin-top: 4px;
     }
-    /* -------------------------------------- */
-    /* ألوان المقبول والمرفوض */
     .approved-cell {
       background-color: #e6ffe6; 
       color: #008000; 
@@ -234,8 +233,6 @@
       color: #cc0000; 
       font-weight: bold;
     }
-    /* -------------------------------------- */
-    /* تنسيقات التفاصيل */
     .detail-container {
         padding: 10px;
     }
@@ -357,17 +354,37 @@
 
     <div class="table-wrapper">
       <div id="tableContainer">
-        <div class="loading">جاري تحميل البيانات...</div>
+        <div class="loading" id="loadingMessage">جاري تحميل البيانات...</div>
       </div>
     </div>
   </div>
 
   <script>
-    // ** تم الحفاظ على سطري الاتصال كما هما بناءً على طلبك **
-    const supabase = window.supabase.createClient(
-      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
-    );
+    // التحقق من الجلسة أولاً
+    function validateSession() {
+      const userId = localStorage.getItem('loggedInUserId');
+      const userFullName = localStorage.getItem('loggedInUser');
+      
+      if (!userId || !userFullName) {
+        alert("الرجاء تسجيل الدخول أولًا!");
+        window.location.href = "index.html";
+        return false;
+      }
+      
+      return true;
+    }
+
+    // تعريف Supabase - نسخة منفصلة لتجنب التعارض
+    let db;
+    try {
+      db = window.supabase.createClient(
+        'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      );
+    } catch (error) {
+      console.error('فشل في تهيئة قاعدة البيانات:', error);
+      showError('خطأ في تحميل قاعدة البيانات. يرجى تحديث الصفحة.');
+    }
 
     let allData = [];
     let userRole = '';
@@ -384,104 +401,158 @@
     };
     let searchTimeout = null;
 
+    function showError(message) {
+      document.getElementById('tableContainer').innerHTML = `<div class="error">${message}</div>`;
+    }
+
+    function showLoading(message) {
+      document.getElementById('loadingMessage').textContent = message;
+    }
+
     async function init() {
-      const userId = localStorage.getItem('loggedInUserId');
-      if (!userId) {
-        alert("الرجاء تسجيل الدخول أولًا!");
-        window.location.href = "index.html";
+      // التحقق من الجلسة أولاً
+      if (!validateSession()) {
         return;
       }
 
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('role, branches')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      userRole = user.role;
-      userBranches = user.branches;
-
-      await loadData();
+      const userId = localStorage.getItem('loggedInUserId');
       
-      // إغلاق dropdown اللجان عند الضغط خارجها
-      document.addEventListener('click', function(e) {
-        if (!e.target.closest('.committee-filter')) {
-          document.getElementById('committeeDropdown').classList.remove('show');
+      try {
+        showLoading('جاري تحميل معلومات المستخدم...');
+        
+        // جلب معلومات المستخدم من localStorage أولاً (من index.html)
+        userRole = localStorage.getItem('userRole') || '';
+        const branchesStr = localStorage.getItem('userBranches') || '[]';
+        userBranches = JSON.parse(branchesStr);
+        
+        // إذا لم تكن المعلومات متوفرة في localStorage، نجلبها من قاعدة البيانات
+        if (!userRole) {
+          const { data: user, error } = await db
+            .from('users')
+            .select('role, branches')
+            .eq('id', userId)
+            .single();
+
+          if (error) throw error;
+          
+          userRole = user.role;
+          userBranches = user.branches || [];
+          
+          // تخزين في localStorage لاستخدامها لاحقاً
+          localStorage.setItem('userRole', userRole);
+          localStorage.setItem('userBranches', JSON.stringify(userBranches));
         }
-      });
+
+        showLoading('جاري تحميل البيانات...');
+        await loadData();
+        
+        // إغلاق dropdown اللجان عند الضغط خارجها
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('.committee-filter')) {
+            document.getElementById('committeeDropdown').classList.remove('show');
+          }
+        });
+
+      } catch (err) {
+        console.error('خطأ في التطبيق:', err);
+        showError(`خطأ: ${err.message || 'فشل في تحميل البيانات'}`);
+      }
     }
 
     async function loadData() {
-      let query = supabase.from('operations_with_details').select('*');
-      if (userRole !== 'admin' && userRole !== 'followup_supervisor' && userBranches) {
-        query = query.in('الفرع', userBranches);
+      try {
+        let query = db.from('operations_with_details').select('*');
+        
+        // تطبيق فلتر الفروع حسب الصلاحية
+        if (userRole !== 'admin' && userRole !== 'followup_supervisor' && userBranches && userBranches.length > 0) {
+          query = query.in('الفرع', userBranches);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('خطأ في جلب البيانات:', error);
+          throw new Error('فشل في جلب البيانات من قاعدة البيانات');
+        }
+
+        allData = data || [];
+        filteredData = [...allData];
+        renderFilters();
+        renderTable(filteredData);
+        updateStats(filteredData);
+
+      } catch (err) {
+        console.error('خطأ في loadData:', err);
+        throw err;
       }
-      const { data, error } = await query.order('created_at', { ascending: false });
-      if (error) throw error;
-      allData = data;
-      filteredData = [...allData];
-      renderFilters();
-      renderTable(filteredData);
-      updateStats(filteredData);
     }
 
     function renderFilters() {
-      let branches = [];
-      if (userRole === 'admin' || userRole === 'followup_supervisor') {
-        branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v && v.trim()))];
-      } else if (userBranches) {
-        branches = userBranches;
-      }
+      try {
+        let branches = [];
+        if (userRole === 'admin' || userRole === 'followup_supervisor') {
+          branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v && v.trim()))];
+        } else if (userBranches && userBranches.length > 0) {
+          branches = userBranches;
+        }
 
-      const branchSelect = document.getElementById('filterBranch');
-      branches.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        branchSelect.appendChild(opt);
-      });
-
-      const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
-      const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
-      const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
-      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
-      const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))].sort();
-
-      const selects = [
-        { id: 'filterReview', data: reviews },
-        { id: 'filterSupervisor', data: supervisors },
-        { id: 'filterAdmin', data: admins },
-        { id: 'filterOfficer', data: officers }
-      ];
-
-      selects.forEach(item => {
-        const select = document.getElementById(item.id);
-        item.data.forEach(v => {
+        const branchSelect = document.getElementById('filterBranch');
+        branchSelect.innerHTML = '<option value="">الكل</option>';
+        branches.forEach(v => {
           const opt = document.createElement('option');
           opt.value = v;
           opt.textContent = v;
-          select.appendChild(opt);
+          branchSelect.appendChild(opt);
         });
-      });
 
-      // إنشاء checkboxes للجان
-      const dropdown = document.getElementById('committeeDropdown');
-      dropdown.innerHTML = '';
-      committees.forEach(committee => {
-        const div = document.createElement('div');
-        div.className = 'committee-item';
-        div.innerHTML = `
-          <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
-          <label for="comm_${committee}">${committee}</label>
-        `;
-        dropdown.appendChild(div);
-      });
+        const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
+        const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
+        const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
+        const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
+        const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))].sort();
 
-      // إضافة مستمعات للفلاتر العامة
-      ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
-        document.getElementById(id).addEventListener('change', applyAllFilters);
-      });
+        const selects = [
+          { id: 'filterReview', data: reviews },
+          { id: 'filterSupervisor', data: supervisors },
+          { id: 'filterAdmin', data: admins },
+          { id: 'filterOfficer', data: officers }
+        ];
+
+        selects.forEach(item => {
+          const select = document.getElementById(item.id);
+          select.innerHTML = '<option value="">الكل</option>';
+          item.data.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            select.appendChild(opt);
+          });
+        });
+
+        // إنشاء checkboxes للجان
+        const dropdown = document.getElementById('committeeDropdown');
+        dropdown.innerHTML = '';
+        committees.forEach(committee => {
+          const div = document.createElement('div');
+          div.className = 'committee-item';
+          div.innerHTML = `
+            <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
+            <label for="comm_${committee}">${committee}</label>
+          `;
+          dropdown.appendChild(div);
+        });
+
+        // إضافة مستمعات للفلاتر العامة
+        ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.addEventListener('change', applyAllFilters);
+          }
+        });
+
+      } catch (err) {
+        console.error('خطأ في renderFilters:', err);
+      }
     }
 
     function toggleCommitteeDropdown() {
@@ -506,48 +577,52 @@
     }
 
     function applyAllFilters() {
-      const branch = document.getElementById('filterBranch').value;
-      const review = document.getElementById('filterReview').value;
-      const supervisor = document.getElementById('filterSupervisor').value;
-      const admin = document.getElementById('filterAdmin').value;
-      const officer = document.getElementById('filterOfficer').value;
-      const transferred = document.getElementById('filterTransferred').value;
+      try {
+        const branch = document.getElementById('filterBranch').value;
+        const review = document.getElementById('filterReview').value;
+        const supervisor = document.getElementById('filterSupervisor').value;
+        const admin = document.getElementById('filterAdmin').value;
+        const officer = document.getElementById('filterOfficer').value;
+        const transferred = document.getElementById('filterTransferred').value;
 
-      filteredData = allData.filter(row => {
-        // الفلاتر العامة
-        if (branch && row["الفرع"] !== branch) return false;
-        if (review && row["المراجعة الداخلية"] !== review) return false;
-        if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
-        if (admin && row["الادارة"] !== admin) return false;
-        if (officer && row["اسم الاخصائى"] !== officer) return false;
-        if (transferred !== '') {
-          const isTransferred = row["تم التحويل"] === true;
-          if (transferred === 'true' && !isTransferred) return false;
-          if (transferred === 'false' && isTransferred) return false;
-        }
-        
-        // فلتر اللجان (multi-select)
-        if (selectedCommittees.length > 0) {
-          if (!selectedCommittees.includes(row["رقم اللجنة"])) return false;
-        }
+        filteredData = allData.filter(row => {
+          // الفلاتر العامة
+          if (branch && row["الفرع"] !== branch) return false;
+          if (review && row["المراجعة الداخلية"] !== review) return false;
+          if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
+          if (admin && row["الادارة"] !== admin) return false;
+          if (officer && row["اسم الاخصائى"] !== officer) return false;
+          if (transferred !== '') {
+            const isTransferred = row["تم التحويل"] === true;
+            if (transferred === 'true' && !isTransferred) return false;
+            if (transferred === 'false' && isTransferred) return false;
+          }
+          
+          // فلتر اللجان (multi-select)
+          if (selectedCommittees.length > 0) {
+            if (!selectedCommittees.includes(row["رقم اللجنة"])) return false;
+          }
 
-        // فلاتر الأعمدة
-        if (columnFilters.nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(columnFilters.nationalId)) return false;
-        if (columnFilters.clientId && !row["كود_العميل"]?.toLowerCase().includes(columnFilters.clientId)) return false;
-        if (columnFilters.clientName) {
-          const name1 = row["اسم_العميل"]?.toLowerCase() || '';
-          const name2 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
-          if (!name1.includes(columnFilters.clientName) && !name2.includes(columnFilters.clientName)) return false;
-        }
-        if (columnFilters.project && !row["المشروع"]?.toLowerCase().includes(columnFilters.project)) return false;
-        if (columnFilters.guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(columnFilters.guarantorId)) return false;
-        if (columnFilters.guarantorName && !row["اسم_الضامن"]?.toLowerCase().includes(columnFilters.guarantorName)) return false;
+          // فلاتر الأعمدة
+          if (columnFilters.nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(columnFilters.nationalId)) return false;
+          if (columnFilters.clientId && !row["كود_العميل"]?.toLowerCase().includes(columnFilters.clientId)) return false;
+          if (columnFilters.clientName) {
+            const name1 = row["اسم_العميل"]?.toLowerCase() || '';
+            const name2 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
+            if (!name1.includes(columnFilters.clientName) && !name2.includes(columnFilters.clientName)) return false;
+          }
+          if (columnFilters.project && !row["المشروع"]?.toLowerCase().includes(columnFilters.project)) return false;
+          if (columnFilters.guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(columnFilters.guarantorId)) return false;
+          if (columnFilters.guarantorName && !row["اسم_الضامن"]?.toLowerCase().includes(columnFilters.guarantorName)) return false;
 
-        return true;
-      });
+          return true;
+        });
 
-      renderTable(filteredData);
-      updateStats(filteredData);
+        renderTable(filteredData);
+        updateStats(filteredData);
+      } catch (err) {
+        console.error('خطأ في applyAllFilters:', err);
+      }
     }
 
     function updateColumnFilter(field, value) {
@@ -558,7 +633,7 @@
         clearTimeout(searchTimeout);
       }
       
-      // الانتظار 600ms قبل البحث
+      // الانتظار 1 ثانية قبل البحث
       searchTimeout = setTimeout(() => {
         applyAllFilters();
       }, 1000);
@@ -686,21 +761,11 @@
       `;
 
       data.forEach((row, idx) => {
-        // وظيفة لتحديد لون الخلفية
         const getCellClass = (value) => {
           if (!value) return '';
           const lowerValue = value.toLowerCase();
-
-          // 1. حالة القبول: إذا كان النص يحتوي على كلمة "مقبول" في أي مكان
-          if (lowerValue.includes('مقبول')) {
-            return 'approved-cell';
-          }
-
-          // 2. حالة الرفض: إذا كان النص يحتوي على كلمة "مرفوض" أو "ملغي" في أي مكان
-          if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي')) {
-            return 'rejected-cell';
-          }
-
+          if (lowerValue.includes('مقبول')) return 'approved-cell';
+          if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي')) return 'rejected-cell';
           return '';
         };
 
@@ -732,167 +797,71 @@
           <tr class="detail-row" id="detail-${idx}">
             <td colspan="18">
               <div class="detail-container">
-                
                 <div class="detail-row-sections">
-                  
                   <div class="detail-section">
                     <h3>📋 معلومات العملية</h3>
-                    <div class="detail-item">
-                      <span class="detail-label">عدد أيام التأخير:</span>
-                      <span class="detail-value">${row["عدد ايام التاخير"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">عدد الأقساط:</span>
-                      <span class="detail-value">${row["عدد الاقساط"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">المنطقة:</span>
-                      <span class="detail-value">${row["المنطقه"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">الفرع:</span>
-                      <span class="detail-value">${row["الفرع"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">القائم بالزيارة:</span>
-                      <span class="detail-value">${row["القائم بالزياره"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">القائم بالإدخال:</span>
-                      <span class="detail-value">${row["اسم القائم بالادخال"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">تاريخ الإدخال:</span>
-                      <span class="detail-value">${row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : '—'}</span>
-                    </div>
+                    ${renderDetailItems(row, [
+                      ['عدد أيام التأخير', 'عدد ايام التاخير'],
+                      ['عدد الأقساط', 'عدد الاقساط'],
+                      ['المنطقة', 'المنطقه'],
+                      ['الفرع', 'الفرع'],
+                      ['القائم بالزيارة', 'القائم بالزياره'],
+                      ['القائم بالإدخال', 'اسم القائم بالادخال'],
+                      ['تاريخ الإدخال', 'created_at', true]
+                    ])}
                   </div>
-
                   <div class="detail-section">
                     <h3>💰 بيانات القرض</h3>
-                    <div class="detail-item">
-                      <span class="detail-label">تاريخ القرض:</span>
-                      <span class="detail-value">${row["تاريخ_القرض"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">أخصائي القرض:</span>
-                      <span class="detail-value">${row["اخصائى_القرض"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">كود العميل:</span>
-                      <span class="detail-value">${row["كود_العميل"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">النشاط الثاني:</span>
-                      <span class="detail-value">${row["النشاط_الثانى"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">فرع العميل:</span>
-                      <span class="detail-value">${row["فرع_العميل_من_القروض"] || '—'}</span>
-                    </div>
+                    ${renderDetailItems(row, [
+                      ['تاريخ القرض', 'تاريخ_القرض'],
+                      ['أخصائي القرض', 'اخصائى_القرض'],
+                      ['كود العميل', 'كود_العميل'],
+                      ['النشاط الثاني', 'النشاط_الثانى'],
+                      ['فرع العميل', 'فرع_العميل_من_القروض']
+                    ])}
                   </div>
-
                   <div class="detail-section">
                     <h3>📊 تقييم العميل</h3>
-                    <div class="detail-item">
-                      <span class="detail-label">الاسم من I-Score:</span>
-                      <span class="detail-value">${row["الاسم_من_الاي_سكور"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">رقم الحساب:</span>
-                      <span class="detail-value">${row["رقم_الحساب_من_التقييم"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">نتيجة التقييم:</span>
-                      <span class="detail-value">${row["نتيجة_التقييم"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">التقييم الرقمي:</span>
-                      <span class="detail-value">${row["التقييم_الرقمى"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">تاريخ الاستعلام:</span>
-                      <span class="detail-value">${row["تاريخ_استعلام_العميل"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
-                      <span class="detail-value">${row["تعليق_استعلام_العميل"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">الإحداثيات:</span>
-                      <span class="detail-value" style="font-size: 9px;">${row["احداثيات الموقع"] || '—'}</span>
-                    </div>
+                    ${renderDetailItems(row, [
+                      ['الاسم من I-Score', 'الاسم_من_الاي_سكور'],
+                      ['رقم الحساب', 'رقم_الحساب_من_التقييم'],
+                      ['نتيجة التقييم', 'نتيجة_التقييم'],
+                      ['التقييم الرقمي', 'التقييم_الرقمى'],
+                      ['تاريخ الاستعلام', 'تاريخ_استعلام_العميل'],
+                      ['تعليق الاستعلام', 'تعليق_استعلام_العميل', false, '#764ba2'],
+                      ['الإحداثيات', 'احداثيات الموقع', false, '', '9px']
+                    ])}
                   </div>
-
                   <div class="detail-section">
                     <h3>👥 تقييم الضامن</h3>
-                    <div class="detail-item">
-                      <span class="detail-label">اسم الضامن:</span>
-                      <span class="detail-value">${row["اسم_الضامن"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">الاسم من I-Score:</span>
-                      <span class="detail-value">${row["اسم_الضامن_من_الاي_سكور"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">نتيجة التقييم:</span>
-                      <span class="detail-value">${row["نتيجة_تقييم_الضامن"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">التقييم الرقمي:</span>
-                      <span class="detail-value">${row["تقييم_رقمى_الضامن"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">تاريخ الاستعلام:</span>
-                      <span class="detail-value">${row["تاريخ_استعلام_الضامن"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
-                      <span class="detail-value">${row["تعليق_استعلام_الضامن"] || '—'}</span>
-                    </div>
+                    ${renderDetailItems(row, [
+                      ['اسم الضامن', 'اسم_الضامن'],
+                      ['الاسم من I-Score', 'اسم_الضامن_من_الاي_سكور'],
+                      ['نتيجة التقييم', 'نتيجة_تقييم_الضامن'],
+                      ['التقييم الرقمي', 'تقييم_رقمى_الضامن'],
+                      ['تاريخ الاستعلام', 'تاريخ_استعلام_الضامن'],
+                      ['تعليق الاستعلام', 'تعليق_استعلام_الضامن', false, '#764ba2']
+                    ])}
                   </div>
-
                 </div>
-
                 <div class="detail-section-full">
                   <h3>✅ المراجعة والمتابعة</h3>
                   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                    <div>
-                      <div class="detail-item">
-                        <span class="detail-label">المراجعة الداخلية:</span>
-                        <span class="detail-value">${row["المراجعة الداخلية"] || '—'}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">ملاحظات المراجعة:</span>
-                        <span class="detail-value">${row["ملاحظات المراجعة الداخلية"] || '—'}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div class="detail-item">
-                        <span class="detail-label">مسؤول المتابعة:</span>
-                        <span class="detail-value">${row["مسؤول المتابعة"] || '—'}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">تعليق المتابعة:</span>
-                        <span class="detail-value">${row["تعليق مسؤول المتابعة"] || '—'}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div class="detail-item">
-                        <span class="detail-label">الإدارة:</span>
-                        <span class="detail-value">${row["الادارة"] || '—'}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">ملاحظات الإدارة:</span>
-                        <span class="detail-value">${row["ملاحظات الادارة"] || '—'}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">تم التحويل:</span>
-                        <span class="detail-value">${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</span>
-                      </div>
-                    </div>
+                    <div>${renderDetailItems(row, [
+                      ['المراجعة الداخلية', 'المراجعة الداخلية'],
+                      ['ملاحظات المراجعة', 'ملاحظات المراجعة الداخلية']
+                    ], false)}</div>
+                    <div>${renderDetailItems(row, [
+                      ['مسؤول المتابعة', 'مسؤول المتابعة'],
+                      ['تعليق المتابعة', 'تعليق مسؤول المتابعة']
+                    ], false)}</div>
+                    <div>${renderDetailItems(row, [
+                      ['الإدارة', 'الادارة'],
+                      ['ملاحظات الإدارة', 'ملاحظات الادارة'],
+                      ['تم التحويل', 'تم التحويل', false, '', '', true]
+                    ], false)}</div>
                   </div>
                 </div>
-
               </div>
             </td>
           </tr>
@@ -901,6 +870,33 @@
 
       html += `</tbody></table>`;
       container.innerHTML = html;
+    }
+
+    function renderDetailItems(row, items, showContainer = true) {
+      let html = showContainer ? '' : '';
+      items.forEach(item => {
+        const [label, key, isDate = false, color = '', fontSize = '', isBoolean = false] = item;
+        let value = row[key] || '—';
+        
+        if (isDate && value !== '—') {
+          value = new Date(value).toLocaleDateString('ar-EG');
+        } else if (isBoolean) {
+          value = value === true || value === 'true' ? 
+            '<span style="color: #2ecc71;">✓ نعم</span>' : 
+            '<span style="color: #e74c3c;">✗ لا</span>';
+        }
+        
+        const style = color ? `style="color: ${color}; font-weight: bold;"` : '';
+        const fontStyle = fontSize ? `style="font-size: ${fontSize};"` : '';
+        
+        html += `
+          <div class="detail-item">
+            <span class="detail-label" ${style}>${label}:</span>
+            <span class="detail-value" ${fontStyle}>${value}</span>
+          </div>
+        `;
+      });
+      return html;
     }
 
     function toggleDetail(index, event) {
@@ -917,8 +913,12 @@
       }
     }
 
-    init().catch(err => {
-      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
+    // بدء التطبيق
+    document.addEventListener('DOMContentLoaded', function() {
+      init().catch(err => {
+        console.error('خطأ في بدء التطبيق:', err);
+        showError(`خطأ في تحميل التطبيق: ${err.message || 'حدث خطأ غير معروف'}`);
+      });
     });
   </script>
 </body>

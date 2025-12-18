@@ -6,6 +6,7 @@
   <title>المراجعة الداخلية - نظام القروض</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* كل الـ CSS كما هو بدون تغيير */
     body { 
       font-family: 'Segoe UI', Tahoma, sans-serif; 
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -565,7 +566,8 @@
   </div>
 
   <script>
-    const supabase = window.supabase.createClient(
+    // ======== التغيير الوحيد: استبدل supabase بـ mySupabase ========
+    const mySupabase = window.supabase.createClient(
       'https://akjyrmmqsnxdbkslxmvb.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
     );
@@ -593,7 +595,8 @@
         return;
       }
 
-      const { data: user, error } = await supabase
+      // ======== التغيير: استخدم mySupabase بدلاً من supabase ========
+      const { data: user, error } = await mySupabase
         .from('users')
         .select('role, branches')
         .eq('id', userId)
@@ -621,7 +624,8 @@
     }
 
     async function loadData() {
-      let query = supabase.from('operations_with_details').select('*');
+      // ======== التغيير: استخدم mySupabase بدلاً من supabase ========
+      let query = mySupabase.from('operations_with_details').select('*');
       
       // تطبيق فلتر الفروع للمراجع الداخلي
       if (userBranches && userBranches.length > 0) {
@@ -629,8 +633,13 @@
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
-      if (error) throw error;
-      allData = data;
+      if (error) {
+        document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ في تحميل البيانات: ${error.message}</div>`;
+        console.error('خطأ في تحميل البيانات:', error);
+        return;
+      }
+      
+      allData = data || [];
       filteredData = [...allData];
       renderFilters();
       renderTable(filteredData);
@@ -943,7 +952,7 @@
             <td><span class="${adminClass}">${row["الادارة"] || '—'}</span></td>
             <td>${row["رقم اللجنة"] || '—'}</td>
             <td>
-              <button class="edit-btn" onclick="openEditModal(${row.id})">✏️ تعديل</button>
+              <button class="edit-btn" onclick="openEditModal('${row.id}')">✏️ تعديل</button>
               <button class="expand-btn" onclick="toggleDetail(${idx}, event)">📄 تفاصيل</button>
             </td>
           </tr>
@@ -1009,111 +1018,98 @@
                     <h3>📊 تقييم العميل</h3>
                     <div class="detail-item">
                       <span class="detail-label">الاسم من I-Score:</span>
-                      <span class="detail-value">${row["الاسم_من_الاي_سكور"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">رقم الحساب:</span>
-                      <span class="detail-value">${row["رقم_الحساب_من_التقييم"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">نتيجة التقييم:</span>
-                      <span class="detail-value">${row["نتيجة_التقييم"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">التقييم الرقمي:</span>
-                      <span class="detail-value">${row["التقييم_الرقمى"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">تاريخ الاستعلام:</span>
-                      <span class="detail-value">${row["تاريخ_استعلام_العميل"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
-                      <span class="detail-value">${row["تعليق_استعلام_العميل"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">الإحداثيات:</span>
-                      <span class="detail-value" style="font-size: 9px;">${row["احداثيات الموقع"] || '—'}</span>
-                    </div>
-                  </div>
+                      <span class="detail-value">${row["الاسم_من_الاي_سكور"] || '—'}</div>
+                      <div class="detail-item">
+                        <span class="detail-label">رقم الحساب:</span>
+                        <span class="detail-value">${row["رقم_الحساب_من_التقييم"] || '—'}</div>
+                        <div class="detail-item">
+                          <span class="detail-label">نتيجة التقييم:</span>
+                          <span class="detail-value">${row["نتيجة_التقييم"] || '—'}</div>
+                          <div class="detail-item">
+                            <span class="detail-label">التقييم الرقمي:</span>
+                            <span class="detail-value">${row["التقييم_الرقمى"] || '—'}</div>
+                            <div class="detail-item">
+                              <span class="detail-label">تاريخ الاستعلام:</span>
+                              <span class="detail-value">${row["تاريخ_استعلام_العميل"] || '—'}</div>
+                              <div class="detail-item">
+                                <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
+                                <span class="detail-value">${row["تعليق_استعلام_العميل"] || '—'}</div>
+                                <div class="detail-item">
+                                  <span class="detail-label">الإحداثيات:</span>
+                                  <span class="detail-value" style="font-size: 9px;">${row["احداثيات الموقع"] || '—'}</div>
+                                </div>
 
-                  <div class="detail-section">
-                    <h3>👥 تقييم الضامن</h3>
-                    <div class="detail-item">
-                      <span class="detail-label">اسم الضامن:</span>
-                      <span class="detail-value">${row["اسم_الضامن"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">الاسم من I-Score:</span>
-                      <span class="detail-value">${row["اسم_الضامن_من_الاي_سكور"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">نتيجة التقييم:</span>
-                      <span class="detail-value">${row["نتيجة_تقييم_الضامن"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">التقييم الرقمي:</span>
-                      <span class="detail-value">${row["تقييم_رقمى_الضامن"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">تاريخ الاستعلام:</span>
-                      <span class="detail-value">${row["تاريخ_استعلام_الضامن"] || '—'}</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
-                      <span class="detail-value">${row["تعليق_استعلام_الضامن"] || '—'}</span>
-                    </div>
-                  </div>
+                                <div class="detail-section">
+                                  <h3>👥 تقييم الضامن</h3>
+                                  <div class="detail-item">
+                                    <span class="detail-label">اسم الضامن:</span>
+                                    <span class="detail-value">${row["اسم_الضامن"] || '—'}</div>
+                                    <div class="detail-item">
+                                      <span class="detail-label">الاسم من I-Score:</span>
+                                      <span class="detail-value">${row["اسم_الضامن_من_الاي_سكور"] || '—'}</div>
+                                      <div class="detail-item">
+                                        <span class="detail-label">نتيجة التقييم:</span>
+                                        <span class="detail-value">${row["نتيجة_تقييم_الضامن"] || '—'}</div>
+                                        <div class="detail-item">
+                                          <span class="detail-label">التقييم الرقمي:</span>
+                                          <span class="detail-value">${row["تقييم_رقمى_الضامن"] || '—'}</div>
+                                          <div class="detail-item">
+                                            <span class="detail-label">تاريخ الاستعلام:</span>
+                                            <span class="detail-value">${row["تاريخ_استعلام_الضامن"] || '—'}</div>
+                                            <div class="detail-item">
+                                              <span class="detail-label" style="font-weight: bold; color: #764ba2;">تعليق الاستعلام:</span>
+                                              <span class="detail-value">${row["تعليق_استعلام_الضامن"] || '—'}</div>
+                                            </div>
 
-                </div>
+                                          </div>
 
-                <div class="detail-section-full">
-                  <h3>✅ المراجعة والمتابعة</h3>
-                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                    <div>
-                      <div class="detail-item">
-                        <span class="detail-label">المراجعة الداخلية:</span>
-                        <span class="detail-value"><span class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</span></span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">ملاحظات المراجعة:</span>
-                        <span class="detail-value">${row["ملاحظات المراجعة الداخلية"] || '—'}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">القائم بالزيارة:</span>
-                        <span class="detail-value">${row["القائم بالزياره"] || '—'}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div class="detail-item">
-                        <span class="detail-label">مسؤول المتابعة:</span>
-                        <span class="detail-value"><span class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</span></span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">تعليق المتابعة:</span>
-                        <span class="detail-value">${row["تعليق مسؤول المتابعة"] || '—'}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div class="detail-item">
-                        <span class="detail-label">الإدارة:</span>
-                        <span class="detail-value"><span class="${adminClass}">${row["الادارة"] || '—'}</span></span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">ملاحظات الإدارة:</span>
-                        <span class="detail-value">${row["ملاحظات الادارة"] || '—'}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="detail-label">تم التحويل:</span>
-                        <span class="detail-value">${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                                          <div class="detail-section-full">
+                                            <h3>✅ المراجعة والمتابعة</h3>
+                                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                                              <div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">المراجعة الداخلية:</span>
+                                                  <span class="detail-value"><span class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</span></span>
+                                                </div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">ملاحظات المراجعة:</span>
+                                                  <span class="detail-value">${row["ملاحظات المراجعة الداخلية"] || '—'}</span>
+                                                </div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">القائم بالزيارة:</span>
+                                                  <span class="detail-value">${row["القائم بالزياره"] || '—'}</span>
+                                                </div>
+                                              </div>
+                                              <div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">مسؤول المتابعة:</span>
+                                                  <span class="detail-value"><span class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</span></span>
+                                                </div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">تعليق المتابعة:</span>
+                                                  <span class="detail-value">${row["تعليق مسؤول المتابعة"] || '—'}</span>
+                                                </div>
+                                              </div>
+                                              <div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">الإدارة:</span>
+                                                  <span class="detail-value"><span class="${adminClass}">${row["الادارة"] || '—'}</span></span>
+                                                </div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">ملاحظات الإدارة:</span>
+                                                  <span class="detail-value">${row["ملاحظات الادارة"] || '—'}</span>
+                                                </div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">تم التحويل:</span>
+                                                  <span class="detail-value">${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
 
-              </div>
-            </td>
-          </tr>
+                                        </div>
+                                      </td>
+                                    </tr>
         `;
       });
 
@@ -1179,7 +1175,8 @@
       };
 
       try {
-        const { error } = await supabase
+        // ======== التغيير: استخدم mySupabase بدلاً من supabase ========
+        const { error } = await mySupabase
           .from('operations')
           .update(updates)
           .eq('id', id);
@@ -1213,9 +1210,6 @@
 
       // تنبيه بخصوص وظيفة التصدير
       alert("📊 وظيفة التصدير للإكسل قيد التطوير\nسيتم إضافتها في التحديثات القادمة");
-      
-      // يمكنك إضافة كود التصدير هنا لاحقاً
-      // مثال: window.location.href = `/export?data=${JSON.stringify(filteredData)}`;
     }
 
     window.onclick = function(event) {
@@ -1223,8 +1217,10 @@
       if (event.target == modal) closeModal();
     };
 
+    // تشغيل التطبيق
     init().catch(err => {
       document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
+      console.error('خطأ:', err);
     });
   </script>
 </body>

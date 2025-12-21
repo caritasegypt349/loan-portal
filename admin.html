@@ -1,5 +1,3 @@
-[file name]: admin.html
-[file content begin]
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -633,12 +631,35 @@
   </div>
 
   <script>
-    const supabase = window.supabase.createClient(
-      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
-    );
+    // التحقق من الجلسة أولاً
+    function validateSession() {
+      const userId = localStorage.getItem('loggedInUserId');
+      const userFullName = localStorage.getItem('loggedInUser');
+      
+      if (!userId || !userFullName) {
+        alert("الرجاء تسجيل الدخول أولًا!");
+        window.location.href = "index.html";
+        return false;
+      }
+      
+      return true;
+    }
+
+    // تعريف Supabase - نسخة منفصلة لتجنب التعارض
+    let db;
+    try {
+      db = window.supabase.createClient(
+        'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      );
+    } catch (error) {
+      console.error('فشل في تهيئة قاعدة البيانات:', error);
+      showError('خطأ في تحميل قاعدة البيانات. يرجى تحديث الصفحة.');
+    }
 
     let allData = [];
+    let userRole = '';
+    let userBranches = [];
     let filteredData = [];
     let selectedCommittees = [];
     let columnFilters = {
@@ -651,100 +672,147 @@
     };
     let searchTimeout = null;
 
+    function showError(message) {
+      document.getElementById('tableContainer').innerHTML = `<div class="error">${message}</div>`;
+    }
+
+    function showLoading(message) {
+      document.getElementById('loadingMessage').textContent = message;
+    }
+
     async function init() {
+      // التحقق من الجلسة أولاً
+      if (!validateSession()) {
+        return;
+      }
+
       const userId = localStorage.getItem('loggedInUserId');
-      if (!userId) {
-        alert("الرجاء تسجيل الدخول أولاً!");
-        window.location.href = "index.html";
-        return;
-      }
-
-      const { data: user, error: userError } = await supabase 
-        .from('users')
-        .select('role')
-        .eq('id', userId)
-        .single();
-
-      if (userError || !user || user.role !== 'admin') {
-        alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
-        window.location.href = "index.html";
-        return;
-      }
       
-      await loadData();
-      
-      // إغلاق dropdown اللجان عند الضغط خارجها
-      document.addEventListener('click', function(e) {
-        if (!e.target.closest('.committee-filter')) {
-          document.getElementById('committeeDropdown').classList.remove('show');
+      try {
+        showLoading('جاري تحميل معلومات المستخدم...');
+        
+        // جلب معلومات المستخدم من localStorage أولاً (من index.html)
+        userRole = localStorage.getItem('userRole') || '';
+        const branchesStr = localStorage.getItem('userBranches') || '[]';
+        userBranches = JSON.parse(branchesStr);
+        
+        // التحقق من صلاحية المستخدم (يجب أن يكون admin)
+        if (userRole !== 'admin') {
+          alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
+          window.location.href = "view-only.html";
+          return;
         }
-      });
+
+        showLoading('جاري تحميل البيانات...');
+        await loadData();
+        
+        // إغلاق dropdown اللجان عند الضغط خارجها
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('.committee-filter')) {
+            document.getElementById('committeeDropdown').classList.remove('show');
+          }
+        });
+
+      } catch (err) {
+        console.error('خطأ في التطبيق:', err);
+        showError(`خطأ: ${err.message || 'فشل في تحميل البيانات'}`);
+      }
     }
 
     async function loadData() {
-      const { data, error } = await supabase
-        .from('operations_with_details')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      allData = data;
-      filteredData = [...allData];
-      renderFilters();
-      renderTable(filteredData);
-      updateStats(filteredData);
+      try {
+        let query = db.from('operations_with_details').select('*');
+        
+        // تطبيق فلتر الفروع حسب الصلاحية
+        if (userRole !== 'admin' && userBranches && userBranches.length > 0) {
+          query = query.in('الفرع', userBranches);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('خطأ في جلب البيانات:', error);
+          throw new Error('فشل في جلب البيانات من قاعدة البيانات');
+        }
+
+        allData = data || [];
+        filteredData = [...allData];
+        renderFilters();
+        renderTable(filteredData);
+        updateStats(filteredData);
+
+      } catch (err) {
+        console.error('خطأ في loadData:', err);
+        throw err;
+      }
     }
 
     function renderFilters() {
-      const branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v && v.trim()))];
-      const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
-      const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
-      const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
-      const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
-      const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))].sort();
+      try {
+        let branches = [];
+        if (userRole === 'admin') {
+          branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v && v.trim()))];
+        } else if (userBranches && userBranches.length > 0) {
+          branches = userBranches;
+        }
 
-      // تحديث فلاتر الفرع
-      const branchSelect = document.getElementById('filterBranch');
-      branches.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        branchSelect.appendChild(opt);
-      });
-
-      const selects = [
-        { id: 'filterReview', data: reviews },
-        { id: 'filterSupervisor', data: supervisors },
-        { id: 'filterAdmin', data: admins },
-        { id: 'filterOfficer', data: officers }
-      ];
-
-      selects.forEach(item => {
-        const select = document.getElementById(item.id);
-        item.data.forEach(v => {
+        const branchSelect = document.getElementById('filterBranch');
+        branchSelect.innerHTML = '<option value="">الكل</option>';
+        branches.forEach(v => {
           const opt = document.createElement('option');
           opt.value = v;
           opt.textContent = v;
-          select.appendChild(opt);
+          branchSelect.appendChild(opt);
         });
-      });
 
-      // إنشاء checkboxes للجان
-      const dropdown = document.getElementById('committeeDropdown');
-      dropdown.innerHTML = '';
-      committees.forEach(committee => {
-        const div = document.createElement('div');
-        div.className = 'committee-item';
-        div.innerHTML = `
-          <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
-          <label for="comm_${committee}">${committee}</label>
-        `;
-        dropdown.appendChild(div);
-      });
+        const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
+        const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
+        const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
+        const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
+        const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))].sort();
 
-      // إضافة مستمعات للفلاتر العامة
-      ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
-        document.getElementById(id).addEventListener('change', applyAllFilters);
-      });
+        const selects = [
+          { id: 'filterReview', data: reviews },
+          { id: 'filterSupervisor', data: supervisors },
+          { id: 'filterAdmin', data: admins },
+          { id: 'filterOfficer', data: officers }
+        ];
+
+        selects.forEach(item => {
+          const select = document.getElementById(item.id);
+          select.innerHTML = '<option value="">الكل</option>';
+          item.data.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            select.appendChild(opt);
+          });
+        });
+
+        // إنشاء checkboxes للجان
+        const dropdown = document.getElementById('committeeDropdown');
+        dropdown.innerHTML = '';
+        committees.forEach(committee => {
+          const div = document.createElement('div');
+          div.className = 'committee-item';
+          div.innerHTML = `
+            <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
+            <label for="comm_${committee}">${committee}</label>
+          `;
+          dropdown.appendChild(div);
+        });
+
+        // إضافة مستمعات للفلاتر العامة
+        ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.addEventListener('change', applyAllFilters);
+          }
+        });
+
+      } catch (err) {
+        console.error('خطأ في renderFilters:', err);
+      }
     }
 
     function toggleCommitteeDropdown() {
@@ -769,48 +837,52 @@
     }
 
     function applyAllFilters() {
-      const branch = document.getElementById('filterBranch').value;
-      const review = document.getElementById('filterReview').value;
-      const supervisor = document.getElementById('filterSupervisor').value;
-      const admin = document.getElementById('filterAdmin').value;
-      const officer = document.getElementById('filterOfficer').value;
-      const transferred = document.getElementById('filterTransferred').value;
+      try {
+        const branch = document.getElementById('filterBranch').value;
+        const review = document.getElementById('filterReview').value;
+        const supervisor = document.getElementById('filterSupervisor').value;
+        const admin = document.getElementById('filterAdmin').value;
+        const officer = document.getElementById('filterOfficer').value;
+        const transferred = document.getElementById('filterTransferred').value;
 
-      filteredData = allData.filter(row => {
-        // الفلاتر العامة
-        if (branch && row["الفرع"] !== branch) return false;
-        if (review && row["المراجعة الداخلية"] !== review) return false;
-        if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
-        if (admin && row["الادارة"] !== admin) return false;
-        if (officer && row["اسم الاخصائى"] !== officer) return false;
-        if (transferred !== '') {
-          const isTransferred = row["تم التحويل"] === true;
-          if (transferred === 'true' && !isTransferred) return false;
-          if (transferred === 'false' && isTransferred) return false;
-        }
-        
-        // فلتر اللجان (multi-select)
-        if (selectedCommittees.length > 0) {
-          if (!selectedCommittees.includes(row["رقم اللجنة"])) return false;
-        }
+        filteredData = allData.filter(row => {
+          // الفلاتر العامة
+          if (branch && row["الفرع"] !== branch) return false;
+          if (review && row["المراجعة الداخلية"] !== review) return false;
+          if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
+          if (admin && row["الادارة"] !== admin) return false;
+          if (officer && row["اسم الاخصائى"] !== officer) return false;
+          if (transferred !== '') {
+            const isTransferred = row["تم التحويل"] === true;
+            if (transferred === 'true' && !isTransferred) return false;
+            if (transferred === 'false' && isTransferred) return false;
+          }
+          
+          // فلتر اللجان (multi-select)
+          if (selectedCommittees.length > 0) {
+            if (!selectedCommittees.includes(row["رقم اللجنة"])) return false;
+          }
 
-        // فلاتر الأعمدة
-        if (columnFilters.nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(columnFilters.nationalId)) return false;
-        if (columnFilters.clientId && !row["كود_العميل"]?.toLowerCase().includes(columnFilters.clientId)) return false;
-        if (columnFilters.clientName) {
-          const name1 = row["اسم_العميل"]?.toLowerCase() || '';
-          const name2 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
-          if (!name1.includes(columnFilters.clientName) && !name2.includes(columnFilters.clientName)) return false;
-        }
-        if (columnFilters.project && !row["المشروع"]?.toLowerCase().includes(columnFilters.project)) return false;
-        if (columnFilters.guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(columnFilters.guarantorId)) return false;
-        if (columnFilters.guarantorName && !row["اسم_الضامن"]?.toLowerCase().includes(columnFilters.guarantorName)) return false;
+          // فلاتر الأعمدة
+          if (columnFilters.nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(columnFilters.nationalId)) return false;
+          if (columnFilters.clientId && !row["كود_العميل"]?.toLowerCase().includes(columnFilters.clientId)) return false;
+          if (columnFilters.clientName) {
+            const name1 = row["اسم_العميل"]?.toLowerCase() || '';
+            const name2 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
+            if (!name1.includes(columnFilters.clientName) && !name2.includes(columnFilters.clientName)) return false;
+          }
+          if (columnFilters.project && !row["المشروع"]?.toLowerCase().includes(columnFilters.project)) return false;
+          if (columnFilters.guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(columnFilters.guarantorId)) return false;
+          if (columnFilters.guarantorName && !row["اسم_الضامن"]?.toLowerCase().includes(columnFilters.guarantorName)) return false;
 
-        return true;
-      });
+          return true;
+        });
 
-      renderTable(filteredData);
-      updateStats(filteredData);
+        renderTable(filteredData);
+        updateStats(filteredData);
+      } catch (err) {
+        console.error('خطأ في applyAllFilters:', err);
+      }
     }
 
     function updateColumnFilter(field, value) {
@@ -821,7 +893,7 @@
         clearTimeout(searchTimeout);
       }
       
-      // الانتظار 600ms قبل البحث
+      // الانتظار 1 ثانية قبل البحث
       searchTimeout = setTimeout(() => {
         applyAllFilters();
       }, 1000);
@@ -1231,7 +1303,7 @@
         "ملاحظات الادارة": document.getElementById('editAdminNotes').value.trim() || null
       };
 
-      const { error } = await supabase
+      const { error } = await db
         .from('operations')
         .update(updates)
         .eq('id', id);
@@ -1261,10 +1333,13 @@
       if (event.target == modal) closeModal();
     };
 
-    init().catch(err => {
-      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
+    // بدء التطبيق
+    document.addEventListener('DOMContentLoaded', function() {
+      init().catch(err => {
+        console.error('خطأ في بدء التطبيق:', err);
+        showError(`خطأ في تحميل التطبيق: ${err.message || 'حدث خطأ غير معروف'}`);
+      });
     });
   </script>
 </body>
 </html>
-[file content end]

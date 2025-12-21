@@ -463,7 +463,7 @@
 
     <div class="table-wrapper">
       <div id="tableContainer">
-        <div class="loading">جاري تحميل البيانات...</div>
+        <div class="loading" id="loadingMessage">جاري تحميل البيانات...</div>
       </div>
     </div>
   </div>
@@ -677,7 +677,10 @@
     }
 
     function showLoading(message) {
-      document.getElementById('loadingMessage').textContent = message;
+      const loadingDiv = document.getElementById('tableContainer');
+      if (loadingDiv) {
+        loadingDiv.innerHTML = `<div class="loading">${message}</div>`;
+      }
     }
 
     async function init() {
@@ -757,13 +760,15 @@
         }
 
         const branchSelect = document.getElementById('filterBranch');
-        branchSelect.innerHTML = '<option value="">الكل</option>';
-        branches.forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v;
-          opt.textContent = v;
-          branchSelect.appendChild(opt);
-        });
+        if (branchSelect) {
+          branchSelect.innerHTML = '<option value="">الكل</option>';
+          branches.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            branchSelect.appendChild(opt);
+          });
+        }
 
         const reviews = [...new Set(allData.map(row => row["المراجعة الداخلية"]).filter(v => v && v.trim()))];
         const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
@@ -780,27 +785,31 @@
 
         selects.forEach(item => {
           const select = document.getElementById(item.id);
-          select.innerHTML = '<option value="">الكل</option>';
-          item.data.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v;
-            opt.textContent = v;
-            select.appendChild(opt);
-          });
+          if (select) {
+            select.innerHTML = '<option value="">الكل</option>';
+            item.data.forEach(v => {
+              const opt = document.createElement('option');
+              opt.value = v;
+              opt.textContent = v;
+              select.appendChild(opt);
+            });
+          }
         });
 
         // إنشاء checkboxes للجان
         const dropdown = document.getElementById('committeeDropdown');
-        dropdown.innerHTML = '';
-        committees.forEach(committee => {
-          const div = document.createElement('div');
-          div.className = 'committee-item';
-          div.innerHTML = `
-            <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
-            <label for="comm_${committee}">${committee}</label>
-          `;
-          dropdown.appendChild(div);
-        });
+        if (dropdown) {
+          dropdown.innerHTML = '';
+          committees.forEach(committee => {
+            const div = document.createElement('div');
+            div.className = 'committee-item';
+            div.innerHTML = `
+              <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
+              <label for="comm_${committee}">${committee}</label>
+            `;
+            dropdown.appendChild(div);
+          });
+        }
 
         // إضافة مستمعات للفلاتر العامة
         ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
@@ -817,7 +826,9 @@
 
     function toggleCommitteeDropdown() {
       const dropdown = document.getElementById('committeeDropdown');
-      dropdown.classList.toggle('show');
+      if (dropdown) {
+        dropdown.classList.toggle('show');
+      }
     }
 
     function updateSelectedCommittees() {
@@ -827,10 +838,12 @@
         .map(cb => cb.value);
       
       const text = document.getElementById('selectedCommitteesText');
-      if (selectedCommittees.length > 0) {
-        text.textContent = `تم اختيار ${selectedCommittees.length} لجنة`;
-      } else {
-        text.textContent = '';
+      if (text) {
+        if (selectedCommittees.length > 0) {
+          text.textContent = `تم اختيار ${selectedCommittees.length} لجنة`;
+        } else {
+          text.textContent = '';
+        }
       }
       
       applyAllFilters();
@@ -838,12 +851,12 @@
 
     function applyAllFilters() {
       try {
-        const branch = document.getElementById('filterBranch').value;
-        const review = document.getElementById('filterReview').value;
-        const supervisor = document.getElementById('filterSupervisor').value;
-        const admin = document.getElementById('filterAdmin').value;
-        const officer = document.getElementById('filterOfficer').value;
-        const transferred = document.getElementById('filterTransferred').value;
+        const branch = document.getElementById('filterBranch')?.value || '';
+        const review = document.getElementById('filterReview')?.value || '';
+        const supervisor = document.getElementById('filterSupervisor')?.value || '';
+        const admin = document.getElementById('filterAdmin')?.value || '';
+        const officer = document.getElementById('filterOfficer')?.value || '';
+        const transferred = document.getElementById('filterTransferred')?.value || '';
 
         filteredData = allData.filter(row => {
           // الفلاتر العامة
@@ -910,18 +923,31 @@
     }
 
     function resetFilters() {
-      document.getElementById('filterBranch').value = '';
-      document.getElementById('filterReview').value = '';
-      document.getElementById('filterSupervisor').value = '';
-      document.getElementById('filterAdmin').value = '';
-      document.getElementById('filterOfficer').value = '';
-      document.getElementById('filterTransferred').value = '';
+      const branch = document.getElementById('filterBranch');
+      if (branch) branch.value = '';
+      
+      const review = document.getElementById('filterReview');
+      if (review) review.value = '';
+      
+      const supervisor = document.getElementById('filterSupervisor');
+      if (supervisor) supervisor.value = '';
+      
+      const admin = document.getElementById('filterAdmin');
+      if (admin) admin.value = '';
+      
+      const officer = document.getElementById('filterOfficer');
+      if (officer) officer.value = '';
+      
+      const transferred = document.getElementById('filterTransferred');
+      if (transferred) transferred.value = '';
       
       // إعادة تعيين checkboxes اللجان
       const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
       checkboxes.forEach(cb => cb.checked = false);
       selectedCommittees = [];
-      document.getElementById('selectedCommitteesText').textContent = '';
+      
+      const text = document.getElementById('selectedCommitteesText');
+      if (text) text.textContent = '';
       
       // إعادة تعيين فلاتر الأعمدة
       columnFilters = {
@@ -939,18 +965,27 @@
     }
 
     function updateStats(data) {
-      document.getElementById('totalRecords').textContent = data.length.toLocaleString('ar-EG');
+      const totalRecords = document.getElementById('totalRecords');
+      const totalAmount = document.getElementById('totalAmount');
       
-      const total = data.reduce((sum, row) => {
-        const amount = parseFloat(row["المبلغ المطلوب"]) || 0;
-        return sum + amount;
-      }, 0);
+      if (totalRecords) {
+        totalRecords.textContent = data.length.toLocaleString('ar-EG');
+      }
       
-      document.getElementById('totalAmount').textContent = total.toLocaleString('ar-EG') + ' ج.م';
+      if (totalAmount) {
+        const total = data.reduce((sum, row) => {
+          const amount = parseFloat(row["المبلغ المطلوب"]) || 0;
+          return sum + amount;
+        }, 0);
+        
+        totalAmount.textContent = total.toLocaleString('ar-EG') + ' ج.م';
+      }
     }
 
     function renderTable(data) {
       const container = document.getElementById('tableContainer');
+      
+      if (!container) return;
       
       if (!data || data.length === 0) {
         container.innerHTML = '<div class="loading">لا توجد بيانات</div>';

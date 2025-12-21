@@ -6,7 +6,7 @@
   <title>عرض البيانات التفصيلي - نظام القروض</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* احتفظ بنفس الـ CSS كما هو */
+    /* احتفظ بنفس الـ CSS كما هو مع إضافة تنسيقات جديدة */
     body { 
       font-family: 'Segoe UI', Tahoma, sans-serif; 
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -278,6 +278,45 @@
         border-bottom: 2px solid #2ecc71;
         padding-bottom: 5px;
     }
+    
+    /* تنسيقات جديدة للجان المرفوعة والمنصرفة */
+    .committee-type-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+    }
+    .committee-type-item:hover {
+      background: #f0f4f8;
+    }
+    .committee-type-label {
+      font-size: 13px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .committee-type-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    .badge-raised {
+      background-color: #4caf50;
+      color: white;
+    }
+    .badge-spent {
+      background-color: #ff9800;
+      color: white;
+    }
+    .committee-search-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 <body>
@@ -341,12 +380,14 @@
       </div>
       
       <div class="filter-group committee-filter">
-        <label class="filter-label">رقم اللجنة</label>
+        <label class="filter-label">اللجان المرفوعة/المنصرفة</label>
         <div class="committee-toggle" onclick="toggleCommitteeDropdown()">
           <span>اختر اللجان</span>
           <div class="selected-committees" id="selectedCommitteesText"></div>
         </div>
-        <div class="committee-dropdown" id="committeeDropdown"></div>
+        <div class="committee-dropdown" id="committeeDropdown">
+          <!-- سيتم ملؤه ديناميكياً -->
+        </div>
       </div>
       
       <button onclick="resetFilters()" class="btn-apply">إعادة تعيين الفلاتر</button>
@@ -461,18 +502,37 @@
 
     async function loadData() {
       try {
-        let query = db.from('operations_with_details').select('*');
+        let query = db.from('"البيانات كاملة المومرفوعة للتنفيز فى البنك"').select('*');
         
         // تطبيق فلتر الفروع حسب الصلاحية
         if (userRole !== 'admin' && userRole !== 'followup_supervisor' && userBranches && userBranches.length > 0) {
-          query = query.in('الفرع', userBranches);
+          // نظراً لأن VIEW جديد، قد نحتاج لتعديل اسم العمود
+          query = query.in('فرع_العملية_الأصلية', userBranches);
         }
         
-        const { data, error } = await query.order('created_at', { ascending: false });
+        const { data, error } = await query.order('تاريخ_إنشاء_العملية', { ascending: false });
 
         if (error) {
           console.error('خطأ في جلب البيانات:', error);
-          throw new Error('فشل في جلب البيانات من قاعدة البيانات');
+          // حاول جلب من الجدول القديم إذا فشل
+          try {
+            showLoading('جاري تحميل البيانات من المصدر القديم...');
+            const { data: oldData, error: oldError } = await db
+              .from('operations_with_details')
+              .select('*')
+              .order('created_at', { ascending: false });
+            
+            if (oldError) throw oldError;
+            
+            allData = oldData || [];
+            filteredData = [...allData];
+            renderFilters();
+            renderTable(filteredData);
+            updateStats(filteredData);
+            return;
+          } catch (oldErr) {
+            throw new Error('فشل في جلب البيانات من أي مصدر: ' + error.message);
+          }
         }
 
         allData = data || [];
@@ -491,7 +551,7 @@
       try {
         let branches = [];
         if (userRole === 'admin' || userRole === 'followup_supervisor') {
-          branches = [...new Set(allData.map(row => row["الفرع"]).filter(v => v && v.trim()))];
+          branches = [...new Set(allData.map(row => row["فرع_العملية_الأصلية"] || row["الفرع"]).filter(v => v && v.trim()))];
         } else if (userBranches && userBranches.length > 0) {
           branches = userBranches;
         }
@@ -509,7 +569,9 @@
         const supervisors = [...new Set(allData.map(row => row["مسؤول المتابعة"]).filter(v => v && v.trim()))];
         const admins = [...new Set(allData.map(row => row["الادارة"]).filter(v => v && v.trim()))];
         const officers = [...new Set(allData.map(row => row["اسم الاخصائى"]).filter(v => v && v.trim()))];
-        const committees = [...new Set(allData.map(row => row["رقم اللجنة"]).filter(v => v && v.trim()))].sort();
+        
+        // استخراج أرقام اللجان مع التصنيف
+        const committees = extractCommittees(allData);
 
         const selects = [
           { id: 'filterReview', data: reviews },
@@ -529,18 +591,8 @@
           });
         });
 
-        // إنشاء checkboxes للجان
-        const dropdown = document.getElementById('committeeDropdown');
-        dropdown.innerHTML = '';
-        committees.forEach(committee => {
-          const div = document.createElement('div');
-          div.className = 'committee-item';
-          div.innerHTML = `
-            <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
-            <label for="comm_${committee}">${committee}</label>
-          `;
-          dropdown.appendChild(div);
-        });
+        // إنشاء واجهة متقدمة لاختيار اللجان
+        renderCommitteeFilter(committees);
 
         // إضافة مستمعات للفلاتر العامة
         ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
@@ -555,6 +607,173 @@
       }
     }
 
+    // دالة لاستخراج وتصنيف اللجان
+    function extractCommittees(data) {
+      const committees = new Map();
+      
+      data.forEach(row => {
+        const committeeNumber = row["رقم اللجنة"];
+        if (committeeNumber && committeeNumber.trim()) {
+          // تصنيف اللجان حسب الاسم
+          const committeeStr = committeeNumber.toString().toLowerCase();
+          let type = 'غير محدد';
+          
+          if (committeeStr.includes('مرفوع') || committeeStr.includes('رفع') || committeeStr.includes('مرتفع')) {
+            type = 'مرفوعة';
+          } else if (committeeStr.includes('منصرف') || committeeStr.includes('صرف') || committeeStr.includes('منفق')) {
+            type = 'منصرفة';
+          } else if (committeeStr.includes('لجنه') || committeeStr.includes('لجنة') || committeeStr.includes('committee')) {
+            type = 'لجنة';
+          }
+          
+          if (!committees.has(committeeNumber)) {
+            committees.set(committeeNumber, {
+              number: committeeNumber,
+              type: type,
+              count: 1
+            });
+          } else {
+            committees.get(committeeNumber).count++;
+          }
+        }
+      });
+      
+      return Array.from(committees.values()).sort((a, b) => {
+        // ترتيب حسب النوع ثم الرقم
+        if (a.type !== b.type) {
+          const typeOrder = { 'مرفوعة': 1, 'منصرفة': 2, 'لجنة': 3, 'غير محدد': 4 };
+          return typeOrder[a.type] - typeOrder[b.type];
+        }
+        return a.number.localeCompare(b.number);
+      });
+    }
+
+    // دالة لعرض فلتر اللجان المتقدم
+    function renderCommitteeFilter(committees) {
+      const dropdown = document.getElementById('committeeDropdown');
+      if (!dropdown) return;
+      
+      dropdown.innerHTML = '';
+      
+      // حقل البحث
+      const searchDiv = document.createElement('div');
+      searchDiv.style.padding = '8px';
+      searchDiv.innerHTML = `
+        <input type="text" class="committee-search-input" placeholder="🔍 ابحث في اللجان..." 
+               oninput="filterCommittees(this.value)" />
+      `;
+      dropdown.appendChild(searchDiv);
+      
+      // تقسيم اللجان حسب النوع
+      const committeesByType = {
+        'مرفوعة': committees.filter(c => c.type === 'مرفوعة'),
+        'منصرفة': committees.filter(c => c.type === 'منصرفة'),
+        'لجنة': committees.filter(c => c.type === 'لجنة'),
+        'غير محدد': committees.filter(c => c.type === 'غير محدد')
+      };
+      
+      // عرض كل نوع
+      Object.entries(committeesByType).forEach(([type, typeCommittees]) => {
+        if (typeCommittees.length > 0) {
+          // عنوان النوع
+          const typeHeader = document.createElement('div');
+          typeHeader.className = 'committee-type-item';
+          typeHeader.innerHTML = `
+            <input type="checkbox" id="select-all-${type}" 
+                   onchange="toggleAllCommittees('${type}', this.checked)">
+            <span class="committee-type-label">
+              <span class="committee-type-badge ${type === 'مرفوعة' ? 'badge-raised' : type === 'منصرفة' ? 'badge-spent' : ''}">
+                ${type}
+              </span>
+              (${typeCommittees.length})
+            </span>
+          `;
+          dropdown.appendChild(typeHeader);
+          
+          // اللجان في هذا النوع
+          typeCommittees.forEach(committee => {
+            const div = document.createElement('div');
+            div.className = 'committee-item';
+            div.setAttribute('data-type', type);
+            div.setAttribute('data-number', committee.number);
+            div.innerHTML = `
+              <input type="checkbox" id="comm_${committee.number.replace(/[^a-zA-Z0-9]/g, '_')}" 
+                     value="${committee.number}" onchange="updateSelectedCommittees()">
+              <label for="comm_${committee.number.replace(/[^a-zA-Z0-9]/g, '_')}">
+                ${committee.number}
+                <small style="color: #666; margin-right: 5px;">(${committee.count})</small>
+              </label>
+            `;
+            dropdown.appendChild(div);
+          });
+          
+          // فاصل بين الأنواع
+          const separator = document.createElement('div');
+          separator.style.height = '1px';
+          separator.style.backgroundColor = '#eee';
+          separator.style.margin = '5px 0';
+          dropdown.appendChild(separator);
+        }
+      });
+      
+      // زر اختيار الكل
+      const selectAllDiv = document.createElement('div');
+      selectAllDiv.style.padding = '8px';
+      selectAllDiv.style.borderTop = '1px solid #eee';
+      selectAllDiv.innerHTML = `
+        <button onclick="selectAllCommittees(true)" style="padding: 6px 12px; margin: 2px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          اختيار الكل
+        </button>
+        <button onclick="selectAllCommittees(false)" style="padding: 6px 12px; margin: 2px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          إلغاء الكل
+        </button>
+      `;
+      dropdown.appendChild(selectAllDiv);
+    }
+
+    // دالة لفلترة اللجان عند البحث
+    function filterCommittees(searchTerm) {
+      const items = document.querySelectorAll('#committeeDropdown .committee-item');
+      const searchLower = searchTerm.toLowerCase();
+      
+      items.forEach(item => {
+        const committeeNumber = item.getAttribute('data-number');
+        const committeeType = item.getAttribute('data-type');
+        
+        if (searchTerm === '') {
+          item.style.display = 'flex';
+        } else if (
+          committeeNumber.toLowerCase().includes(searchLower) ||
+          committeeType.toLowerCase().includes(searchLower) ||
+          searchTerm.includes('لجنه') || searchTerm.includes('لجنة') ||
+          committeeNumber.includes(searchTerm)
+        ) {
+          item.style.display = 'flex';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    // اختيار/إلغاء جميع اللجان من نوع معين
+    function toggleAllCommittees(type, checked) {
+      const checkboxes = document.querySelectorAll(`#committeeDropdown .committee-item[data-type="${type}"] input[type="checkbox"]`);
+      checkboxes.forEach(cb => cb.checked = checked);
+      updateSelectedCommittees();
+    }
+
+    // اختيار/إلغاء جميع اللجان
+    function selectAllCommittees(select) {
+      const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        // استثناء checkboxes العناوين
+        if (!cb.id.includes('select-all-')) {
+          cb.checked = select;
+        }
+      });
+      updateSelectedCommittees();
+    }
+
     function toggleCommitteeDropdown() {
       const dropdown = document.getElementById('committeeDropdown');
       dropdown.classList.toggle('show');
@@ -563,12 +782,21 @@
     function updateSelectedCommittees() {
       const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
       selectedCommittees = Array.from(checkboxes)
-        .filter(cb => cb.checked)
+        .filter(cb => cb.checked && !cb.id.includes('select-all-'))
         .map(cb => cb.value);
       
       const text = document.getElementById('selectedCommitteesText');
       if (selectedCommittees.length > 0) {
-        text.textContent = `تم اختيار ${selectedCommittees.length} لجنة`;
+        const raisedCount = selectedCommittees.filter(c => c.toLowerCase().includes('مرفوع')).length;
+        const spentCount = selectedCommittees.filter(c => c.toLowerCase().includes('منصرف')).length;
+        const otherCount = selectedCommittees.length - raisedCount - spentCount;
+        
+        let types = [];
+        if (raisedCount > 0) types.push(`${raisedCount} مرفوعة`);
+        if (spentCount > 0) types.push(`${spentCount} منصرفة`);
+        if (otherCount > 0) types.push(`${otherCount} أخرى`);
+        
+        text.textContent = `تم اختيار ${selectedCommittees.length} لجنة (${types.join('، ')})`;
       } else {
         text.textContent = '';
       }
@@ -587,31 +815,36 @@
 
         filteredData = allData.filter(row => {
           // الفلاتر العامة
-          if (branch && row["الفرع"] !== branch) return false;
+          const rowBranch = row["فرع_العملية_الأصلية"] || row["الفرع"];
+          if (branch && rowBranch !== branch) return false;
           if (review && row["المراجعة الداخلية"] !== review) return false;
           if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
           if (admin && row["الادارة"] !== admin) return false;
           if (officer && row["اسم الاخصائى"] !== officer) return false;
           if (transferred !== '') {
-            const isTransferred = row["تم التحويل"] === true;
+            const isTransferred = row["تم التحويل"] === true || row["تم التحويل"] === 'true';
             if (transferred === 'true' && !isTransferred) return false;
             if (transferred === 'false' && isTransferred) return false;
           }
           
           // فلتر اللجان (multi-select)
           if (selectedCommittees.length > 0) {
-            if (!selectedCommittees.includes(row["رقم اللجنة"])) return false;
+            const committeeNumber = row["رقم اللجنة"];
+            if (!committeeNumber || !selectedCommittees.includes(committeeNumber)) return false;
           }
 
           // فلاتر الأعمدة
-          if (columnFilters.nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(columnFilters.nationalId)) return false;
+          const nationalId = row["رقم البطاقة العميل"] || row["رقم البطاقة"];
+          if (columnFilters.nationalId && !nationalId?.toLowerCase().includes(columnFilters.nationalId)) return false;
           if (columnFilters.clientId && !row["كود_العميل"]?.toLowerCase().includes(columnFilters.clientId)) return false;
           if (columnFilters.clientName) {
             const name1 = row["اسم_العميل"]?.toLowerCase() || '';
             const name2 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
-            if (!name1.includes(columnFilters.clientName) && !name2.includes(columnFilters.clientName)) return false;
+            const name3 = row["اسم_العميل_البنكي"]?.toLowerCase() || '';
+            if (!name1.includes(columnFilters.clientName) && !name2.includes(columnFilters.clientName) && !name3.includes(columnFilters.clientName)) return false;
           }
-          if (columnFilters.project && !row["المشروع"]?.toLowerCase().includes(columnFilters.project)) return false;
+          const project = row["المشروع"] || row["مشروع_العملية_التشغيلية"] || row["اسم_المشروع_المرفوع_البنكي"];
+          if (columnFilters.project && !project?.toLowerCase().includes(columnFilters.project)) return false;
           if (columnFilters.guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(columnFilters.guarantorId)) return false;
           if (columnFilters.guarantorName && !row["اسم_الضامن"]?.toLowerCase().includes(columnFilters.guarantorName)) return false;
 
@@ -682,7 +915,11 @@
       document.getElementById('totalRecords').textContent = data.length.toLocaleString('ar-EG');
       
       const total = data.reduce((sum, row) => {
-        const amount = parseFloat(row["المبلغ المطلوب"]) || 0;
+        // محاولة الحصول على المبلغ من مصادر مختلفة
+        const amount = parseFloat(row["المبلغ_المرفوع_البنكي"]) || 
+                      parseFloat(row["قيمة_القرض_المرفوعة_البنكية"]) || 
+                      parseFloat(row["المبلغ المطلوب"]) || 
+                      parseFloat(row["المبلغ_المطلوب_في_العملية_الأصلية"]) || 0;
         return sum + amount;
       }, 0);
       
@@ -723,7 +960,7 @@
                   oninput="updateColumnFilter('clientName', this.value)"
                   onkeypress="searchOnEnter(event, 'clientName', this.value)" />
               </th>
-              <th>رقم الحساب</th>
+              <th>رقم الحساب البنكي</th>
               <th>الإحداثيات</th>
               <th>الاسم من I-Score</th>
               <th>
@@ -747,7 +984,10 @@
                   oninput="updateColumnFilter('guarantorName', this.value)"
                   onkeypress="searchOnEnter(event, 'guarantorName', this.value)" />
               </th>
-              <th>المبلغ</th>
+              <th>المبلغ المطلوب</th>
+              <th>المبلغ المرفوع</th>
+              <th>قيمة القرض</th>
+              <th>المصاريف الإدارية</th>
               <th>الأخصائي</th>
               <th>تم التحويل</th>
               <th>المراجعة</th>
@@ -763,7 +1003,7 @@
       data.forEach((row, idx) => {
         const getCellClass = (value) => {
           if (!value) return '';
-          const lowerValue = value.toLowerCase();
+          const lowerValue = value.toString().toLowerCase();
           if (lowerValue.includes('مقبول')) return 'approved-cell';
           if (lowerValue.includes('مرفوض') || lowerValue.includes('ملغي')) return 'rejected-cell';
           return '';
@@ -772,30 +1012,38 @@
         const reviewClass = getCellClass(row["المراجعة الداخلية"]);
         const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
         const adminClass = getCellClass(row["الادارة"]);
+        
+        // تحديد لون عمود اللجنة حسب النوع
+        const committeeNumber = row["رقم اللجنة"] || '';
+        const committeeClass = committeeNumber.toLowerCase().includes('مرفوع') ? 'approved-cell' : 
+                               committeeNumber.toLowerCase().includes('منصرف') ? 'rejected-cell' : '';
 
         html += `
           <tr>
             <td>${idx + 1}</td>
-            <td>${row["رقم البطاقة العميل"] || '—'}</td>
+            <td>${row["رقم البطاقة العميل"] || row["رقم البطاقة"] || '—'}</td>
             <td>${row["كود_العميل"] || '—'}</td>
-            <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
-            <td style="font-size: 10px;">${row["رقم_الحساب_من_التقييم"] || '—'}</td>
+            <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || row["اسم_العميل_البنكي"] || '—'}</td>
+            <td style="font-size: 10px;">${row["رقم_الحساب_البنكي"] || row["رقم_الحساب_من_التقييم"] || '—'}</td>
             <td style="font-size: 9px;">${row["احداثيات الموقع"] ? row["احداثيات الموقع"].substring(0, 20) + '...' : '—'}</td>
             <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
-            <td>${row["المشروع"] || '—'}</td>
+            <td>${row["المشروع"] || row["مشروع_العملية_التشغيلية"] || row["اسم_المشروع_المرفوع_البنكي"] || '—'}</td>
             <td>${row["رقم بطاقة الضامن"] || '—'}</td>
             <td>${row["اسم_الضامن"] || '—'}</td>
-            <td style="font-weight: bold; color: #667eea;">${row["المبلغ المطلوب"] || '—'}</td>
+            <td style="font-weight: bold; color: #667eea;">${formatCurrency(row["المبلغ المطلوب"] || row["المبلغ_المطلوب_في_العملية_الأصلية"])}</td>
+            <td style="font-weight: bold; color: #4caf50;">${formatCurrency(row["المبلغ_المرفوع_البنكي"])}</td>
+            <td style="font-weight: bold; color: #2196f3;">${formatCurrency(row["قيمة_القرض_المرفوعة_البنكية"])}</td>
+            <td style="font-weight: bold; color: #ff9800;">${formatCurrency(row["المصاريف_الإدارية_المرفوعة"])}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
             <td>${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
             <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
             <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
             <td class="${adminClass}">${row["الادارة"] || '—'}</td>
-            <td>${row["رقم اللجنة"] || '—'}</td>
+            <td class="${committeeClass}">${committeeNumber || '—'}</td>
             <td><button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button></td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="18">
+            <td colspan="20">
               <div class="detail-container">
                 <div class="detail-row-sections">
                   <div class="detail-section">
@@ -804,10 +1052,10 @@
                       ['عدد أيام التأخير', 'عدد ايام التاخير'],
                       ['عدد الأقساط', 'عدد الاقساط'],
                       ['المنطقة', 'المنطقه'],
-                      ['الفرع', 'الفرع'],
+                      ['الفرع', 'فرع_العملية_الأصلية'],
                       ['القائم بالزيارة', 'القائم بالزياره'],
                       ['القائم بالإدخال', 'اسم القائم بالادخال'],
-                      ['تاريخ الإدخال', 'created_at', true]
+                      ['تاريخ الإدخال', 'تاريخ_إنشاء_العملية', true]
                     ])}
                   </div>
                   <div class="detail-section">
@@ -821,6 +1069,17 @@
                     ])}
                   </div>
                   <div class="detail-section">
+                    <h3>🏦 بيانات البنك</h3>
+                    ${renderDetailItems(row, [
+                      ['المبلغ المرفوع', 'المبلغ_المرفوع_البنكي', false, '#4caf50', '', true],
+                      ['قيمة القرض', 'قيمة_القرض_المرفوعة_البنكية', false, '#2196f3', '', true],
+                      ['المصاريف الإدارية', 'المصاريف_الإدارية_المرفوعة', false, '#ff9800', '', true],
+                      ['رقم الحساب البنكي', 'رقم_الحساب_البنكي'],
+                      ['كود الفرع', 'كود_فرع_الرفع_البنكي'],
+                      ['كود البنك', 'كود البنك ثابت']
+                    ])}
+                  </div>
+                  <div class="detail-section">
                     <h3>📊 تقييم العميل</h3>
                     ${renderDetailItems(row, [
                       ['الاسم من I-Score', 'الاسم_من_الاي_سكور'],
@@ -828,10 +1087,11 @@
                       ['نتيجة التقييم', 'نتيجة_التقييم'],
                       ['التقييم الرقمي', 'التقييم_الرقمى'],
                       ['تاريخ الاستعلام', 'تاريخ_استعلام_العميل'],
-                      ['تعليق الاستعلام', 'تعليق_استعلام_العميل', false, '#764ba2'],
-                      ['الإحداثيات', 'احداثيات الموقع', false, '', '9px']
+                      ['تعليق الاستعلام', 'تعليق_استعلام_العميل', false, '#764ba2']
                     ])}
                   </div>
+                </div>
+                <div class="detail-row-sections">
                   <div class="detail-section">
                     <h3>👥 تقييم الضامن</h3>
                     ${renderDetailItems(row, [
@@ -841,6 +1101,14 @@
                       ['التقييم الرقمي', 'تقييم_رقمى_الضامن'],
                       ['تاريخ الاستعلام', 'تاريخ_استعلام_الضامن'],
                       ['تعليق الاستعلام', 'تعليق_استعلام_الضامن', false, '#764ba2']
+                    ])}
+                  </div>
+                  <div class="detail-section">
+                    <h3>📋 معلومات المشروع</h3>
+                    ${renderDetailItems(row, [
+                      ['اسم المشروع البنكي', 'اسم_المشروع_المرفوع_البنكي'],
+                      ['مشروع العملية', 'مشروع_العملية_التشغيلية'],
+                      ['الإحداثيات', 'احداثيات الموقع', false, '', '9px']
                     ])}
                   </div>
                 </div>
@@ -872,18 +1140,24 @@
       container.innerHTML = html;
     }
 
+    // دالة مساعدة لتنسيق العملات
+    function formatCurrency(value) {
+      if (!value && value !== 0) return '—';
+      const num = parseFloat(value);
+      if (isNaN(num)) return value;
+      return num.toLocaleString('ar-EG') + ' ج.م';
+    }
+
     function renderDetailItems(row, items, showContainer = true) {
       let html = showContainer ? '' : '';
       items.forEach(item => {
-        const [label, key, isDate = false, color = '', fontSize = '', isBoolean = false] = item;
+        const [label, key, isDate = false, color = '', fontSize = '', isCurrency = false] = item;
         let value = row[key] || '—';
         
         if (isDate && value !== '—') {
           value = new Date(value).toLocaleDateString('ar-EG');
-        } else if (isBoolean) {
-          value = value === true || value === 'true' ? 
-            '<span style="color: #2ecc71;">✓ نعم</span>' : 
-            '<span style="color: #e74c3c;">✗ لا</span>';
+        } else if (isCurrency && value !== '—') {
+          value = formatCurrency(value);
         }
         
         const style = color ? `style="color: ${color}; font-weight: bold;"` : '';

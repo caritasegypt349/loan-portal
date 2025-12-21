@@ -278,20 +278,6 @@
         border-bottom: 2px solid #2ecc71;
         padding-bottom: 5px;
     }
-    
-    /* تنسيقات للبيانات البنكية الجديدة */
-    .bank-data-cell {
-      font-weight: bold;
-    }
-    .bank-amount {
-      color: #4caf50 !important;
-    }
-    .bank-loan-value {
-      color: #2196f3 !important;
-    }
-    .bank-expenses {
-      color: #ff9800 !important;
-    }
   </style>
 </head>
 <body>
@@ -475,44 +461,22 @@
 
     async function loadData() {
       try {
-        // استخدام VIEW الجديد الذي يجمع كل البيانات
-        let query = db.from('"البيانات كاملة المومرفوعة للتنفيز فى البنك"').select('*');
+        let query = db.from('operations_with_details').select('*');
         
         // تطبيق فلتر الفروع حسب الصلاحية
         if (userRole !== 'admin' && userRole !== 'followup_supervisor' && userBranches && userBranches.length > 0) {
-          // استخدم عمود الفرع الصحيح من VIEW
-          query = query.in('فرع_العملية_الأصلية', userBranches);
+          query = query.in('الفرع', userBranches);
         }
         
-        const { data, error } = await query.order('تاريخ_إنشاء_العملية', { ascending: false });
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) {
-          console.error('خطأ في جلب البيانات من VIEW:', error);
-          // إذا فشل VIEW، حاول استخدام operations_with_details كبديل
-          try {
-            showLoading('جاري تحميل البيانات من المصدر البديل...');
-            const { data: oldData, error: oldError } = await db
-              .from('operations_with_details')
-              .select('*')
-              .order('created_at', { ascending: false });
-            
-            if (oldError) throw oldError;
-            
-            allData = oldData || [];
-            filteredData = [...allData];
-            renderFilters();
-            renderTable(filteredData);
-            updateStats(filteredData);
-            return;
-          } catch (oldErr) {
-            throw new Error('فشل في جلب البيانات: ' + error.message);
-          }
+          console.error('خطأ في جلب البيانات:', error);
+          throw new Error('فشل في جلب البيانات من قاعدة البيانات');
         }
 
-        // تحويل أسماء الأعمدة للتوافق مع الكود الحالي
-        allData = mapViewColumns(data || []);
+        allData = data || [];
         filteredData = [...allData];
-        
         renderFilters();
         renderTable(filteredData);
         updateStats(filteredData);
@@ -521,64 +485,6 @@
         console.error('خطأ في loadData:', err);
         throw err;
       }
-    }
-
-    // دالة لتحويل أسماء أعمدة VIEW لأسماء الأعمدة المستخدمة في الكود
-    function mapViewColumns(viewData) {
-      return viewData.map(row => {
-        return {
-          // البيانات الأساسية من operations_with_details
-          "رقم البطاقة العميل": row["رقم البطاقة"] || row["رقم البطاقة العميل"],
-          "كود_العميل": row["كود_العميل"],
-          "اسم_العميل": row["اسم_العميل_البنكي"] || row["اسم_العميل"],
-          "اسم_العميل_من_التقييم": row["اسم_العميل_من_التقييم"],
-          "رقم_الحساب_من_التقييم": row["رقم_الحساب_البنكي"] || row["رقم_الحساب_من_التقييم"],
-          "احداثيات الموقع": row["احداثيات الموقع"],
-          "الاسم_من_الاي_سكور": row["الاسم_من_الاي_سكور"],
-          "المشروع": row["مشروع_العملية_التشغيلية"] || row["المشروع"] || row["اسم_المشروع_المرفوع_البنكي"],
-          "رقم بطاقة الضامن": row["رقم بطاقة الضامن"],
-          "اسم_الضامن": row["اسم_الضامن"],
-          "المبلغ المطلوب": row["المبلغ_المطلوب_في_العملية_الأصلية"] || row["المبلغ المطلوب"],
-          "اسم الاخصائى": row["اسم الاخصائى"],
-          "تم التحويل": row["تم التحويل"],
-          "المراجعة الداخلية": row["المراجعة الداخلية"],
-          "ملاحظات المراجعة الداخلية": row["ملاحظات المراجعة الداخلية"],
-          "مسؤول المتابعة": row["مسؤول المتابعة"],
-          "تعليق مسؤول المتابعة": row["تعليق مسؤول المتابعة"],
-          "الادارة": row["الادارة"],
-          "ملاحظات الادارة": row["ملاحظات الادارة"],
-          "رقم اللجنة": row["رقم اللجنة"],
-          "created_at": row["تاريخ_إنشاء_العملية"],
-          "اسم القائم بالادخال": row["منشئ_العملية"],
-          "عدد ايام التاخير": row["عدد ايام التاخير"],
-          "عدد الاقساط": row["عدد الاقساط"],
-          "المنطقه": row["المنطقه"],
-          "الفرع": row["فرع_العملية_الأصلية"] || row["الفرع"],
-          "القائم بالزياره": row["القائم بالزياره"],
-          "اخصائى_القرض": row["اخصائى_القرض"],
-          "تاريخ_القرض": row["تاريخ_القرض"],
-          "النشاط_الثانى": row["النشاط_الثانى"],
-          "فرع_العميل_من_القروض": row["فرع_العميل_من_القروض"],
-          "نتيجة_التقييم": row["نتيجة_التقييم"],
-          "التقييم_الرقمى": row["التقييم_الرقمى"],
-          "تاريخ_استعلام_العميل": row["تاريخ_استعلام_العميل"],
-          "تعليق_استعلام_العميل": row["تعليق_استعلام_العميل"],
-          "اسم_الضامن_من_الاي_سكور": row["اسم_الضامن_من_الاي_سكور"],
-          "نتيجة_تقييم_الضامن": row["نتيجة_تقييم_الضامن"],
-          "تقييم_رقمى_الضامن": row["تقييم_رقمى_الضامن"],
-          "تاريخ_استعلام_الضامن": row["تاريخ_استعلام_الضامن"],
-          "تعليق_استعلام_الضامن": row["تعليق_استعلام_الضامن"],
-          
-          // البيانات البنكية الجديدة من VIEW
-          "bank_amount": row["المبلغ_المرفوع_البنكي"],
-          "bank_loan_value": row["قيمة_القرض_المرفوعة_البنكية"],
-          "bank_expenses": row["المصاريف_الإدارية_المرفوعة"],
-          "bank_account_number": row["رقم_الحساب_البنكي"],
-          "bank_branch_code": row["كود_فرع_الرفع_البنكي"],
-          "bank_project_name": row["اسم_المشروع_المرفوع_البنكي"],
-          "bank_code": row["كود البنك ثابت"]
-        };
-      });
     }
 
     function renderFilters() {
@@ -841,18 +747,13 @@
                   oninput="updateColumnFilter('guarantorName', this.value)"
                   onkeypress="searchOnEnter(event, 'guarantorName', this.value)" />
               </th>
-              <th>المبلغ المطلوب</th>
+              <th>المبلغ</th>
               <th>الأخصائي</th>
               <th>تم التحويل</th>
               <th>المراجعة</th>
               <th>المتابعة</th>
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
-              <!-- الأعمدة الجديدة البنكية -->
-              <th>المبلغ المرفوع</th>
-              <th>قيمة القرض</th>
-              <th>المصاريف الإدارية</th>
-              <th>رقم الحساب البنكي</th>
               <th></th>
             </tr>
           </thead>
@@ -884,22 +785,17 @@
             <td>${row["المشروع"] || '—'}</td>
             <td>${row["رقم بطاقة الضامن"] || '—'}</td>
             <td>${row["اسم_الضامن"] || '—'}</td>
-            <td style="font-weight: bold; color: #667eea;">${formatCurrency(row["المبلغ المطلوب"])}</td>
+            <td style="font-weight: bold; color: #667eea;">${row["المبلغ المطلوب"] || '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
             <td>${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
             <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
             <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
             <td class="${adminClass}">${row["الادارة"] || '—'}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
-            <!-- البيانات البنكية الجديدة -->
-            <td class="bank-data-cell bank-amount">${formatCurrency(row["bank_amount"])}</td>
-            <td class="bank-data-cell bank-loan-value">${formatCurrency(row["bank_loan_value"])}</td>
-            <td class="bank-data-cell bank-expenses">${formatCurrency(row["bank_expenses"])}</td>
-            <td class="bank-data-cell">${row["bank_account_number"] || '—'}</td>
             <td><button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button></td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="22">
+            <td colspan="18">
               <div class="detail-container">
                 <div class="detail-row-sections">
                   <div class="detail-section">
@@ -974,14 +870,6 @@
 
       html += `</tbody></table>`;
       container.innerHTML = html;
-    }
-
-    // دالة مساعدة لتنسيق العملات
-    function formatCurrency(value) {
-      if (!value && value !== 0) return '—';
-      const num = parseFloat(value);
-      if (isNaN(num)) return value;
-      return num.toLocaleString('ar-EG') + ' ج.م';
     }
 
     function renderDetailItems(row, items, showContainer = true) {

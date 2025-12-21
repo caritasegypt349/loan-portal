@@ -278,6 +278,20 @@
         border-bottom: 2px solid #2ecc71;
         padding-bottom: 5px;
     }
+    
+    /* تنسيقات للبيانات البنكية الجديدة */
+    .bank-data-cell {
+      font-weight: bold;
+    }
+    .bank-amount {
+      color: #4caf50 !important;
+    }
+    .bank-loan-value {
+      color: #2196f3 !important;
+    }
+    .bank-expenses {
+      color: #ff9800 !important;
+    }
   </style>
 </head>
 <body>
@@ -461,6 +475,9 @@
 
     async function loadData() {
       try {
+        showLoading('جاري تحميل البيانات الأساسية...');
+        
+        // 1. أولاً: جلب البيانات الأساسية من operations_with_details
         let query = db.from('operations_with_details').select('*');
         
         // تطبيق فلتر الفروع حسب الصلاحية
@@ -468,15 +485,38 @@
           query = query.in('الفرع', userBranches);
         }
         
-        const { data, error } = await query.order('created_at', { ascending: false });
+        const { data: operationsData, error: operationsError } = await query.order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('خطأ في جلب البيانات:', error);
-          throw new Error('فشل في جلب البيانات من قاعدة البيانات');
+        if (operationsError) {
+          console.error('خطأ في جلب البيانات الأساسية:', operationsError);
+          throw new Error('فشل في جلب البيانات الأساسية من قاعدة البيانات');
         }
 
-        allData = data || [];
+        if (!operationsData || operationsData.length === 0) {
+          allData = [];
+          filteredData = [];
+          renderFilters();
+          renderTable(filteredData);
+          updateStats(filteredData);
+          return;
+        }
+
+        showLoading('جاري تحميل البيانات البنكية...');
+        
+        // 2. ثانياً: جلب البيانات البنكية من bank_loans_data
+        const { data: bankData, error: bankError } = await db
+          .from('bank_loans_data')
+          .select('*');
+
+        if (bankError) {
+          console.error('تحذير: خطأ في جلب البيانات البنكية:', bankError);
+          // نواصل بدون البيانات البنكية
+        }
+
+        // 3. ثالثاً: دمج البيانات
+        allData = mergeData(operationsData, bankData || []);
         filteredData = [...allData];
+        
         renderFilters();
         renderTable(filteredData);
         updateStats(filteredData);
@@ -485,6 +525,36 @@
         console.error('خطأ في loadData:', err);
         throw err;
       }
+    }
+
+    // دمج البيانات الأساسية مع البيانات البنكية
+    function mergeData(operationsData, bankData) {
+      // إنشاء خريطة للبيانات البنكية باستخدام رقم البطاقة كمفتاح
+      const bankDataMap = new Map();
+      bankData.forEach(bankRecord => {
+        const nationalId = bankRecord["رقم البطاقة"];
+        if (nationalId) {
+          bankDataMap.set(nationalId, bankRecord);
+        }
+      });
+      
+      // دمج كل عملية مع بياناتها البنكية
+      return operationsData.map(operation => {
+        const nationalId = operation["رقم البطاقة العميل"];
+        const bankRecord = nationalId ? bankDataMap.get(nationalId) : null;
+        
+        return {
+          ...operation,
+          // البيانات البنكية المرفوعة
+          bank_amount: bankRecord ? bankRecord["المبلغ"] : null,
+          bank_loan_value: bankRecord ? bankRecord["قيمة القرض"] : null,
+          bank_expenses: bankRecord ? bankRecord["المصاريف الادارية"] : null,
+          bank_account_number: bankRecord ? bankRecord["رقم الحساب"] : null,
+          bank_branch_code: bankRecord ? bankRecord["كود الفرع"] : null,
+          bank_project_name: bankRecord ? bankRecord["اسم المشروع"] : null,
+          bank_code: bankRecord ? bankRecord["كود البنك ثابت"] : null
+        };
+      });
     }
 
     function renderFilters() {
@@ -754,6 +824,11 @@
               <th>المتابعة</th>
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
+              <!-- الأعمدة الجديدة البنكية -->
+              <th>المبلغ المرفوع</th>
+              <th>قيمة القرض</th>
+              <th>المصاريف الإدارية</th>
+              <th>رقم الحساب البنكي</th>
               <th></th>
             </tr>
           </thead>
@@ -785,17 +860,22 @@
             <td>${row["المشروع"] || '—'}</td>
             <td>${row["رقم بطاقة الضامن"] || '—'}</td>
             <td>${row["اسم_الضامن"] || '—'}</td>
-            <td style="font-weight: bold; color: #667eea;">${row["المبلغ المطلوب"] || '—'}</td>
+            <td style="font-weight: bold; color: #667eea;">${formatCurrency(row["المبلغ المطلوب"])}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
             <td>${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
             <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
             <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
             <td class="${adminClass}">${row["الادارة"] || '—'}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
+            <!-- البيانات البنكية الجديدة -->
+            <td class="bank-data-cell bank-amount">${formatCurrency(row["bank_amount"])}</td>
+            <td class="bank-data-cell bank-loan-value">${formatCurrency(row["bank_loan_value"])}</td>
+            <td class="bank-data-cell bank-expenses">${formatCurrency(row["bank_expenses"])}</td>
+            <td class="bank-data-cell">${row["bank_account_number"] || '—'}</td>
             <td><button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button></td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="18">
+            <td colspan="22">
               <div class="detail-container">
                 <div class="detail-row-sections">
                   <div class="detail-section">
@@ -870,6 +950,14 @@
 
       html += `</tbody></table>`;
       container.innerHTML = html;
+    }
+
+    // دالة مساعدة لتنسيق العملات
+    function formatCurrency(value) {
+      if (!value && value !== 0) return '—';
+      const num = parseFloat(value);
+      if (isNaN(num)) return value;
+      return num.toLocaleString('ar-EG') + ' ج.م';
     }
 
     function renderDetailItems(row, items, showContainer = true) {

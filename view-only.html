@@ -6,7 +6,6 @@
   <title>عرض البيانات التفصيلي - نظام القروض</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* احتفظ بنفس الـ CSS كما هو */
     body { 
       font-family: 'Segoe UI', Tahoma, sans-serif; 
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -34,6 +33,7 @@
       gap: 20px; 
       justify-content: center; 
       margin-bottom: 20px; 
+      flex-wrap: wrap; 
     }
     .stat-card { 
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -43,6 +43,9 @@
       text-align: center; 
       box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); 
       transition: transform 0.3s; 
+      flex: 1; 
+      min-width: 180px; 
+      max-width: 220px; 
     }
     .stat-card:hover { 
       transform: translateY(-5px); 
@@ -131,9 +134,24 @@
       cursor: pointer;
       background: white;
       text-align: right;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .committee-toggle:hover {
       border-color: #667eea;
+    }
+    .select-all-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .select-all-btn:hover {
+      background: #764ba2;
     }
     table { 
       width: 100%; 
@@ -222,6 +240,7 @@
       font-size: 12px;
       color: #667eea;
       margin-top: 4px;
+      text-align: right;
     }
     .approved-cell {
       background-color: #e6ffe6; 
@@ -290,8 +309,20 @@
         <div class="value" id="totalRecords">0</div>
       </div>
       <div class="stat-card">
-        <div class="label">مجموع المبالغ</div>
+        <div class="label">المبلغ المطلوب</div>
         <div class="value" id="totalAmount">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">المبلغ المحول</div>
+        <div class="value" id="totalTransferred">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">قيمة التمويل</div>
+        <div class="value" id="totalFinance">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">المصاريف الإدارية</div>
+        <div class="value" id="totalAdminFees">0</div>
       </div>
     </div>
 
@@ -344,8 +375,9 @@
         <label class="filter-label">رقم اللجنة</label>
         <div class="committee-toggle" onclick="toggleCommitteeDropdown()">
           <span>اختر اللجان</span>
-          <div class="selected-committees" id="selectedCommitteesText"></div>
+          <button class="select-all-btn" onclick="selectAllCommittees(event)">اختيار كل اللجان</button>
         </div>
+        <div class="selected-committees" id="selectedCommitteesText"></div>
         <div class="committee-dropdown" id="committeeDropdown"></div>
       </div>
       
@@ -374,7 +406,7 @@
       return true;
     }
 
-    // تعريف Supabase - نسخة منفصلة لتجنب التعارض
+    // تعريف Supabase
     let db;
     try {
       db = window.supabase.createClient(
@@ -410,7 +442,6 @@
     }
 
     async function init() {
-      // التحقق من الجلسة أولاً
       if (!validateSession()) {
         return;
       }
@@ -420,12 +451,10 @@
       try {
         showLoading('جاري تحميل معلومات المستخدم...');
         
-        // جلب معلومات المستخدم من localStorage أولاً (من index.html)
         userRole = localStorage.getItem('userRole') || '';
         const branchesStr = localStorage.getItem('userBranches') || '[]';
         userBranches = JSON.parse(branchesStr);
         
-        // إذا لم تكن المعلومات متوفرة في localStorage، نجلبها من قاعدة البيانات
         if (!userRole) {
           const { data: user, error } = await db
             .from('users')
@@ -438,7 +467,6 @@
           userRole = user.role;
           userBranches = user.branches || [];
           
-          // تخزين في localStorage لاستخدامها لاحقاً
           localStorage.setItem('userRole', userRole);
           localStorage.setItem('userBranches', JSON.stringify(userBranches));
         }
@@ -446,7 +474,6 @@
         showLoading('جاري تحميل البيانات...');
         await loadData();
         
-        // إغلاق dropdown اللجان عند الضغط خارجها
         document.addEventListener('click', function(e) {
           if (!e.target.closest('.committee-filter')) {
             document.getElementById('committeeDropdown').classList.remove('show');
@@ -463,7 +490,6 @@
       try {
         let query = db.from('operations_with_details').select('*');
         
-        // تطبيق فلتر الفروع حسب الصلاحية
         if (userRole !== 'admin' && userRole !== 'followup_supervisor' && userBranches && userBranches.length > 0) {
           query = query.in('الفرع', userBranches);
         }
@@ -529,7 +555,6 @@
           });
         });
 
-        // إنشاء checkboxes للجان
         const dropdown = document.getElementById('committeeDropdown');
         dropdown.innerHTML = '';
         committees.forEach(committee => {
@@ -542,7 +567,6 @@
           dropdown.appendChild(div);
         });
 
-        // إضافة مستمعات للفلاتر العامة
         ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
           const element = document.getElementById(id);
           if (element) {
@@ -558,6 +582,18 @@
     function toggleCommitteeDropdown() {
       const dropdown = document.getElementById('committeeDropdown');
       dropdown.classList.toggle('show');
+    }
+
+    function selectAllCommittees(event) {
+      event.stopPropagation();
+      const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
+      const allSelected = Array.from(checkboxes).every(cb => cb.checked);
+      
+      checkboxes.forEach(cb => {
+        cb.checked = !allSelected;
+      });
+      
+      updateSelectedCommittees();
     }
 
     function updateSelectedCommittees() {
@@ -586,7 +622,6 @@
         const transferred = document.getElementById('filterTransferred').value;
 
         filteredData = allData.filter(row => {
-          // الفلاتر العامة
           if (branch && row["الفرع"] !== branch) return false;
           if (review && row["المراجعة الداخلية"] !== review) return false;
           if (supervisor && row["مسؤول المتابعة"] !== supervisor) return false;
@@ -598,18 +633,19 @@
             if (transferred === 'false' && isTransferred) return false;
           }
           
-          // فلتر اللجان (multi-select)
           if (selectedCommittees.length > 0) {
             if (!selectedCommittees.includes(row["رقم اللجنة"])) return false;
           }
 
-          // فلاتر الأعمدة
           if (columnFilters.nationalId && !row["رقم البطاقة العميل"]?.toLowerCase().includes(columnFilters.nationalId)) return false;
           if (columnFilters.clientId && !row["كود_العميل"]?.toLowerCase().includes(columnFilters.clientId)) return false;
           if (columnFilters.clientName) {
             const name1 = row["اسم_العميل"]?.toLowerCase() || '';
             const name2 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
-            if (!name1.includes(columnFilters.clientName) && !name2.includes(columnFilters.clientName)) return false;
+            const name3 = row["اسم_العميل_من_بيانات_القروض"]?.toLowerCase() || '';
+            if (!name1.includes(columnFilters.clientName) && 
+                !name2.includes(columnFilters.clientName) && 
+                !name3.includes(columnFilters.clientName)) return false;
           }
           if (columnFilters.project && !row["المشروع"]?.toLowerCase().includes(columnFilters.project)) return false;
           if (columnFilters.guarantorId && !row["رقم بطاقة الضامن"]?.toLowerCase().includes(columnFilters.guarantorId)) return false;
@@ -628,12 +664,10 @@
     function updateColumnFilter(field, value) {
       columnFilters[field] = value.toLowerCase();
       
-      // إلغاء البحث السابق
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
       
-      // الانتظار 1 ثانية قبل البحث
       searchTimeout = setTimeout(() => {
         applyAllFilters();
       }, 1000);
@@ -657,13 +691,11 @@
       document.getElementById('filterOfficer').value = '';
       document.getElementById('filterTransferred').value = '';
       
-      // إعادة تعيين checkboxes اللجان
       const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
       checkboxes.forEach(cb => cb.checked = false);
       selectedCommittees = [];
       document.getElementById('selectedCommitteesText').textContent = '';
       
-      // إعادة تعيين فلاتر الأعمدة
       columnFilters = {
         nationalId: '',
         clientId: '',
@@ -681,12 +713,30 @@
     function updateStats(data) {
       document.getElementById('totalRecords').textContent = data.length.toLocaleString('ar-EG');
       
-      const total = data.reduce((sum, row) => {
+      const totalAmount = data.reduce((sum, row) => {
         const amount = parseFloat(row["المبلغ المطلوب"]) || 0;
         return sum + amount;
       }, 0);
       
-      document.getElementById('totalAmount').textContent = total.toLocaleString('ar-EG') + ' ج.م';
+      const totalTransferred = data.reduce((sum, row) => {
+        const amount = parseFloat(row["المبلغ_البنكي"]) || 0;
+        return sum + amount;
+      }, 0);
+      
+      const totalFinance = data.reduce((sum, row) => {
+        const amount = parseFloat(row["قيمة_القرض_البنكي"]) || 0;
+        return sum + amount;
+      }, 0);
+      
+      const totalAdminFees = data.reduce((sum, row) => {
+        const amount = parseFloat(row["المصاريف_الادارية_البنكية"]) || 0;
+        return sum + amount;
+      }, 0);
+      
+      document.getElementById('totalAmount').textContent = totalAmount.toLocaleString('ar-EG') + ' ج.م';
+      document.getElementById('totalTransferred').textContent = totalTransferred.toLocaleString('ar-EG') + ' ج.م';
+      document.getElementById('totalFinance').textContent = totalFinance.toLocaleString('ar-EG') + ' ج.م';
+      document.getElementById('totalAdminFees').textContent = totalAdminFees.toLocaleString('ar-EG') + ' ج.م';
     }
 
     function renderTable(data) {
@@ -747,7 +797,11 @@
                   oninput="updateColumnFilter('guarantorName', this.value)"
                   onkeypress="searchOnEnter(event, 'guarantorName', this.value)" />
               </th>
-              <th>المبلغ</th>
+              <th>المبلغ المطلوب</th>
+              <th>المبلغ المحول</th>
+              <th>قيمة التمويل</th>
+              <th>نظام التمويل</th>
+              <th>المصاريف الإدارية</th>
               <th>الأخصائي</th>
               <th>تم التحويل</th>
               <th>المراجعة</th>
@@ -773,12 +827,18 @@
         const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
         const adminClass = getCellClass(row["الادارة"]);
 
+        // الأعمدة المالية الجديدة
+        const transferredAmount = row["المبلغ_البنكي"] || 0;
+        const financeValue = row["قيمة_القرض_البنكي"] || 0;
+        const adminFees = row["المصاريف_الادارية_البنكية"] || 0;
+        const financeSystem = row["اسم_المشروع_البنكي"] || '—';
+
         html += `
           <tr>
             <td>${idx + 1}</td>
             <td>${row["رقم البطاقة العميل"] || '—'}</td>
             <td>${row["كود_العميل"] || '—'}</td>
-            <td>${row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
+            <td>${row["اسم_العميل"] || row["اسم_العميل_من_بيانات_القروض"] || row["اسم_العميل_من_التقييم"] || '—'}</td>
             <td style="font-size: 10px;">${row["رقم_الحساب_من_التقييم"] || '—'}</td>
             <td style="font-size: 9px;">${row["احداثيات الموقع"] ? row["احداثيات الموقع"].substring(0, 20) + '...' : '—'}</td>
             <td>${row["الاسم_من_الاي_سكور"] || '—'}</td>
@@ -786,6 +846,10 @@
             <td>${row["رقم بطاقة الضامن"] || '—'}</td>
             <td>${row["اسم_الضامن"] || '—'}</td>
             <td style="font-weight: bold; color: #667eea;">${row["المبلغ المطلوب"] || '—'}</td>
+            <td style="font-weight: bold; color: #2ecc71;">${transferredAmount ? transferredAmount.toLocaleString('ar-EG') : '—'}</td>
+            <td style="font-weight: bold; color: #3498db;">${financeValue ? financeValue.toLocaleString('ar-EG') : '—'}</td>
+            <td>${financeSystem}</td>
+            <td style="font-weight: bold; color: #e74c3c;">${adminFees ? adminFees.toLocaleString('ar-EG') : '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
             <td>${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
             <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
@@ -795,7 +859,7 @@
             <td><button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button></td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="18">
+            <td colspan="21">
               <div class="detail-container">
                 <div class="detail-row-sections">
                   <div class="detail-section">
@@ -913,7 +977,6 @@
       }
     }
 
-    // بدء التطبيق
     document.addEventListener('DOMContentLoaded', function() {
       init().catch(err => {
         console.error('خطأ في بدء التطبيق:', err);

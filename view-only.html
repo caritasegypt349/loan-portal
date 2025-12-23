@@ -141,7 +141,17 @@
     .committee-toggle:hover {
       border-color: #667eea;
     }
-    .select-all-btn {
+    .committee-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      padding: 0 12px;
+      padding-top: 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+    }
+    .committee-btn {
       background: #667eea;
       color: white;
       border: none;
@@ -149,9 +159,20 @@
       border-radius: 4px;
       font-size: 12px;
       cursor: pointer;
+      flex: 1;
+      min-width: 120px;
     }
-    .select-all-btn:hover {
+    .committee-btn:hover {
       background: #764ba2;
+    }
+    .committee-btn.select-all {
+      background: #2ecc71;
+    }
+    .committee-btn.select-committees {
+      background: #3498db;
+    }
+    .committee-btn.clear {
+      background: #e74c3c;
     }
     table { 
       width: 100%; 
@@ -375,7 +396,6 @@
         <label class="filter-label">رقم اللجنة</label>
         <div class="committee-toggle" onclick="toggleCommitteeDropdown()">
           <span>اختر اللجان</span>
-          <button class="select-all-btn" onclick="selectAllCommittees(event)">اختيار كل اللجان</button>
         </div>
         <div class="selected-committees" id="selectedCommitteesText"></div>
         <div class="committee-dropdown" id="committeeDropdown"></div>
@@ -392,7 +412,6 @@
   </div>
 
   <script>
-    // التحقق من الجلسة أولاً
     function validateSession() {
       const userId = localStorage.getItem('loggedInUserId');
       const userFullName = localStorage.getItem('loggedInUser');
@@ -406,7 +425,6 @@
       return true;
     }
 
-    // تعريف Supabase
     let db;
     try {
       db = window.supabase.createClient(
@@ -556,7 +574,16 @@
         });
 
         const dropdown = document.getElementById('committeeDropdown');
-        dropdown.innerHTML = '';
+        dropdown.innerHTML = `
+          <div class="committee-buttons">
+            <button class="committee-btn select-all" onclick="selectAllCommittees()">اختيار كل اللجان</button>
+            <button class="committee-btn select-committees" onclick="selectCommitteesWithWord()">اللجان التي تحتوي على "لجنة" أو "لجنه"</button>
+            <button class="committee-btn clear" onclick="clearAllCommittees()">إلغاء الكل</button>
+          </div>
+          <div id="committeeItemsContainer"></div>
+        `;
+        
+        const itemsContainer = document.getElementById('committeeItemsContainer');
         committees.forEach(committee => {
           const div = document.createElement('div');
           div.className = 'committee-item';
@@ -564,7 +591,7 @@
             <input type="checkbox" id="comm_${committee}" value="${committee}" onchange="updateSelectedCommittees()">
             <label for="comm_${committee}">${committee}</label>
           `;
-          dropdown.appendChild(div);
+          itemsContainer.appendChild(div);
         });
 
         ['filterBranch', 'filterReview', 'filterSupervisor', 'filterAdmin', 'filterOfficer', 'filterTransferred'].forEach(id => {
@@ -584,15 +611,34 @@
       dropdown.classList.toggle('show');
     }
 
-    function selectAllCommittees(event) {
-      event.stopPropagation();
+    function selectAllCommittees() {
       const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
-      const allSelected = Array.from(checkboxes).every(cb => cb.checked);
-      
       checkboxes.forEach(cb => {
-        cb.checked = !allSelected;
+        cb.checked = true;
       });
-      
+      updateSelectedCommittees();
+    }
+
+    function selectCommitteesWithWord() {
+      const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        const committeeName = cb.value || '';
+        const normalizedName = committeeName.toLowerCase().trim();
+        // اختيار اللجان التي تحتوي على "لجنة" أو "لجنه"
+        if (normalizedName.includes('لجنة') || normalizedName.includes('لجنه')) {
+          cb.checked = true;
+        } else {
+          cb.checked = false;
+        }
+      });
+      updateSelectedCommittees();
+    }
+
+    function clearAllCommittees() {
+      const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+      });
       updateSelectedCommittees();
     }
 
@@ -605,6 +651,14 @@
       const text = document.getElementById('selectedCommitteesText');
       if (selectedCommittees.length > 0) {
         text.textContent = `تم اختيار ${selectedCommittees.length} لجنة`;
+        
+        // إضافة قائمة مختصرة باللجان المختارة
+        const shortList = selectedCommittees.slice(0, 3).join('، ');
+        if (selectedCommittees.length > 3) {
+          text.textContent += `: ${shortList} +${selectedCommittees.length - 3} أخرى`;
+        } else {
+          text.textContent += `: ${shortList}`;
+        }
       } else {
         text.textContent = '';
       }
@@ -641,8 +695,8 @@
           if (columnFilters.clientId && !row["كود_العميل"]?.toLowerCase().includes(columnFilters.clientId)) return false;
           if (columnFilters.clientName) {
             const name1 = row["اسم_العميل"]?.toLowerCase() || '';
-            const name2 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
-            const name3 = row["اسم_العميل_من_بيانات_القروض"]?.toLowerCase() || '';
+            const name2 = row["اسم_العميل_من_بيانات_القروض"]?.toLowerCase() || '';
+            const name3 = row["اسم_العميل_من_التقييم"]?.toLowerCase() || '';
             if (!name1.includes(columnFilters.clientName) && 
                 !name2.includes(columnFilters.clientName) && 
                 !name3.includes(columnFilters.clientName)) return false;
@@ -691,10 +745,7 @@
       document.getElementById('filterOfficer').value = '';
       document.getElementById('filterTransferred').value = '';
       
-      const checkboxes = document.querySelectorAll('#committeeDropdown input[type="checkbox"]');
-      checkboxes.forEach(cb => cb.checked = false);
-      selectedCommittees = [];
-      document.getElementById('selectedCommitteesText').textContent = '';
+      clearAllCommittees();
       
       columnFilters = {
         nationalId: '',
@@ -827,7 +878,6 @@
         const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
         const adminClass = getCellClass(row["الادارة"]);
 
-        // الأعمدة المالية الجديدة
         const transferredAmount = row["المبلغ_البنكي"] || 0;
         const financeValue = row["قيمة_القرض_البنكي"] || 0;
         const adminFees = row["المصاريف_الادارية_البنكية"] || 0;

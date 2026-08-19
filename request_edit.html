@@ -196,24 +196,12 @@
           text: 'أنت مدير - يمكنك تعديل جميع الحقول',
           class: 'permission-admin'
         },
-        'أخصائي': {
-          text: 'أنت أخصائي - يمكنك تعديل بيانات العميل والضامن والمشروع والفرع',
-          class: 'permission-specialist'
-        },
-        'مدخل بيانات': {
+        'data_entry': {
           text: 'أنت مدخل بيانات - يمكنك تعديل البيانات الأساسية',
           class: 'permission-data-entry'
         },
-        'مراجع': {
-          text: 'أنت مراجع - يمكنك فقط تعديل حقل المراجعة الداخلية',
-          class: 'permission-other'
-        },
-        'متابعة': {
-          text: 'أنت مسؤول متابعة - يمكنك فقط تعديل حقل المتابعة',
-          class: 'permission-other'
-        },
-        'إدارة': {
-          text: 'أنت إدارة - يمكنك فقط تعديل حقل الإدارة',
+        'internal_reviewer': {
+          text: 'أنت مراجع - يمكنك عرض السجل فقط ولا يمكنك تعديل البيانات الأساسية من هنا',
           class: 'permission-other'
         }
       };
@@ -235,17 +223,11 @@
         .select('*');
         
       // ✅ تصفية حسب الصلاحيات
-      if (loggedInUser.role === 'مراجع') {
+      if (loggedInUser.role === 'internal_reviewer') {
         // المراجعون يرون فقط السجلات التي تحتاج مراجعة
         query = query.eq('المراجعة الداخلية', 'لم تتم المراجعة');
-      } else if (loggedInUser.role === 'متابعة') {
-        // المتابعة يرون فقط السجلات التي تمت مراجعتها
-        query = query.eq('المراجعة الداخلية', 'تمت المراجعة مقبول');
-      } else if (loggedInUser.role === 'إدارة') {
-        // الإدارة ترى فقط السجلات التي تمت متابعتها
-        query = query.eq('مسؤول المتابعة', 'تمت المراجعة مقبول');
       } else if (loggedInUser.role !== 'admin' && loggedInUser.branches) {
-        // الموظفين يرون فقط فروعهم
+        // الموظفين (مثل مدخل البيانات) يرون فقط فروعهم
         query = query.in('الفرع', loggedInUser.branches);
       }
         
@@ -390,13 +372,9 @@
       const editableFields = {
         'admin': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
                   'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee'],
-        'أخصائي': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
-                   'editInstallments', 'editOfficer', 'editRegion', 'editBranch'],
-        'مدخل بيانات': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
+        'data_entry': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
                         'editInstallments', 'editOfficer', 'editRegion', 'editBranch'],
-        'مراجع': [], // المراجعين لا يمكنهم تعديل البيانات الأساسية
-        'متابعة': [], // المتابعة لا يمكنهم تعديل البيانات الأساسية
-        'إدارة': []   // الإدارة لا يمكنهم تعديل البيانات الأساسية
+        'internal_reviewer': [] // المراجعين لا يمكنهم تعديل البيانات الأساسية من هنا، لهم صفحة المراجعة الخاصة
       };
       
       // رسائل الصلاحيات في المودال
@@ -405,24 +383,12 @@
           text: 'أنت مدير - يمكنك تعديل جميع الحقول',
           class: 'permission-admin'
         },
-        'أخصائي': {
-          text: 'أنت أخصائي - يمكنك تعديل بيانات العميل والضامن والمشروع والفرع',
-          class: 'permission-specialist'
-        },
-        'مدخل بيانات': {
+        'data_entry': {
           text: 'أنت مدخل بيانات - يمكنك تعديل البيانات الأساسية',
           class: 'permission-data-entry'
         },
-        'مراجع': {
-          text: 'أنت مراجع - يمكنك فقط تعديل حقل المراجعة الداخلية (يجب استخدام صفحة المراجعة الخاصة)',
-          class: 'permission-other'
-        },
-        'متابعة': {
-          text: 'أنت مسؤول متابعة - يمكنك فقط تعديل حقل المتابعة (يجب استخدام صفحة المتابعة الخاصة)',
-          class: 'permission-other'
-        },
-        'إدارة': {
-          text: 'أنت إدارة - يمكنك فقط تعديل حقل الإدارة (يجب استخدام صفحة الإدارة الخاصة)',
+        'internal_reviewer': {
+          text: 'أنت مراجع - لا يمكنك تعديل البيانات الأساسية من هنا (استخدم صفحة المراجعة الخاصة)',
           class: 'permission-other'
         }
       };

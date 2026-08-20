@@ -37,7 +37,7 @@
     style.id = 'reusableFollowupStyles';
     style.textContent = `
       .followup-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-      .followup-modal .modal-content { background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 500px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
+      .followup-modal .modal-content { background: white; margin: 4% auto; padding: 20px 20px 0 20px; width: 90%; max-width: 500px; border-radius: 8px; max-height: 88vh; overflow-y: auto; }
       .followup-modal .close { float: left; font-size: 24px; cursor: pointer; color: #999; }
       .followup-modal .close:hover { color: #e74c3c; }
       .followup-modal .form-group { margin-bottom: 20px; }
@@ -58,8 +58,12 @@
       }
       .followup-modal .hint { color: #666; font-weight: normal; font-size: 12px; }
       .followup-modal .modal-actions {
-        display: flex; justify-content: flex-start; gap: 10px; margin-top: 25px;
-        padding-top: 20px; border-top: 1px solid #eee;
+        display: flex; justify-content: flex-start; gap: 10px;
+        position: sticky; bottom: 0; background: white;
+        margin: 25px -20px 0 -20px;
+        padding: 15px 20px 22px;
+        border-top: 1px solid #eee;
+        box-shadow: 0 -6px 14px rgba(0,0,0,0.08);
       }
       .followup-modal .btn { padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
       .followup-modal .btn-primary { background-color: #2ecc71; color: white; }

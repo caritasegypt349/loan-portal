@@ -322,6 +322,22 @@
       transform: scale(1.1); 
       box-shadow: 0 4px 12px rgba(15, 40, 70, 0.32); 
     }
+    .kyc-btn {
+      background: linear-gradient(135deg, #c6a35f 0%, #a3813f 100%);
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: bold;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .kyc-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(166, 130, 63, 0.4);
+    }
     .detail-row { 
       display: none; 
       background: #f0f4f8; 
@@ -984,10 +1000,13 @@
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
               <th></th>
+              <th>اعرف عميلك</th>
             </tr>
           </thead>
           <tbody id="tableBody">
       `;
+
+      window.currentTableData = data;
 
       data.forEach((row, idx) => {
         const getCellClass = (value) => {
@@ -1031,9 +1050,10 @@
             <td class="${adminClass}">${row["الادارة"] || '—'}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
             <td><button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button></td>
+            <td><button class="kyc-btn" onclick="openKYCReport(${idx})">📄 إنشاء تقرير اعرف عميلك</button></td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="21">
+            <td colspan="22">
               <div class="detail-container">
                 <div class="detail-row-sections">
                   <div class="detail-section">
@@ -1149,6 +1169,37 @@
         btn.textContent = 'تفاصيل';
         btn.style.background = 'linear-gradient(135deg, #1c3f66 0%, #0f2846 100%)';
       }
+    }
+
+    // ========== إنشاء تقرير اعرف عميلك (KYC) معبأ مسبقًا ==========
+    function openKYCReport(idx) {
+      const row = (window.currentTableData || [])[idx];
+      if (!row) {
+        alert('تعذر العثور على بيانات هذا السجل.');
+        return;
+      }
+
+      // نجهز أكبر قدر ممكن من البيانات المتاحة فعليًا لدينا لنموذج الـ KYC
+      const prefill = {
+        fields: {
+          name: row["اسم_العميل"] || row["اسم_العميل_من_بيانات_القروض"] || row["اسم_العميل_من_التقييم"] || '',
+          nid: row["رقم البطاقة العميل"] || '',
+          area: row["المنطقه"] || row["الفرع"] || '',
+          activity: row["المشروع"] || row["النشاط_الثانى"] || '',
+          purpose: row["المشروع"] || '',
+          loan: row["المبلغ المطلوب"] || '',
+          gps: row["احداثيات الموقع"] || '',
+          notes: `تم استيراد البيانات الأساسية تلقائيًا من نظام إدارة التمويل بتاريخ ${new Date().toLocaleDateString('ar-EG')} (كود العميل: ${row["كود_العميل"] || '—'})`
+        }
+      };
+
+      try {
+        localStorage.setItem('kyc_prefill_data', JSON.stringify(prefill));
+      } catch (e) {
+        console.error('تعذر تجهيز بيانات الاستيراد التلقائي:', e);
+      }
+
+      window.open('kyc-report.html', '_blank');
     }
 
     // 🔽🔽🔽 دالة تصدير البيانات إلى Excel 🔽🔽🔽

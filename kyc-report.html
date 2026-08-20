@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نموذج اعرف عميلك - كاريتاس مصر</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef2f5;font-family:"Segoe UI",Tahoma,Arial;color:#222}
+.container{max-width:1100px;margin:20px auto;padding:0 14px}.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 3px 15px #0001}
+.header{text-align:center;border-bottom:2px solid #333;padding-bottom:12px}.header h1{margin:0;font-size:24px}.header h2{margin:5px 0;font-size:17px}
+.section-title{background:#eee;padding:8px 12px;margin:14px 0 9px;font-weight:700;border-right:4px solid #333}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+label{font-weight:600;font-size:13px}input,select,textarea{width:100%;margin-top:4px;border:1px solid #bbb;border-radius:6px;padding:7px;font:inherit}textarea{height:55px}
+.radio{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}.radio label{font-weight:400}.radio input{width:auto;margin:0}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{border:1px solid #bbb;padding:7px;text-align:center}th{background:#eee}td:first-child{text-align:right}
+.actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}button{border:0;border-radius:7px;padding:10px 18px;font-size:14px;cursor:pointer}
+.print{background:#222;color:white}.save{background:#555;color:white}.load{background:#777;color:white}.clear{background:#ddd}
+.status{text-align:center;font-weight:700;margin-top:10px}.note{font-size:12px;color:#555;margin-top:6px}#fileInput{display:none}
+#report{display:none}.report-box{background:white;padding:7mm;max-width:210mm;margin:auto}.report-head{text-align:center;border-bottom:2px solid #222;padding-bottom:6px}
+.report-head h1{font-size:20px;margin:0}.report-head h2{font-size:14px;margin:3px}.report-section{font-weight:700;background:#eee;padding:4px;margin-top:6px;font-size:11px}
+.report-meta{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin:4px 0}.meta{border:1px solid #aaa;padding:3px;font-size:9px;line-height:1.12;overflow-wrap:anywhere;word-break:break-word}.meta.long{grid-column:1/-1}
+.report-table{page-break-inside:avoid}.report-table tr{page-break-inside:avoid}.report-table td,.report-table th{padding:3px;font-size:9px}.sign{display:grid;grid-template-columns:1fr 1fr;gap:25px;text-align:center;font-size:9px;margin-top:7px}.sign div{border-top:1px solid #555;padding-top:3px}
+@media(max-width:750px){.grid,.grid2{grid-template-columns:1fr}.card{padding:13px}}
+@media print{
+@page{size:A4 portrait;margin:4mm}
+html,body{background:#fff!important;margin:0!important;padding:0!important}
+.container{display:none!important}
+#report{display:block!important}
+.report-box{
+  padding:0!important;
+  max-width:none!important;
+  width:100%!important;
+  font-size:9px;
+  line-height:1.1;
+}
+.report-head{padding-bottom:4px}
+.report-head h1{font-size:17px;margin:0}
+.report-head h2{font-size:11px;margin:2px}
+.report-section{font-size:9px;padding:2px;margin-top:4px}
+.report-meta{margin:3px 0;gap:2px}
+.meta{font-size:8.5px;padding:2px}
+.report-table td,.report-table th{font-size:8.5px;padding:2px}
+}
+</style>
+</head>
+<body>
+<div class="container"><div class="card">
+<div class="header"><h1>جمعية كاريتاس مصر</h1><h2>برنامج الإقراض والتمكين الاقتصادي</h2><div>نموذج اعرف عميلك (KYC)</div></div>
+
+<div class="section-title">بيانات العميل الأساسية</div>
+<div class="grid">
+<div><label>اسم العميل</label><input id="name"></div><div><label>الرقم القومي</label><input id="nid" maxlength="14"></div>
+<div><label>تاريخ الميلاد</label><input id="birthDate" type="date"></div><div><label>صادر من</label><input id="issuedBy"></div>
+<div><label>تاريخ الإصدار</label><input id="issueDate" type="date"></div><div><label>تاريخ التحقق</label><input id="date" type="date"></div>
+</div>
+
+<div class="section-title">بيانات الاتصال والعنوان</div>
+<div class="grid">
+<div><label>رقم هاتف المنزل</label><input id="homePhone"></div><div><label>رقم المحمول</label><input id="phone"></div>
+<div><label>تليفون العمل</label><input id="workPhone"></div><div style="grid-column:span 2"><label>عنوان السكن</label><input id="address"></div>
+<div><label>المحافظة / المركز / القرية</label><input id="area"></div>
+</div>
+
+<div class="section-title">طبيعة العمل والنشاط</div>
+<div class="grid2">
+<div><label>طبيعة العمل</label><div class="radio">
+<label><input type="radio" name="workNature" value="قطاع عام"> قطاع عام</label>
+<label><input type="radio" name="workNature" value="قطاع خاص"> قطاع خاص</label>
+<label><input type="radio" name="workNature" value="أعمال حرة"> أعمال حرة</label>
+<label><input type="radio" name="workNature" value="بالمعاش"> بالمعاش</label>
+<label><input type="radio" name="workNature" value="طالب"> طالب</label>
+<label><input type="radio" name="workNature" value="لا يعمل"> لا يعمل</label>
+<label><input type="radio" name="workNature" value="قوات مسلحة"> قوات مسلحة</label>
+<label><input type="radio" name="workNature" value="شرطة"> شرطة</label>
+<label><input type="radio" name="workNature" value="ذو منصب سياسي"> ذو منصب سياسي</label>
+<label><input type="radio" name="workNature" value="أخرى"> أخرى</label>
+</div></div>
+<div><label>الوظيفة الحالية</label><input id="job"><label style="display:block;margin-top:6px">عنوان العمل</label><input id="workAddress"></div>
+</div>
+
+<div class="grid">
+<div><label>نشاط العميل</label><input id="activity"></div><div><label>المستفيد الحقيقي من التمويل</label><input id="beneficiary"></div>
+<div><label>علاقة العميل بالمستفيد</label><input id="beneficiaryRelation"></div><div><label>نوع الحساب</label><input id="accountType"></div>
+<div style="grid-column:span 2"><label>حسابات مفتوحة في بنوك أخرى</label><input id="otherBanks"></div>
+</div>
+
+<div class="section-title">مصادر الدخل والغرض من التمويل</div>
+<div class="grid2">
+<div><label>مصدر الدخل الأساسي</label><input id="mainIncome"></div><div><label>مصادر أخرى للدخل</label><input id="otherIncome"></div>
+<div><label>الغرض من التمويل</label><input id="purpose"></div><div><label>قيمة التمويل</label><input id="loan"></div>
+</div>
+
+<div class="section-title">شخص يرجع إليه في حالة الطوارئ</div>
+<div class="grid"><div><label>الاسم</label><input id="emergencyName"></div><div><label>القرابة</label><input id="emergencyRelation"></div><div><label>رقم الهاتف</label><input id="emergencyPhone"></div></div>
+
+<div class="section-title">KYC Checklist</div>
+<table><thead><tr><th style="width:58%">بند التحقق</th><th>تم</th><th>لم يتم</th></tr></thead><tbody id="checklist"></tbody></table>
+
+<div class="section-title">تقييم المخاطر والملاحظات</div>
+<div class="grid2"><div><label>مستوى المخاطر</label><select id="risk"><option value="">اختر</option><option>منخفض</option><option>متوسط</option><option>مرتفع</option></select></div>
+<div><label>GPS / إحداثيات الموقع</label><input id="gps" placeholder="28.076167, 30.796932"></div></div>
+<div style="margin-top:8px"><label>ملاحظات</label><textarea id="notes"></textarea></div>
+
+<div class="section-title">إقرار العميل</div>
+<div style="font-size:12px;line-height:1.5">أقر بصحة كافة البيانات المدونة أعلاه وأتحمل المسؤولية المدنية والجنائية في حالة عدم صحة أي من تلك البيانات، كما أتعهد بعدم التعامل بأي أموال مشبوهة وأخطر الجمعية بتحديث البيانات عند حدوث أي تغيير.</div>
+
+<div class="status" id="status">نسبة استكمال KYC: 0%</div>
+<div class="note">Save Template يحفظ ملف العميل بصيغة .kyc، ويمكن استدعاؤه لاحقاً بدون حفظ البيانات داخل البرنامج.</div>
+<div class="actions">
+<button class="print" onclick="prepareReport()">🖨️ عرض وطباعة التقرير</button>
+<button class="save" onclick="saveTemplate()">💾 Save Template</button>
+<button class="load" onclick="fileInput.click()">📂 استدعاء Template</button>
+<button class="clear" onclick="clearForm()">مسح النموذج</button>
+</div>
+<input id="fileInput" type="file" accept=".kyc,.json" onchange="loadTemplate(event)">
+</div></div>
+
+<div id="report"><div class="report-box">
+<div class="report-head"><h1>جمعية كاريتاس مصر</h1><h2>برنامج الإقراض والتمكين الاقتصادي</h2><div><strong>نموذج اعرف عميلك (KYC)</strong></div></div>
+<div class="report-section">بيانات العميل</div><div class="report-meta" id="reportMeta"></div>
+<div class="report-section">بيانات العمل والنشاط والدخل</div><div class="report-meta" id="reportWork"></div>
+<div class="report-section">KYC Checklist</div><table class="report-table"><thead><tr><th>بند التحقق</th><th>النتيجة</th></tr></thead><tbody id="reportChecklist"></tbody></table>
+<div class="report-section">المخاطر والملاحظات</div><table class="report-table"><tr><th>مستوى المخاطر</th><td id="rRisk"></td></tr><tr><th>GPS</th><td id="rGps"></td></tr><tr><th>نسبة الاستكمال</th><td id="rPercent"></td></tr><tr><th>النتيجة</th><td id="rResult"></td></tr><tr><th>الملاحظات</th><td id="rNotes"></td></tr></table>
+<div style="font-size:9px;margin-top:5px">أقر بصحة كافة البيانات المدونة أعلاه وأتحمل المسؤولية المدنية والجنائية في حالة عدم صحة أي من تلك البيانات.</div>
+<div class="sign"><div>اسم العميل / التوقيع<br><br>............................</div><div>اسم الموظف / التوقيع<br><br>............................</div></div>
+<div class="sign"><div>اسم المراجع / التوقيع<br><br>............................</div><div>تاريخ المراجعة<br><br><span id="rReviewDate"></span></div></div>
+</div></div>
+
+<script>
+const items=[
+"تم الاطلاع على بطاقة الرقم القومي / جواز السفر ومطابقة بياناتها مع العميل",
+"تم التحقق من رقم الهاتف والتأكد من إمكانية التواصل مع العميل",
+"تم التحقق من عنوان العميل",
+"تم تسجيل موقع العميل / GPS وفق الإجراء المعتمد",
+"تم التحقق من طبيعة العمل والنشاط",
+"تم التحقق من المستفيد الحقيقي من التمويل وعلاقته بالعميل",
+"تم إجراء الاستعلام الائتماني ومراجعة نتيجته",
+"تم التأكد من عدم وجود اختلافات جوهرية في بيانات العميل أو مستنداته",
+"تم التحقق من مصادر الدخل والغرض من التمويل",
+"تم استكمال بيانات العميل والمستندات المطلوبة على النظام / الملف"
+];
+const ids=["name","nid","birthDate","issuedBy","issueDate","date","homePhone","phone","workPhone","address","area","job","workAddress","activity","beneficiary","beneficiaryRelation","accountType","otherBanks","mainIncome","otherIncome","purpose","loan","emergencyName","emergencyRelation","emergencyPhone","risk","gps","notes"];
+checklist.innerHTML=items.map((x,i)=>`<tr><td>${x}</td><td><input type="radio" name="c${i}" value="تم" onchange="updateStatus()"></td><td><input type="radio" name="c${i}" value="لم يتم" onchange="updateStatus()"></td></tr>`).join("");
+date.value=new Date().toISOString().slice(0,10);
+
+function getRadio(n){return document.querySelector('input[name="'+n+'"]:checked')?.value||""}
+function getData(){return {version:"KYC-Caritas-1.0",fields:Object.fromEntries(ids.map(id=>[id,document.getElementById(id).value])),workNature:getRadio("workNature"),checks:items.map((_,i)=>document.querySelector('input[name="c'+i+'"]:checked')?.value||"")}}
+function setData(d){const f=d.fields||d;ids.forEach(id=>{if(f[id]!==undefined)document.getElementById(id).value=f[id]});document.querySelectorAll('input[name="workNature"]').forEach(e=>e.checked=e.value===d.workNature);(d.checks||[]).forEach((v,i)=>{let e=document.querySelector('input[name="c'+i+'"][value="'+v+'"]');if(e)e.checked=true});updateStatus()}
+function updateStatus(){let d=getData(),p=Math.round(d.checks.filter(x=>x==="تم").length/items.length*100);status.textContent="نسبة استكمال KYC: "+p+"%"}
+function saveTemplate(){let d=getData(),blob=new Blob([JSON.stringify(d,null,2)],{type:"application/json"}),a=document.createElement("a"),safe=(d.fields.name||"عميل").replace(/[\/:*?"<>|]/g,"_");a.href=URL.createObjectURL(blob);a.download="KYC_"+safe+"_"+(d.fields.nid||"بيانات")+".kyc";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function loadTemplate(e){let file=e.target.files[0];if(!file)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(d.version!=="KYC-Caritas-1.0")throw 1;setData(d);alert("تم استدعاء بيانات العميل بنجاح.")}catch(x){alert("ملف Template غير صالح.")}e.target.value=""};r.readAsText(file,"UTF-8")}
+function prepareReport(){let d=getData(),f=d.fields,p=Math.round(d.checks.filter(x=>x==="تم").length/items.length*100);
+let meta=[["اسم العميل",f.name],["الرقم القومي",f.nid],["تاريخ الميلاد",f.birthDate],["صادر من",f.issuedBy],["تاريخ الإصدار",f.issueDate],["تاريخ التحقق",f.date],["هاتف المنزل",f.homePhone],["المحمول",f.phone],["تليفون العمل",f.workPhone],["العنوان",f.address],["المنطقة",f.area],["شخص الطوارئ",f.emergencyName],["القرابة",f.emergencyRelation],["هاتف الطوارئ",f.emergencyPhone]];
+reportMeta.innerHTML=meta.map(x=>{
+let long=["العنوان","المنطقة","شخص الطوارئ"].includes(x[0]);
+return `<div class="meta${long?" long":""}"><b>${x[0]}:</b> ${x[1]||"—"}</div>`;
+}).join("");
+let work=[["طبيعة العمل",d.workNature],["الوظيفة الحالية",f.job],["عنوان العمل",f.workAddress],["نشاط العميل",f.activity],["المستفيد الحقيقي",f.beneficiary],["علاقة المستفيد",f.beneficiaryRelation],["حسابات بنوك أخرى",f.otherBanks],["نوع الحساب",f.accountType],["مصدر الدخل الأساسي",f.mainIncome],["مصادر أخرى",f.otherIncome],["الغرض من التمويل",f.purpose],["قيمة التمويل",f.loan]];
+reportWork.innerHTML=work.map(x=>`<div class="meta"><b>${x[0]}:</b> ${x[1]||"—"}</div>`).join("");
+reportChecklist.innerHTML=items.map((x,i)=>`<tr><td>${x}</td><td>${d.checks[i]==="تم"?"✓ تم":d.checks[i]==="لم يتم"?"✗ لم يتم":"—"}</td></tr>`).join("");
+rRisk.textContent=f.risk||"—";rGps.textContent=f.gps||"—";rPercent.textContent=p+"%";rResult.textContent=p===100?"مستوفى":p>=80?"مستوفى مع ملاحظات":"يحتاج إلى استكمال";rNotes.textContent=f.notes||"لا توجد ملاحظات";rReviewDate.textContent=new Date().toLocaleDateString("ar-EG");setTimeout(()=>{fitReportToOnePage();setTimeout(()=>window.print(),80)},50)}
+function fitReportToOnePage(){
+const box=document.querySelector(".report-box");
+if(!box)return;
+
+box.style.zoom="1";
+box.style.transform="none";
+box.style.width="100%";
+
+const maxHeight=1040; // تقريباً المساحة المتاحة داخل A4 بعد الهوامش
+const actualHeight=box.scrollHeight;
+
+if(actualHeight>maxHeight){
+  const scale=Math.max(0.70, Math.min(1, maxHeight/actualHeight));
+  box.style.zoom=scale;
+}
+}
+function clearForm(){if(!confirm("هل تريد مسح النموذج بالكامل؟"))return;ids.forEach(id=>document.getElementById(id).value="");document.querySelectorAll('input[type=radio]').forEach(e=>e.checked=false);date.value=new Date().toISOString().slice(0,10);updateStatus()}
+window.addEventListener("afterprint",()=>{
+const box=document.querySelector(".report-box");
+if(box)box.style.zoom="1";
+});
+
+/* ========== إضافة: استيراد بيانات تلقائي عند الفتح من نظام إدارة التمويل ========== */
+/* هذا الجزء إضافي بالكامل ولا يغيّر أي شيء في منطق النموذج الأصلي أو طريقة عمله يدويًا */
+(function importPrefillData(){
+  try {
+    const raw = localStorage.getItem('kyc_prefill_data');
+    if (!raw) return;
+    const prefill = JSON.parse(raw);
+    setData(prefill);
+    localStorage.removeItem('kyc_prefill_data');
+  } catch(e) {
+    console.error('تعذر استيراد البيانات التلقائية:', e);
+  }
+})();
+</script>
+</body></html>

@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body { 
       font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; 
@@ -276,6 +277,22 @@
       transform: scale(1.1); 
       box-shadow: 0 4px 12px rgba(30, 132, 73, 0.4); 
     }
+    .kyc-btn {
+      background: linear-gradient(135deg, #c6a35f 0%, #a3813f 100%);
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: bold;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .kyc-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(166, 130, 63, 0.4);
+    }
     .loading { 
       text-align: center; 
       padding: 40px; 
@@ -359,12 +376,12 @@
     }
     .modal-content { 
       background: white; 
-      margin: 20px auto; 
-      padding: 30px; 
+      margin: 3% auto; 
+      padding: 30px 30px 0 30px; 
       width: 90%;
       max-width: 900px;
       border-radius: 12px; 
-      max-height: 85vh; 
+      max-height: 90vh; 
       overflow-y: auto;
       box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     }
@@ -414,9 +431,13 @@
       display: flex;
       justify-content: center;
       gap: 10px;
-      margin-top: 20px;
-      padding-top: 20px;
+      position: sticky;
+      bottom: 0;
+      background: white;
+      margin: 20px -30px 0 -30px;
+      padding: 15px 30px 22px;
       border-top: 2px solid #d5f4e6;
+      box-shadow: 0 -6px 14px rgba(0,0,0,0.08);
     }
     .form-grid { 
       display: grid; 
@@ -460,6 +481,14 @@
       <div class="stat-card">
         <div class="label">مجموع المبالغ</div>
         <div class="value" id="totalAmount">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">تم التحويل</div>
+        <div class="value" id="transferredCount">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">لم تُعتمد إداريًا بعد</div>
+        <div class="value" id="pendingCount">0</div>
       </div>
     </div>
 
@@ -518,6 +547,7 @@
       </div>
       
       <button onclick="resetFilters()" class="btn-apply" style="grid-column: span 2;">إعادة تعيين الفلاتر</button>
+      <button onclick="exportToExcel()" id="exportBtn" class="btn-apply" style="grid-column: span 2; background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);">📊 تصدير للإكسل</button>
     </div>
 
     <div class="table-wrapper">
@@ -1034,6 +1064,8 @@
     function updateStats(data) {
       const totalRecords = document.getElementById('totalRecords');
       const totalAmount = document.getElementById('totalAmount');
+      const transferredCount = document.getElementById('transferredCount');
+      const pendingCount = document.getElementById('pendingCount');
       
       if (totalRecords) {
         totalRecords.textContent = data.length.toLocaleString('ar-EG');
@@ -1046,6 +1078,19 @@
         }, 0);
         
         totalAmount.textContent = total.toLocaleString('ar-EG') + ' ج.م';
+      }
+
+      if (transferredCount) {
+        const count = data.filter(row => row["تم التحويل"] === true).length;
+        transferredCount.textContent = count.toLocaleString('ar-EG');
+      }
+
+      if (pendingCount) {
+        const count = data.filter(row => {
+          const status = row["الادارة"];
+          return !status || status.trim() === '' || status === 'لم تتم المراجعة';
+        }).length;
+        pendingCount.textContent = count.toLocaleString('ar-EG');
       }
     }
 
@@ -1125,10 +1170,13 @@
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
               <th>الإجراء</th>
+              <th>اعرف عميلك</th>
             </tr>
           </thead>
           <tbody id="tableBody">
       `;
+
+      window.currentTableData = data;
 
       data.forEach((row, idx) => {
         const reviewClass = getCellClass(row["المراجعة الداخلية"]);
@@ -1158,9 +1206,10 @@
               <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل الكل</button>
               <button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button>
             </td>
+            <td><button class="kyc-btn" onclick="openKYCReport(${idx})">📄 إنشاء تقرير اعرف عميلك</button></td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="18">
+            <td colspan="19">
               <div class="detail-container">
                 
                 <div class="detail-row-sections">
@@ -1428,6 +1477,117 @@
 
     function closeModal() {
       document.getElementById('editModal').style.display = 'none';
+    }
+
+    // ========== إنشاء تقرير اعرف عميلك (KYC) معبأ مسبقًا ==========
+    function openKYCReport(idx) {
+      const row = (window.currentTableData || [])[idx];
+      if (!row) {
+        alert('تعذر العثور على بيانات هذا السجل.');
+        return;
+      }
+
+      const prefill = {
+        fields: {
+          name: row["اسم_العميل"] || row["اسم_العميل_من_التقييم"] || '',
+          nid: row["رقم البطاقة العميل"] || '',
+          area: row["المنطقه"] || row["الفرع"] || '',
+          activity: row["المشروع"] || row["النشاط_الثانى"] || '',
+          purpose: row["المشروع"] || '',
+          loan: row["المبلغ المطلوب"] || '',
+          gps: row["احداثيات الموقع"] || '',
+          notes: `تم استيراد البيانات الأساسية تلقائيًا من نظام إدارة التمويل بتاريخ ${new Date().toLocaleDateString('ar-EG')} (كود العميل: ${row["كود_العميل"] || '—'})`
+        }
+      };
+
+      try {
+        localStorage.setItem('kyc_prefill_data', JSON.stringify(prefill));
+      } catch (e) {
+        console.error('تعذر تجهيز بيانات الاستيراد التلقائي:', e);
+      }
+
+      window.open('kyc-report.html', '_blank');
+    }
+
+    function exportToExcel() {
+      if (!filteredData || filteredData.length === 0) {
+        alert('لا توجد بيانات للتصدير!');
+        return;
+      }
+
+      try {
+        const exportBtn = document.getElementById('exportBtn');
+        const originalText = exportBtn ? exportBtn.innerHTML : '';
+        if (exportBtn) {
+          exportBtn.innerHTML = '⏳ جاري التصدير...';
+          exportBtn.disabled = true;
+        }
+
+        const exportData = filteredData.map((row, idx) => ({
+          'م': idx + 1,
+          'رقم بطاقة العميل': row["رقم البطاقة العميل"] || '',
+          'كود العميل': row["كود_العميل"] || '',
+          'اسم العميل': row["اسم_العميل"] || row["اسم_العميل_من_بيانات_القروض"] || row["اسم_العميل_من_التقييم"] || '',
+          'المشروع': row["المشروع"] || '',
+          'رقم بطاقة الضامن': row["رقم بطاقة الضامن"] || '',
+          'اسم الضامن': row["اسم_الضامن"] || '',
+          'المبلغ المطلوب': row["المبلغ المطلوب"] || 0,
+          'الأخصائي': row["اسم الاخصائى"] || '',
+          'تم التحويل': row["تم التحويل"] ? 'نعم' : 'لا',
+          'المراجعة الداخلية': row["المراجعة الداخلية"] || '',
+          'ملاحظات المراجعة الداخلية': row["ملاحظات المراجعة الداخلية"] || '',
+          'مسؤول المتابعة': row["مسؤول المتابعة"] || '',
+          'تعليق مسؤول المتابعة': row["تعليق مسؤول المتابعة"] || '',
+          'الإدارة': row["الادارة"] || '',
+          'ملاحظات الإدارة': row["ملاحظات الادارة"] || '',
+          'رقم اللجنة': row["رقم اللجنة"] || '',
+          'عدد أيام التأخير': row["عدد ايام التاخير"] || '',
+          'عدد الأقساط': row["عدد الاقساط"] || '',
+          'المنطقة': row["المنطقه"] || '',
+          'الفرع': row["الفرع"] || '',
+          'القائم بالزيارة': row["القائم بالزياره"] || '',
+          'القائم بالإدخال': row["اسم القائم بالادخال"] || '',
+          'تاريخ الإدخال': row["created_at"] ? new Date(row["created_at"]).toLocaleDateString('ar-EG') : ''
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        worksheet['!cols'] = Object.keys(exportData[0] || {}).map(k => ({ wch: Math.max(14, k.length + 4) }));
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'بيانات القروض');
+
+        const statsSheet = XLSX.utils.aoa_to_sheet([
+          ['ملخص الإحصائيات'],
+          [''],
+          ['إجمالي السجلات', filteredData.length],
+          ['مجموع المبالغ المطلوبة', filteredData.reduce((sum, row) => sum + (parseFloat(row["المبلغ المطلوب"]) || 0), 0)],
+          [''],
+          ['تاريخ التصدير', new Date().toLocaleDateString('ar-EG')],
+          ['وقت التصدير', new Date().toLocaleTimeString('ar-EG')]
+        ]);
+        statsSheet['!cols'] = [{ wch: 25 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(workbook, statsSheet, 'ملخص');
+
+        const fileName = `بيانات_القروض_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+
+        setTimeout(() => {
+          if (exportBtn) {
+            exportBtn.innerHTML = originalText;
+            exportBtn.disabled = false;
+          }
+          alert(`تم تصدير ${filteredData.length} سجل بنجاح إلى ملف ${fileName}`);
+        }, 400);
+
+      } catch (error) {
+        console.error('خطأ في التصدير:', error);
+        alert('حدث خطأ أثناء التصدير. يرجى المحاولة مرة أخرى.');
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+          exportBtn.innerHTML = '📊 تصدير للإكسل';
+          exportBtn.disabled = false;
+        }
+      }
     }
 
     window.onclick = function(event) {

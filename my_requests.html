@@ -4,33 +4,83 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>طلبات التعديل الخاصة بي</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: #f5f7fa;
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
       margin: 0;
       padding: 20px;
       color: #333;
+      min-height: 100vh;
     }
-    
+
+    .top-header {
+      max-width: 1200px;
+      margin: 0 auto 18px;
+      background: linear-gradient(135deg, #2e5c8a 0%, #1c3f66 100%);
+      border-radius: 14px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand { display: flex; align-items: center; gap: 10px; }
+    .top-header .brand img { height: 34px; width: auto; filter: drop-shadow(0 2px 6px rgba(15, 40, 70, 0.25)); }
+    .top-header .brand span { color: white; font-weight: 800; font-size: 14px; }
+    .top-header .nav-actions { display: flex; gap: 10px; }
+    .top-header .nav-actions a, .top-header .nav-actions button {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      transition: background 0.2s ease;
+    }
+    .top-header .nav-actions a:hover, .top-header .nav-actions button:hover {
+      background: rgba(255,255,255,0.28);
+    }
+
     .container {
       max-width: 1200px;
       margin: 0 auto;
       background: white;
       padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18);
+      position: relative;
+      overflow: hidden;
     }
-    
+    .container::before {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #2e5c8a 0%, #c6a35f 50%, #2e5c8a 100%);
+    }
+
     h2 {
       text-align: center;
-      color: #2c3e50;
+      color: #142433;
+      font-weight: 800;
       margin-bottom: 25px;
       padding-bottom: 15px;
-      border-bottom: 2px solid #3498db;
+      border-bottom: 2px solid #dde5ee;
     }
-    
+
     .filters {
       display: flex;
       gap: 15px;
@@ -38,7 +88,7 @@
       flex-wrap: wrap;
       align-items: center;
     }
-    
+
     select, input {
       padding: 10px 15px;
       border: 1px solid #ddd;
@@ -46,20 +96,20 @@
       font-size: 14px;
       min-width: 200px;
     }
-    
+
     select:focus, input:focus {
       outline: none;
       border-color: #3498db;
       box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
     }
-    
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
       font-size: 14px;
     }
-    
+
     th {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -69,17 +119,17 @@
       position: sticky;
       top: 0;
     }
-    
+
     td {
       padding: 12px 15px;
       border-bottom: 1px solid #eee;
       text-align: right;
     }
-    
+
     tr:hover {
       background-color: #f8f9fa;
     }
-    
+
     .status-badge {
       padding: 6px 12px;
       border-radius: 20px;
@@ -89,25 +139,25 @@
       text-align: center;
       min-width: 100px;
     }
-    
+
     .status-pending {
       background: #fff3cd;
       color: #856404;
       border: 1px solid #ffeaa7;
     }
-    
+
     .status-approved {
       background: #d4edda;
       color: #155724;
       border: 1px solid #c3e6cb;
     }
-    
+
     .status-rejected {
       background: #f8d7da;
       color: #721c24;
       border: 1px solid #f5c6cb;
     }
-    
+
     .action-btn {
       padding: 8px 16px;
       border: none;
@@ -116,25 +166,32 @@
       font-weight: 600;
       transition: all 0.3s ease;
     }
-    
+
     .view-btn {
       background: #3498db;
       color: white;
     }
-    
+
     .view-btn:hover {
       background: #2980b9;
       transform: translateY(-2px);
       box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
     }
-    
+
     .loading {
       text-align: center;
       padding: 40px;
       color: #666;
       font-size: 16px;
     }
-    
+
+    .error-box {
+      text-align: center;
+      padding: 40px;
+      color: #e74c3c;
+      font-weight: bold;
+    }
+
     .no-data {
       text-align: center;
       padding: 50px;
@@ -144,13 +201,7 @@
       border-radius: 8px;
       margin-top: 20px;
     }
-    
-    .no-data i {
-      font-size: 48px;
-      color: #bdc3c7;
-      margin-bottom: 15px;
-    }
-    
+
     /* Modal Styles */
     .modal {
       display: none;
@@ -163,7 +214,7 @@
       background-color: rgba(0, 0, 0, 0.5);
       backdrop-filter: blur(3px);
     }
-    
+
     .modal-content {
       background-color: white;
       margin: 5% auto;
@@ -176,18 +227,12 @@
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
       animation: modalSlideIn 0.3s ease-out;
     }
-    
+
     @keyframes modalSlideIn {
-      from {
-        opacity: 0;
-        transform: translateY(-50px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(-50px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    
+
     .modal-header {
       display: flex;
       justify-content: space-between;
@@ -196,12 +241,9 @@
       padding-bottom: 15px;
       border-bottom: 2px solid #f1f1f1;
     }
-    
-    .modal-header h3 {
-      margin: 0;
-      color: #2c3e50;
-    }
-    
+
+    .modal-header h3 { margin: 0; color: #2c3e50; }
+
     .close-btn {
       background: none;
       border: none;
@@ -211,24 +253,22 @@
       padding: 5px;
       transition: color 0.3s;
     }
-    
-    .close-btn:hover {
-      color: #e74c3c;
-    }
-    
+
+    .close-btn:hover { color: #e74c3c; }
+
     .details-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 25px;
       margin: 20px 0;
     }
-    
+
     .detail-section {
       padding: 20px;
       border-radius: 8px;
       background: #f8f9fa;
     }
-    
+
     .detail-section h4 {
       margin-top: 0;
       margin-bottom: 15px;
@@ -236,26 +276,17 @@
       padding-bottom: 10px;
       border-bottom: 1px solid #e0e0e0;
     }
-    
+
     .detail-item {
       margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
     }
-    
-    .detail-label {
-      font-weight: 600;
-      color: #555;
-      flex: 1;
-    }
-    
-    .detail-value {
-      flex: 2;
-      text-align: left;
-      color: #333;
-    }
-    
+
+    .detail-label { font-weight: 600; color: #555; flex: 1; }
+    .detail-value { flex: 2; text-align: left; color: #333; }
+
     .notes-section {
       background: #fff8e1;
       padding: 20px;
@@ -263,79 +294,29 @@
       margin: 20px 0;
       border-left: 4px solid #ffc107;
     }
-    
-    .comparison-section {
-      margin: 25px 0;
-    }
-    
+
+    .comparison-section { margin: 25px 0; }
+
     .comparison-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 15px;
       margin-top: 15px;
     }
-    
-    .old-data {
-      background: #ffebee;
-      padding: 15px;
-      border-radius: 6px;
-      border: 1px solid #ffcdd2;
-    }
-    
-    .new-data {
-      background: #e8f5e8;
-      padding: 15px;
-      border-radius: 6px;
-      border: 1px solid #c8e6c9;
-    }
-    
-    .data-title {
-      font-weight: bold;
-      margin-bottom: 10px;
-      color: #333;
-    }
-    
+
+    .old-data { background: #ffebee; padding: 15px; border-radius: 6px; border: 1px solid #ffcdd2; }
+    .new-data { background: #e8f5e8; padding: 15px; border-radius: 6px; border: 1px solid #c8e6c9; }
+    .data-title { font-weight: bold; margin-bottom: 10px; color: #333; }
+
     .data-item {
       margin-bottom: 8px;
       padding-bottom: 8px;
       border-bottom: 1px dashed #ddd;
     }
-    
-    .data-key {
-      font-weight: 600;
-      color: #555;
-      display: inline-block;
-      width: 45%;
-    }
-    
-    .data-value {
-      color: #333;
-      display: inline-block;
-      width: 53%;
-      text-align: left;
-    }
-    
-    .change-indicator {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      margin-right: 8px;
-      text-align: center;
-      line-height: 20px;
-      font-size: 12px;
-    }
-    
-    .changed {
-      background: #ff9800;
-      color: white;
-    }
-    
-    .unchanged {
-      background: #bdbdbd;
-      color: white;
-    }
-    
+
+    .data-key { font-weight: 600; color: #555; display: inline-block; width: 45%; }
+    .data-value { color: #333; display: inline-block; width: 53%; text-align: left; }
+
     .stats-bar {
       display: flex;
       justify-content: space-between;
@@ -344,60 +325,36 @@
       border-radius: 8px;
       margin-bottom: 25px;
     }
-    
-    .stat-item {
-      text-align: center;
-      flex: 1;
-    }
-    
-    .stat-value {
-      font-size: 24px;
-      font-weight: bold;
-      color: #2c3e50;
-    }
-    
-    .stat-label {
-      font-size: 14px;
-      color: #7f8c8d;
-      margin-top: 5px;
-    }
-    
+
+    .stat-item { text-align: center; flex: 1; }
+    .stat-value { font-size: 24px; font-weight: bold; color: #2c3e50; }
+    .stat-label { font-size: 14px; color: #7f8c8d; margin-top: 5px; }
+
     @media (max-width: 768px) {
-      .filters {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
-      select, input {
-        width: 100%;
-      }
-      
-      .details-grid,
-      .comparison-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .modal-content {
-        width: 95%;
-        margin: 10% auto;
-        padding: 20px;
-      }
-      
-      .stats-bar {
-        flex-wrap: wrap;
-      }
-      
-      .stat-item {
-        flex: 0 0 50%;
-        margin-bottom: 15px;
-      }
+      .filters { flex-direction: column; align-items: stretch; }
+      select, input { width: 100%; }
+      .details-grid, .comparison-grid { grid-template-columns: 1fr; }
+      .modal-content { width: 95%; margin: 10% auto; padding: 20px; }
+      .stats-bar { flex-wrap: wrap; }
+      .stat-item { flex: 0 0 50%; margin-bottom: 15px; }
     }
   </style>
 </head>
 <body>
+  <div class="top-header">
+    <div class="brand">
+      <img src="logo.png" alt="Caritas Egypt" />
+      <span>نظام إدارة التمويل</span>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html">🏠 الرئيسية</a>
+      <button onclick="pageLogout()">تسجيل خروج</button>
+    </div>
+  </div>
+
   <div class="container">
     <h2>📋 طلبات التعديل الخاصة بي</h2>
-    
+
     <div class="filters">
       <select id="statusFilter" onchange="filterRequests()">
         <option value="">جميع الحالات</option>
@@ -405,10 +362,10 @@
         <option value="Approved">مقبول</option>
         <option value="Rejected">مرفوض</option>
       </select>
-      
+
       <input type="text" id="searchInput" placeholder="🔍 بحث برقم الطلب أو السجل..." onkeyup="filterRequests()" />
     </div>
-    
+
     <div class="stats-bar">
       <div class="stat-item">
         <div class="stat-value" id="totalRequests">0</div>
@@ -427,7 +384,7 @@
         <div class="stat-label">طلبات مرفوضة</div>
       </div>
     </div>
-    
+
     <div id="requestsTable">
       <div class="loading">جارٍ تحميل طلباتك...</div>
     </div>
@@ -440,7 +397,7 @@
         <h3>تفاصيل طلب التعديل رقم <span id="modalRequestId"></span></h3>
         <button class="close-btn" onclick="closeModal()">&times;</button>
       </div>
-      
+
       <div class="details-grid">
         <div class="detail-section">
           <h4>معلومات الطلب</h4>
@@ -465,7 +422,7 @@
             <span class="detail-value" id="modalReviewedBy"></span>
           </div>
         </div>
-        
+
         <div class="detail-section">
           <h4>معلومات المستخدم</h4>
           <div class="detail-item">
@@ -482,12 +439,12 @@
           </div>
         </div>
       </div>
-      
+
       <div class="notes-section">
         <h4>📝 ملاحظات الطلب</h4>
         <p id="modalNotes"></p>
       </div>
-      
+
       <div class="comparison-section">
         <h4>🔄 مقارنة التغييرات</h4>
         <div class="comparison-grid">
@@ -501,7 +458,7 @@
           </div>
         </div>
       </div>
-      
+
       <div style="text-align: center; margin-top: 30px;">
         <button class="action-btn view-btn" onclick="closeModal()">إغلاق</button>
       </div>
@@ -509,54 +466,71 @@
   </div>
 
   <script>
-    const supabase = window.supabase.createClient(
-      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
-    );
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
+    let db;
+    try {
+      db = window.supabase.createClient(
+        'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      );
+    } catch (err) {
+      console.error('فشل في تهيئة قاعدة البيانات:', err);
+      document.getElementById('requestsTable').innerHTML = '<div class="error-box">خطأ في تحميل قاعدة البيانات. يرجى تحديث الصفحة.</div>';
+    }
 
     let allRequests = [];
     let currentUserId = null;
 
+    function showTableError(message) {
+      document.getElementById('requestsTable').innerHTML = `<div class="error-box">❌ ${message}</div>`;
+    }
+
     async function init() {
-      currentUserId = localStorage.getItem('loggedInUserId');
-      if (!currentUserId) {
-        alert("الرجاء تسجيل الدخول أولاً!");
-        window.location.href = "index.html";
-        return;
+      try {
+        currentUserId = localStorage.getItem('loggedInUserId');
+        if (!currentUserId) {
+          alert("الرجاء تسجيل الدخول أولاً!");
+          window.location.href = "index.html";
+          return;
+        }
+
+        await loadMyRequests();
+      } catch (err) {
+        console.error('خطأ في التطبيق:', err);
+        showTableError('حدث خطأ غير متوقع. الرجاء تحديث الصفحة.');
       }
-
-      // تحميل بيانات المستخدم
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('full_name, role')
-        .eq('id', currentUserId)
-        .single();
-
-      if (userError) {
-        console.error('خطأ في تحميل بيانات المستخدم:', userError);
-      }
-
-      await loadMyRequests();
     }
 
     async function loadMyRequests() {
       document.getElementById('requestsTable').innerHTML = '<div class="loading">جارٍ تحميل طلباتك...</div>';
 
-      const { data, error } = await supabase
-        .from('edit_requests')
-        .select('*')
-        .eq('requester_id', currentUserId)
-        .order('created_at', { ascending: false });
+      try {
+        const { data, error } = await db
+          .from('edit_requests')
+          .select('*')
+          .eq('requester_id', currentUserId)
+          .order('created_at', { ascending: false });
 
-      if (error) {
-        document.getElementById('requestsTable').innerHTML = 
-          '<div class="no-data">❌ حدث خطأ في تحميل البيانات: ' + error.message + '</div>';
-        return;
+        if (error) {
+          console.error('خطأ في تحميل البيانات:', error);
+          showTableError(`حدث خطأ في تحميل البيانات: ${error.message}`);
+          return;
+        }
+
+        allRequests = data || [];
+        updateStats();
+        renderTable(allRequests);
+      } catch (err) {
+        console.error('خطأ غير متوقع في loadMyRequests:', err);
+        showTableError(`خطأ غير متوقع: ${err.message || err}`);
       }
-
-      allRequests = data;
-      updateStats();
-      renderTable(allRequests);
     }
 
     function updateStats() {
@@ -602,10 +576,10 @@
       requests.forEach(req => {
         const statusClass = req.status === 'Pending' ? 'status-pending' :
                           req.status === 'Approved' ? 'status-approved' : 'status-rejected';
-        
+
         const statusText = req.status === 'Pending' ? '⏳ معلّق' :
                           req.status === 'Approved' ? '✅ مقبول' : '❌ مرفوض';
-        
+
         const updatedAt = req.approved_at || req.updated_at || req.created_at;
 
         html += `
@@ -639,9 +613,9 @@
       }
 
       if (searchText) {
-        filtered = filtered.filter(req => 
-          req.id.toString().includes(searchText) ||
-          req.operation_id.toString().includes(searchText) ||
+        filtered = filtered.filter(req =>
+          String(req.id).includes(searchText) ||
+          String(req.operation_id).includes(searchText) ||
           (req.notes && req.notes.toLowerCase().includes(searchText))
         );
       }
@@ -652,6 +626,7 @@
     function formatDate(dateString) {
       if (!dateString) return '—';
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '—';
       return date.toLocaleDateString('ar-EG', {
         year: 'numeric',
         month: 'short',
@@ -661,11 +636,10 @@
       });
     }
 
-    async function showDetails(requestId) {
+    function showDetails(requestId) {
       const request = allRequests.find(r => r.id === requestId);
       if (!request) return;
 
-      // تحديث المعلومات الأساسية
       document.getElementById('modalRequestId').textContent = request.id;
       document.getElementById('modalOperationId').textContent = request.operation_id;
       document.getElementById('modalCreatedAt').textContent = formatDate(request.created_at);
@@ -674,26 +648,22 @@
       document.getElementById('modalRequesterName').textContent = request.requested_by || '—';
       document.getElementById('modalRequesterRole').textContent = request.requester_role || '—';
       document.getElementById('modalNotes').textContent = request.notes || 'لا توجد ملاحظات';
-      
-      // سبب الطلب (مختصر من الملاحظات)
-      const shortReason = request.notes ? 
-        (request.notes.length > 100 ? request.notes.substring(0, 100) + '...' : request.notes) : 
+
+      const shortReason = request.notes ?
+        (request.notes.length > 100 ? request.notes.substring(0, 100) + '...' : request.notes) :
         'لم يتم تحديد سبب';
       document.getElementById('modalRequestReason').textContent = shortReason;
 
-      // حالة الطلب مع تنسيق
       const statusMap = {
-        'Pending': '<span class="status-pending">⏳ معلّق</span>',
-        'Approved': '<span class="status-approved">✅ مقبول</span>',
-        'Rejected': '<span class="status-rejected">❌ مرفوض</span>'
+        'Pending': '<span class="status-badge status-pending">⏳ معلّق</span>',
+        'Approved': '<span class="status-badge status-approved">✅ مقبول</span>',
+        'Rejected': '<span class="status-badge status-rejected">❌ مرفوض</span>'
       };
-      document.getElementById('modalStatus').innerHTML = statusMap[request.status] || request.status;
+      document.getElementById('modalStatus').innerHTML = statusMap[request.status] || (request.status || '—');
 
-      // عرض البيانات القديمة والجديدة
       displayComparisonData(request.old_value, 'modalOldData');
       displayComparisonData(request.new_value, 'modalNewData');
 
-      // إظهار المودال
       document.getElementById('detailsModal').style.display = 'block';
     }
 
@@ -701,7 +671,6 @@
       const container = document.getElementById(elementId);
       container.innerHTML = '';
 
-      // تحويل البيانات إذا كانت نصًا
       let dataObj = data;
       if (typeof data === 'string') {
         try {
@@ -716,54 +685,45 @@
         return;
       }
 
-      // عرض البيانات
-      for (const [key, value] of Object.entries(dataObj)) {
+      const keys = Object.keys(dataObj);
+      if (keys.length === 0) {
+        container.innerHTML = '<div class="data-item">لا توجد بيانات</div>';
+        return;
+      }
+
+      keys.forEach(key => {
+        const value = dataObj[key];
         const div = document.createElement('div');
         div.className = 'data-item';
-        
+
         const keySpan = document.createElement('span');
         keySpan.className = 'data-key';
         keySpan.textContent = key + ':';
-        
+
         const valueSpan = document.createElement('span');
         valueSpan.className = 'data-value';
-        valueSpan.textContent = value === null || value === undefined ? '—' : value;
-        
+        valueSpan.textContent = value === null || value === undefined || value === '' ? '—' : value;
+
         div.appendChild(keySpan);
         div.appendChild(valueSpan);
         container.appendChild(div);
-      }
-
-      if (Object.keys(dataObj).length === 0) {
-        container.innerHTML = '<div class="data-item">لا توجد بيانات</div>';
-      }
+      });
     }
 
     function closeModal() {
       document.getElementById('detailsModal').style.display = 'none';
     }
 
-    // إغلاق المودال عند النقر خارج المحتوى
     window.onclick = function(event) {
       const modal = document.getElementById('detailsModal');
-      if (event.target === modal) {
-        closeModal();
-      }
+      if (event.target === modal) closeModal();
     };
 
-    // إغلاق المودال بمفتاح ESC
     document.addEventListener('keydown', function(event) {
-      if (event.key === 'Escape') {
-        closeModal();
-      }
+      if (event.key === 'Escape') closeModal();
     });
 
-    // بدء التطبيق
-    init().catch(error => {
-      console.error('خطأ في التطبيق:', error);
-      document.getElementById('requestsTable').innerHTML = 
-        '<div class="no-data">❌ حدث خطأ غير متوقع. الرجاء تحديث الصفحة.</div>';
-    });
+    init();
   </script>
 </body>
 </html>

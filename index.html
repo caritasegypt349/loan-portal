@@ -1,175 +1,338 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>نظام إدارة التمويل - الصفحة الرئيسية</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: #f5f7fa;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 500px;
-      margin: 80px auto;
-      padding: 30px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    h2 {
-      text-align: center;
-      color: #2c3e50;
-      margin-bottom: 30px;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: bold;
-      color: #34495e;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 16px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #3498db;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #2980b9;
-    }
-    .error {
-      color: #e74c3c;
-      text-align: center;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    .success {
-      color: #27ae60;
-      text-align: center;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    .dashboard {
-      text-align: center;
-    }
-    .welcome {
-      font-size: 20px;
-      margin-bottom: 25px;
-      color: #27ae60;
-    }
-    .btn-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-top: 20px;
-    }
-    .page-btn {
-      padding: 14px;
-      background: #2ecc71;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: bold;
-      text-align: center;
-      display: block;
-    }
-    .page-btn.review { background: #e67e22; }
-    .page-btn.team { background: #9b59b6; }
-    .page-btn.supervise { background: #34495e; }
-    .page-btn.admin { background: #e74c3c; }
-    .page-btn.financing { background: #1abc9c; }
-    .page-btn.view { background: #9b59b6; }
-    /* زر الخروج */
-    .logout-btn {
-      background: #e74c3c;
-      margin-top: 20px;
-      width: 100%;
-    }
-    .logout-btn:hover {
-      background: #c0392b;
-    }
-    /* رسالة خروج تلقائي */
-    .auto-logout {
-      background: #fff3cd;
-      border: 1px solid #ffeaa7;
-      color: #856404;
-      padding: 10px;
-      margin-bottom: 20px;
-      border-radius: 5px;
-      text-align: center;
-      font-size: 14px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>نظام إدارة التمويل - Caritas Egypt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --navy-deep: #0f2846;
+    --navy: #1c3f66;
+    --navy-mid: #2e5c8a;
+    --steel: #5686b3;
+    --bg-top: #eef4fa;
+    --bg-bottom: #d9e6f4;
+    --ink: #142433;
+    --muted: #64768a;
+    --card: #ffffff;
+    --gold: #c6a35f;
+    --danger: #b3463a;
+    --danger-dark: #92352b;
+    --success: #2f7d6b;
+    --ring: rgba(86, 134, 179, 0.35);
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    background:
+      radial-gradient(60% 50% at 12% 8%, rgba(46, 92, 138, 0.16), transparent 60%),
+      radial-gradient(55% 45% at 92% 88%, rgba(15, 40, 70, 0.14), transparent 60%),
+      linear-gradient(160deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* شبكة نقاط خفيفة جداً في الخلفية - إحساس مؤسسي هادئ */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(28, 63, 102, 0.07) 1px, transparent 1px);
+    background-size: 26px 26px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .shell {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .brand-logo {
+    height: 54px;
+    width: auto;
+    filter: drop-shadow(0 4px 10px rgba(15, 40, 70, 0.15));
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 38px 34px 32px;
+    box-shadow:
+      0 1px 2px rgba(15, 40, 70, 0.06),
+      0 20px 45px -12px rgba(15, 40, 70, 0.22);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: "";
+    position: absolute;
+    top: 0; right: 0; left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--navy) 0%, var(--gold) 50%, var(--navy) 100%);
+  }
+
+  h2.title {
+    text-align: center;
+    color: var(--navy-deep);
+    font-weight: 800;
+    font-size: 21px;
+    margin: 4px 0 6px;
+    letter-spacing: -0.2px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+    margin: 0 0 28px;
+  }
+
+  .form-group { margin-bottom: 18px; }
+
+  label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: 700;
+    font-size: 13.5px;
+    color: var(--navy);
+  }
+
+  input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1.5px solid #dde5ee;
+    border-radius: 11px;
+    box-sizing: border-box;
+    font-size: 15px;
+    font-family: inherit;
+    background: #fbfcfe;
+    color: var(--ink);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--steel);
+    box-shadow: 0 0 0 4px var(--ring);
+    background: #ffffff;
+  }
+
+  button {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: white;
+    border: none;
+    border-radius: 11px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    box-shadow: 0 8px 20px -6px rgba(15, 40, 70, 0.45);
+  }
+
+  button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+  .error, .success {
+    text-align: center;
+    margin-top: 14px;
+    font-weight: 700;
+    font-size: 14px;
+    min-height: 18px;
+  }
+  .error { color: var(--danger); }
+  .success { color: var(--success); }
+
+  .dashboard { text-align: center; }
+
+  .welcome-card {
+    background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 100%);
+    color: white;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .welcome-eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.65);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .welcome-name {
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 6px;
+  }
+
+  .page-btn {
+    padding: 16px 12px;
+    background: #f6f9fc;
+    border: 1.5px solid #e4ebf3;
+    color: var(--navy-deep);
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    border-right: 4px solid var(--navy-mid);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+
+  .page-btn .icon { font-size: 20px; }
+
+  .page-btn:hover {
+    background: #ffffff;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px -10px rgba(15, 40, 70, 0.35);
+  }
+
+  .page-btn.review   { border-right-color: #b7863f; }
+  .page-btn.team     { border-right-color: #6a5a9c; }
+  .page-btn.supervise{ border-right-color: #35506b; }
+  .page-btn.admin    { border-right-color: var(--danger); }
+  .page-btn.financing{ border-right-color: var(--success); }
+  .page-btn.view     { border-right-color: #6a5a9c; }
+
+  .logout-btn {
+    background: transparent;
+    color: var(--danger);
+    border: 1.5px solid #f0d3ce;
+    margin-top: 22px;
+    box-shadow: none;
+    font-weight: 700;
+  }
+  .logout-btn:hover { background: #fdf2f1; filter: none; transform: none; }
+
+  .auto-logout {
+    background: #fff8ea;
+    border: 1px solid #f0dfae;
+    color: #8a6d1f;
+    padding: 11px 14px;
+    margin-bottom: 18px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .footer-tag {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 20px;
+    letter-spacing: 0.2px;
+  }
+
+  @media (max-width: 420px) {
+    .card { padding: 28px 20px 24px; }
+    .btn-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <!-- رسالة خروج تلقائي -->
-    <div id="autoLogoutMessage" class="auto-logout" style="display: none;">
-      ✓ تم تسجيل الخروج من الجلسات السابقة تلقائياً
-    </div>
-    
-    <div id="loginSection">
-      <h2>تسجيل الدخول إلى نظام التمويل</h2>
-      <div class="form-group">
-        <label for="username">اسم المستخدم</label>
-        <input type="text" id="username" placeholder="مثال: mixel1" autocomplete="username" />
-      </div>
-      <div class="form-group">
-        <label for="password">كلمة السر</label>
-        <input type="password" id="password" placeholder="أدخل كلمة السر" autocomplete="current-password" />
-      </div>
-      <button id="loginBtn">دخول</button>
-      <div id="errorMessage" class="error"></div>
+  <div class="shell">
+    <div class="brand-row">
+      <img src="logo.png" alt="Caritas Egypt" class="brand-logo" />
     </div>
 
-    <div id="dashboardSection" style="display:none;" class="dashboard">
-      <div class="welcome">مرحباً، <span id="userFullName"></span>!</div>
-      <div class="btn-grid" id="pageButtons"></div>
-      <!-- زر الخروج الاختياري -->
-      <button id="logoutBtn" class="logout-btn">تسجيل خروج</button>
+    <div class="card">
+      <div id="autoLogoutMessage" class="auto-logout" style="display: none;">
+        ✓ تم تسجيل الخروج من الجلسات السابقة تلقائياً
+      </div>
+
+      <div id="loginSection">
+        <h2 class="title">نظام إدارة التمويل</h2>
+        <p class="subtitle">سجّل الدخول للمتابعة إلى لوحة التحكم الخاصة بك</p>
+
+        <div class="form-group">
+          <label for="username">اسم المستخدم</label>
+          <input type="text" id="username" placeholder="مثال: mixel1" autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label for="password">كلمة السر</label>
+          <input type="password" id="password" placeholder="أدخل كلمة السر" autocomplete="current-password" />
+        </div>
+        <button id="loginBtn">دخول</button>
+        <div id="errorMessage" class="error"></div>
+      </div>
+
+      <div id="dashboardSection" style="display:none;" class="dashboard">
+        <div class="welcome-card">
+          <div class="welcome-eyebrow">مرحباً بعودتك</div>
+          <div class="welcome-name" id="userFullName"></div>
+        </div>
+        <div class="btn-grid" id="pageButtons"></div>
+        <button id="logoutBtn" class="logout-btn">تسجيل خروج</button>
+      </div>
     </div>
+
+    <div class="footer-tag">Caritas Egypt &middot; نظام إدارة التمويل الداخلي</div>
   </div>
 
   <script>
     // ========== 1. تسجيل خروج تلقائي عند فتح الصفحة ==========
     (function autoLogoutOnLoad() {
-      // عندما تفتح index.html، سجل الخروج من الجلسات القديمة
       const wasLoggedIn = localStorage.getItem('loggedInUserId');
-      
+
       if (wasLoggedIn) {
-        // عرض رسالة الخروج التلقائي
         document.getElementById('autoLogoutMessage').style.display = 'block';
-        
-        // مسح البيانات القديمة
+
         localStorage.removeItem('loggedInUserId');
         localStorage.removeItem('loggedInUser');
         localStorage.removeItem('userRole');
         localStorage.removeItem('userBranches');
         localStorage.removeItem('sessionId');
-        
-        // إخفاء الرسالة بعد 3 ثواني
+
         setTimeout(() => {
           document.getElementById('autoLogoutMessage').style.display = 'none';
         }, 3000);
-        
+
         console.log("تم تسجيل الخروج التلقائي من الجلسة السابقة");
       }
     })();
@@ -184,7 +347,6 @@
     document.getElementById('loginBtn').addEventListener('click', login);
     document.getElementById('logoutBtn').addEventListener('click', logout);
 
-    // السماح بالدخول بالزر Enter
     document.getElementById('password').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') login();
     });
@@ -203,7 +365,7 @@
       try {
         errorDiv.textContent = "جارٍ التحقق...";
         errorDiv.className = 'success';
-        
+
         const { data, error } = await mySupabase
           .from('users')
           .select('id, full_name, role, branches')
@@ -217,30 +379,26 @@
           return;
         }
 
-        // ========== 4. تخزين بيانات الجلسة الجديدة ==========
         localStorage.setItem('loggedInUserId', data.id);
         localStorage.setItem('loggedInUser', data.full_name);
         localStorage.setItem('userRole', data.role);
         localStorage.setItem('userBranches', JSON.stringify(data.branches || []));
-        
-        // إنشاء رمز جلسة فريد لمنع التعارض
+
         const sessionId = 'fin_sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('sessionId', sessionId);
-        
-        // إضافة وقت انتهاء الجلسة (8 ساعات)
+
         const expiryTime = new Date().getTime() + (8 * 60 * 60 * 1000);
         localStorage.setItem('sessionExpiry', expiryTime);
 
         errorDiv.textContent = "✓ تم تسجيل الدخول بنجاح";
         errorDiv.className = 'success';
-        
-        // الانتقال إلى لوحة التحكم
+
         setTimeout(() => {
           document.getElementById('loginSection').style.display = 'none';
           document.getElementById('userFullName').textContent = data.full_name;
           renderPageButtons(data.role);
           document.getElementById('dashboardSection').style.display = 'block';
-        }, 500);
+        }, 400);
 
       } catch (err) {
         errorDiv.textContent = "حدث خطأ أثناء الاتصال. حاول لاحقاً.";
@@ -252,22 +410,19 @@
     // ========== 5. دالة تسجيل الخروج ==========
     function logout() {
       if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
-        // مسح جميع بيانات الجلسة
         localStorage.clear();
         sessionStorage.clear();
-        
-        // إظهار رسالة تأكيد
+
         document.getElementById('errorMessage').textContent = "✓ تم تسجيل الخروج بنجاح";
         document.getElementById('errorMessage').className = 'success';
-        
-        // العودة إلى صفحة الدخول بعد ثانية
+
         setTimeout(() => {
           document.getElementById('dashboardSection').style.display = 'none';
           document.getElementById('loginSection').style.display = 'block';
           document.getElementById('errorMessage').textContent = '';
           document.getElementById('username').value = '';
           document.getElementById('password').value = '';
-        }, 1000);
+        }, 800);
       }
     }
 
@@ -278,53 +433,48 @@
 
       const pages = [];
 
-      // كل الأدوار يحصلون على "عرض البيانات"
-      pages.push({ label: "عرض البيانات", url: "view-only.html", cls: "page-btn view" });
+      pages.push({ label: "عرض البيانات", icon: "📊", url: "view-only.html", cls: "page-btn view" });
+      pages.push({ label: "طلباتي", icon: "🗂️", url: "my_requests.html", cls: "page-btn" });
 
-      // كل الأدوار يحصلون على "طلباتي"
-      pages.push({ label: "طلباتي", url: "my_requests.html", cls: "page-btn" });
-
-      // باقي الصفحات حسب الدور
       if (role === 'data_entry') {
-        pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
-        pages.push({ label: "طلب تعديل", url: "request_edit.html", cls: "page-btn" });
+        pages.push({ label: "إدخال بيانات", icon: "📝", url: "entry.html", cls: "page-btn" });
+        pages.push({ label: "طلب تعديل", icon: "✏️", url: "request_edit.html", cls: "page-btn" });
       }
       else if (role === 'financing_officer') {
-        pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
-        pages.push({ label: "إدارة التمويل", url: "financing.html", cls: "page-btn financing" });
+        pages.push({ label: "إدخال بيانات", icon: "📝", url: "entry.html", cls: "page-btn" });
+        pages.push({ label: "إدارة التمويل", icon: "💰", url: "financing.html", cls: "page-btn financing" });
       }
       else if (role === 'team_leader') {
-        pages.push({ label: "عرض فريق العمل", url: "team-view.html", cls: "page-btn team" });
+        pages.push({ label: "عرض فريق العمل", icon: "👥", url: "team-view.html", cls: "page-btn team" });
       }
       else if (role === 'internal_reviewer') {
-        pages.push({ label: "المراجعة الداخلية", url: "review.html", cls: "page-btn review" });
-        pages.push({ label: "طلب تعديل", url: "request_edit.html", cls: "page-btn" });
+        pages.push({ label: "المراجعة الداخلية", icon: "🔎", url: "review.html", cls: "page-btn review" });
+        pages.push({ label: "طلب تعديل", icon: "✏️", url: "request_edit.html", cls: "page-btn" });
       }
       else if (role === 'followup_supervisor') {
-        pages.push({ label: "متابعة العمليات", url: "supervise.html", cls: "page-btn supervise" });
+        pages.push({ label: "متابعة العمليات", icon: "📌", url: "supervise.html", cls: "page-btn supervise" });
       }
       else if (role === 'admin') {
-        pages.push({ label: "إدخال بيانات", url: "entry.html", cls: "page-btn" });
-        pages.push({ label: "المراجعة", url: "review.html", cls: "page-btn review" });
-        pages.push({ label: "المتابعة", url: "supervise.html", cls: "page-btn supervise" });
-        pages.push({ label: "لوحة الإدارة", url: "admin.html", cls: "page-btn admin" });
-        pages.push({ label: "طلب تعديل", url: "request_edit.html", cls: "page-btn" });
-        pages.push({ label: "إدارة طلبات التعديل", url: "admin_requests.html", cls: "page-btn admin" });
+        pages.push({ label: "إدخال بيانات", icon: "📝", url: "entry.html", cls: "page-btn" });
+        pages.push({ label: "المراجعة", icon: "🔎", url: "review.html", cls: "page-btn review" });
+        pages.push({ label: "المتابعة", icon: "📌", url: "supervise.html", cls: "page-btn supervise" });
+        pages.push({ label: "لوحة الإدارة", icon: "🛠️", url: "admin.html", cls: "page-btn admin" });
+        pages.push({ label: "طلب تعديل", icon: "✏️", url: "request_edit.html", cls: "page-btn" });
+        pages.push({ label: "إدارة طلبات التعديل", icon: "✅", url: "admin_requests.html", cls: "page-btn admin" });
       }
 
       pages.forEach(page => {
         const btn = document.createElement('a');
         btn.href = page.url;
         btn.className = page.cls;
-        btn.textContent = page.label;
         btn.target = "_blank";
+        btn.innerHTML = `<span class="icon">${page.icon}</span><span>${page.label}</span>`;
         buttonsDiv.appendChild(btn);
       });
     }
 
     // ========== 7. تحميل تلقائي إذا كان هناك جلسة (للتجربة) ==========
     window.addEventListener('DOMContentLoaded', function() {
-      // هذا فقط للتجربة - يمكن إزالته
       const debugUser = localStorage.getItem('loggedInUserId');
       if (debugUser && window.location.search.includes('debug')) {
         document.getElementById('loginSection').style.display = 'none';

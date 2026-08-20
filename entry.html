@@ -4,13 +4,52 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>إدخال بيانات العملية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: #f5f7fa;
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
       margin: 0;
       padding: 20px;
+      min-height: 100vh;
+    }
+    .top-header {
+      max-width: 1400px;
+      margin: 0 auto 18px;
+      background: linear-gradient(135deg, #2e5c8a 0%, #1c3f66 100%);
+      border-radius: 14px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand { display: flex; align-items: center; gap: 10px; }
+    .top-header .brand img { height: 34px; width: auto; }
+    .top-header .brand span { color: white; font-weight: 800; font-size: 14px; }
+    .top-header .nav-actions { display: flex; gap: 10px; }
+    .top-header .nav-actions a, .top-header .nav-actions button {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      transition: background 0.2s ease;
+    }
+    .top-header .nav-actions a:hover, .top-header .nav-actions button:hover {
+      background: rgba(255,255,255,0.28);
     }
     .container {
       display: grid;
@@ -23,11 +62,20 @@
       background: white;
       padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    .panel::before {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #2e5c8a 0%, #c6a35f 50%, #2e5c8a 100%);
     }
     h2, h3 {
       text-align: center;
-      color: #2c3e50;
+      color: #142433;
       margin-top: 0;
     }
     .form-group {
@@ -47,18 +95,22 @@
       box-sizing: border-box;
     }
     button {
-      background: #2980b9;
+      background: #1c3f66;
       color: white;
       padding: 12px 24px;
       border: none;
-      border-radius: 4px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 16px;
+      font-weight: 700;
+      font-family: 'Tajawal', sans-serif;
       display: block;
       margin: 20px auto;
+      transition: background 0.2s ease, transform 0.15s ease;
     }
     button:hover {
-      background: #1f6391;
+      background: #0f2846;
+      transform: translateY(-1px);
     }
     button:disabled {
       background: #95a5a6;
@@ -97,6 +149,17 @@
   </style>
 </head>
 <body>
+  <div class="top-header">
+    <div class="brand">
+      <img src="logo.png" alt="Caritas Egypt" />
+      <span>نظام إدارة التمويل</span>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html">🏠 الرئيسية</a>
+      <button onclick="pageLogout()">تسجيل خروج</button>
+    </div>
+  </div>
+
   <div class="container">
     <div class="panel">
       <h2>إدخال البيانات</h2>
@@ -172,6 +235,14 @@
   </div>
 
   <script>
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
     // **التغيير الوحيد: تغيير اسم المتغير من supabase إلى db**
     const db = window.supabase.createClient(
       'https://akjyrmmqsnxdbkslxmvb.supabase.co',

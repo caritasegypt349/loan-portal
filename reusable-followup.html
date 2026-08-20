@@ -1,157 +1,90 @@
-<!-- reusable-followup.html -->
-<div id="reusableFollowupModal" class="modal followup-modal">
-  <div class="modal-content">
-    <span class="close" onclick="closeReusableModal()">&times;</span>
-    <h3>تعديل متابعة العملية</h3>
-    
-    <div class="form-group">
-      <label>حالة المتابعة <small class="hint">(اختر من القائمة أو اكتب جديداً)</small></label>
-      <input 
-        type="text" 
-        id="reusableStatus" 
-        list="reusableStatusOptions"
-        placeholder="اختر أو اكتب حالة جديدة..."
-        class="form-input"
-        oninput="checkCustomStatus()"
-      />
-      
-      <datalist id="reusableStatusOptions">
-        <option value="لم تتم المراجعة">
-        <option value="الموقع لاستكمال الموافقة علي تمويل العميل">
-        <option value="تمت المراجعة مقبول">
-        <option value="تمت الموافقة على التمويل، وتم تعديل المبلغ/المدة">
-        <option value="تمت المراجعة مرفوض">
-        <option value="تم الغاء الطلب من العميل">
-        <option value="مطلوب ارسال الملف على الميل">
-        <option value="مرسل ميل بالملاحظات فى انتظار الرد">
-        <option value="مناقشه المبلغ">
-        <option value="مطلوب تغيير الضامن">
-        <option value="مطلوب عمل استثناء الـ iScore">
-        <option value="عدد القروض الموجودة للعميل أكبر من الحد المسموح به (Exceeded Limit)">
-        <option value="تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يعتد بالاستعلام الحالي">
-        <option value="يرجى استكمال باقى الملاحظات الموجودة لاتمام عمليه المراجعة و الموافقه">
-        <option value="سداد معجل">
-        <option value="مرفوض من اداره الائتمان">
-      </datalist>
-      
-      <div id="customStatusIndicator" class="custom-indicator">
-        <span>✓ حالة مخصصة</span>
-      </div>
-    </div>
-    
-    <div class="form-group">
-      <label>تعليق المتابعة <small class="hint">(التفاصيل والملاحظات الإضافية)</small></label>
-      <textarea 
-        id="reusableComment" 
-        rows="4" 
-        placeholder="اكتب تعليق المتابعة هنا..."
-        class="form-textarea"
-      ></textarea>
-    </div>
-    
-    <!-- حقول إضافية حسب الصفحة -->
-    <div id="extraFields"></div>
-    
-    <input type="hidden" id="reusableRecordId" />
-    <input type="hidden" id="reusablePageType" />
-    
-    <div class="modal-actions">
-      <button onclick="saveReusableFollowup()" class="btn btn-primary">
-        💾 حفظ التغييرات
-      </button>
-      <button onclick="closeReusableModal()" class="btn btn-secondary">
-        ✕ إلغاء
-      </button>
-    </div>
-  </div>
-</div>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>اختبار مكوّن المتابعة - Reusable Followup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    .container::before {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #2e5c8a 0%, #c6a35f 50%, #2e5c8a 100%);
+    }
+    h2 { color: #142433; text-align: center; font-weight: 800; }
+    p.desc { color: #64768a; text-align: center; margin-bottom: 30px; }
+    .test-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }
+    .test-buttons button {
+      padding: 14px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; font-size: 14px;
+    }
+    .btn-review { background: #e67e22; }
+    .btn-supervise { background: #34495e; }
+    .btn-admin { background: #e74c3c; }
+    .result-box {
+      background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; padding: 15px;
+      font-family: monospace; font-size: 13px; white-space: pre-wrap; min-height: 60px;
+    }
+    .result-title { font-weight: bold; margin-bottom: 8px; color: #2c3e50; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🧪 اختبار مكوّن المتابعة (Reusable Followup)</h2>
+    <p class="desc">صفحة اختبار مستقلة — اضغط أي زرار عشان تفتح المودال وتجرب الحفظ، وهتشوف النتيجة اللي هترجع للـ callback تحت.</p>
 
-<style>
-  .followup-modal .modal-content {
-    max-width: 500px;
-  }
-  
-  .form-group {
-    margin-bottom: 20px;
-  }
-  
-  .form-input {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #3498db;
-    border-radius: 6px;
-    font-size: 14px;
-    transition: all 0.3s;
-  }
-  
-  .form-input:focus {
-    border-color: #2ecc71;
-    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
-    outline: none;
-  }
-  
-  .form-textarea {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #ddd;
-    border-radius: 6px;
-    font-size: 14px;
-    resize: vertical;
-    min-height: 100px;
-  }
-  
-  .custom-indicator {
-    display: none;
-    margin-top: 5px;
-    padding: 5px 10px;
-    background-color: #e8f6e8;
-    border: 1px solid #2ecc71;
-    border-radius: 4px;
-    color: #27ae60;
-    font-size: 12px;
-  }
-  
-  .hint {
-    color: #666;
-    font-weight: normal;
-    font-size: 12px;
-  }
-  
-  .modal-actions {
-    display: flex;
-    justify-content: flex-start;
-    gap: 10px;
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #eee;
-  }
-  
-  .btn {
-    padding: 12px 25px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    transition: all 0.3s;
-  }
-  
-  .btn-primary {
-    background-color: #2ecc71;
-    color: white;
-  }
-  
-  .btn-primary:hover {
-    background-color: #27ae60;
-    transform: translateY(-2px);
-  }
-  
-  .btn-secondary {
-    background-color: #95a5a6;
-    color: white;
-  }
-  
-  .btn-secondary:hover {
-    background-color: #7f8c8d;
-  }
-</style>
+    <div class="test-buttons">
+      <button class="btn-review" onclick="testOpen('review')">تجربة review</button>
+      <button class="btn-supervise" onclick="testOpen('supervise')">تجربة supervise</button>
+      <button class="btn-admin" onclick="testOpen('admin')">تجربة admin</button>
+    </div>
+
+    <div class="result-title">آخر نتيجة محفوظة (اللي هتوصل للصفحة اللي بتستخدم المكوّن):</div>
+    <div class="result-box" id="resultBox">لسه معملتش تجربة...</div>
+  </div>
+
+  <script src="reusable-followup.js"></script>
+  <script>
+    function testOpen(pageType) {
+      // بيانات وهمية للتجربة فقط
+      ReusableFollowup.openModal(
+        'TEST-123',
+        pageType,
+        'لم تتم المراجعة',
+        'تعليق تجريبي',
+        function (recordId, status, comment, extraData) {
+          document.getElementById('resultBox').textContent =
+            'recordId: ' + recordId + '\n' +
+            'pageType: ' + pageType + '\n' +
+            'status: ' + status + '\n' +
+            'comment: ' + comment + '\n' +
+            'extraData: ' + JSON.stringify(extraData, null, 2);
+        }
+      );
+    }
+  </script>
+</body>
+</html>

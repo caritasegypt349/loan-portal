@@ -4,30 +4,77 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>طلب تعديل بيانات عملية - نظام القروض</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f9f9f9; margin: 0; padding: 20px; }
-    .container { max-width: 1800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #3498db; margin-top: 0; }
+    body { 
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; 
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
+      margin: 0; padding: 20px; min-height: 100vh;
+    }
+    .top-header {
+      max-width: 1800px;
+      margin: 0 auto 18px;
+      background: linear-gradient(135deg, #2e5c8a 0%, #1c3f66 100%);
+      border-radius: 14px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand { display: flex; align-items: center; gap: 10px; }
+    .top-header .brand img { height: 34px; width: auto; filter: drop-shadow(0 2px 6px rgba(15, 40, 70, 0.25)); }
+    .top-header .brand span { color: white; font-weight: 800; font-size: 14px; }
+    .top-header .nav-actions { display: flex; gap: 10px; }
+    .top-header .nav-actions a, .top-header .nav-actions button {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      transition: background 0.2s ease;
+    }
+    .top-header .nav-actions a:hover, .top-header .nav-actions button:hover {
+      background: rgba(255,255,255,0.28);
+    }
+    .container { max-width: 1800px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18); position: relative; overflow: hidden; }
+    .container::before {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #2e5c8a 0%, #c6a35f 50%, #2e5c8a 100%);
+    }
+    h2 { text-align: center; color: #142433; font-weight: 800; margin-top: 0; }
     .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
-    select, input, button { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    select, input, button { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: 'Tajawal', sans-serif; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 13px; }
     th { background-color: #f2f2f2; }
-    .request-btn { 
-      background: #3498db; 
-      color: white; 
-      border: none; 
-      padding: 4px 8px; 
-      border-radius: 4px; 
-      cursor: pointer; 
+    .request-btn {
+      background: #2e5c8a;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
       margin: 2px;
     }
-    .detail-btn {
-      background: #2ecc71;
-    }
+    .detail-btn { background: #2ecc71; }
     .loading { text-align: center; padding: 40px; color: #777; }
-    .error { color: #e74c3c; text-align: center; padding: 20px; }
+    .error { color: #e74c3c; text-align: center; padding: 20px; font-weight: bold; }
     .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
     .modal-content { background: white; margin: 5% auto; padding: 20px; width: 90%; max-width: 800px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
     .modal label { display: block; margin: 10px 0 5px; font-weight: bold; }
@@ -36,10 +83,10 @@
     .detail-row td { padding: 15px; background: #f8f9fa; font-size: 12px; }
     .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .read-only { background: #eee; color: #555; }
-    .disabled-field { 
-      background: #f5f5f5 !important; 
-      color: #999 !important; 
-      cursor: not-allowed !important; 
+    .disabled-field {
+      background: #f5f5f5 !important;
+      color: #999 !important;
+      cursor: not-allowed !important;
     }
     .permission-message {
       padding: 10px;
@@ -49,15 +96,27 @@
       font-weight: bold;
     }
     .permission-admin { background: #e8f6f3; color: #1d8348; border: 1px solid #a3e4d7; }
-    .permission-specialist { background: #e8f4fc; color: #1a5276; border: 1px solid #aed6f1; }
     .permission-data-entry { background: #fef9e7; color: #7d6608; border: 1px solid #f9e79f; }
     .permission-other { background: #f4ecf7; color: #6c3483; border: 1px solid #d7bde2; }
   </style>
 </head>
 <body>
+  <div class="top-header">
+    <div class="brand">
+      <img src="logo.png" alt="Caritas Egypt" />
+      <span>نظام إدارة التمويل</span>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html">🏠 الرئيسية</a>
+      <button onclick="pageLogout()">تسجيل خروج</button>
+    </div>
+  </div>
+
   <div class="container">
     <h2>طلب تعديل بيانات عملية</h2>
-    
+
+    <div id="permissionMessage" class="permission-message"></div>
+
     <div class="filters">
       <select id="filterBranch">
         <option value="">الفرع (الكل)</option>
@@ -70,8 +129,6 @@
       <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #3498db; color: white;">تطبيق الفلاتر</button>
     </div>
 
-    <div id="permissionMessage" class="permission-message"></div>
-
     <div id="tableContainer">
       <div class="loading">جارٍ تحميل البيانات...</div>
     </div>
@@ -82,63 +139,61 @@
       <h3>طلب تعديل بيانات السجل</h3>
       <input type="hidden" id="editRecordId" />
       <p style="color:red; font-weight:bold;">**ستقوم بإرسال طلب التعديل للمدير، لن يتم تطبيق التعديلات إلا بعد موافقته.**</p>
-      
+
       <div id="modalPermissionMessage" class="permission-message"></div>
-      
+
       <div class="form-grid">
         <div>
           <label>رقم بطاقة العميل (الجديد)</label>
           <input type="text" id="editNationalId" maxlength="14" />
-          
+
           <label>رقم بطاقة الضامن (الجديد)</label>
           <input type="text" id="editGuarantorId" maxlength="14" />
-          
+
           <label>المشروع (الجديد)</label>
           <input type="text" id="editProject" />
-          
+
           <label>المبلغ المطلوب (الجديد)</label>
           <input type="number" id="editAmount" />
-          
+
           <label>عدد الأقساط (الجديد)</label>
           <input type="number" id="editInstallments" />
-          
+
           <label>اسم الأخصائي (الجديد)</label>
           <input type="text" id="editOfficer" />
-          
+
           <label>المنطقة (الجديدة)</label>
           <input type="text" id="editRegion" />
-          
+
           <label>الفرع (الجديد)</label>
           <input type="text" id="editBranch" />
-          
+
           <label>رقم اللجنة (الجديد)</label>
           <input type="text" id="editCommittee" />
         </div>
-        
+
         <div>
-          <p>
-            <strong>بيانات المراجعة والمتابعة الحالية (للقراءة فقط):</strong>
-          </p>
+          <p><strong>بيانات المراجعة والمتابعة الحالية (للقراءة فقط):</strong></p>
           <label>المراجعة الداخلية</label>
           <input type="text" id="currentReview" class="read-only" readonly />
-          
+
           <label>مسؤول المتابعة</label>
           <input type="text" id="currentSupervisor" class="read-only" readonly />
-          
+
           <label>الإدارة</label>
           <input type="text" id="currentAdmin" class="read-only" readonly />
-          
+
           <label>القائم بالزيارة (الحالي)</label>
           <input type="text" id="currentVisitor" class="read-only" readonly />
-          
+
           <label>اسم القائم بالإدخال (الحالي)</label>
           <input type="text" id="currentDataEntry" class="read-only" readonly />
-          
+
           <label>ملاحظات على الطلب (مهم: يجب ذكر سبب التعديل بوضوح)</label>
           <textarea id="requestNotes" rows="6" placeholder="الرجاء كتابة سبب طلب التعديل هنا" required></textarea>
         </div>
       </div>
-      
+
       <div style="text-align: center; margin-top: 20px;">
         <button onclick="submitEditRequest()" style="background:#3498db;color:white; padding: 10px 20px;">إرسال طلب التعديل</button>
         <button onclick="closeModal()" style="background:#e74c3c;color:white; padding: 10px 20px;">إلغاء</button>
@@ -147,100 +202,125 @@
   </div>
 
   <script>
-    const supabase = window.supabase.createClient(
-      'https://akjyrmmqsnxdbkslxmvb.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
-    );
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
+    // ========== إعداد قاعدة البيانات ==========
+    let db;
+    try {
+      db = window.supabase.createClient(
+        'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      );
+    } catch (err) {
+      console.error('فشل في تهيئة قاعدة البيانات:', err);
+      document.getElementById('tableContainer').innerHTML = '<div class="error">خطأ في تحميل قاعدة البيانات. يرجى تحديث الصفحة.</div>';
+    }
+
+    // الأدوار المسموح لها بالدخول لهذه الصفحة (حسب index.html)
+    const ALLOWED_ROLES = ['admin', 'data_entry', 'internal_reviewer'];
+
+    // الحقول القابلة للتعديل حسب الدور
+    const EDITABLE_FIELDS = {
+      'admin': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount',
+                'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee'],
+      'data_entry': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount',
+                      'editInstallments', 'editOfficer', 'editRegion', 'editBranch'],
+      'internal_reviewer': []
+    };
+
+    const ROLE_MESSAGES = {
+      'admin': { text: 'أنت مدير - يمكنك تعديل جميع الحقول', class: 'permission-admin' },
+      'data_entry': { text: 'أنت مدخل بيانات - يمكنك تعديل البيانات الأساسية', class: 'permission-data-entry' },
+      'internal_reviewer': { text: 'أنت مراجع - يمكنك عرض السجلات فقط، لا يمكنك تعديل البيانات الأساسية من هنا', class: 'permission-other' }
+    };
+
+    const ALL_EDIT_FIELDS = ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount',
+      'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee'];
 
     let allData = [];
-    let loggedInUser = {};
+    let loggedInUser = { id: '', name: '', role: '', branches: [] };
+
+    function showTableError(message) {
+      document.getElementById('tableContainer').innerHTML = `<div class="error">${message}</div>`;
+    }
 
     async function init() {
-      const userId = localStorage.getItem('loggedInUserId');
-      if (!userId) {
-        alert("الرجاء تسجيل الدخول أولًا!");
-        window.location.href = "index.html";
-        return;
+      try {
+        const userId = localStorage.getItem('loggedInUserId');
+        const userName = localStorage.getItem('loggedInUser');
+        const userRole = localStorage.getItem('userRole');
+
+        if (!userId || !userName || !userRole) {
+          alert("الرجاء تسجيل الدخول أولًا!");
+          window.location.href = "index.html";
+          return;
+        }
+
+        if (!ALLOWED_ROLES.includes(userRole)) {
+          alert("ليس لديك صلاحية الوصول إلى هذه الصفحة.");
+          window.location.href = "index.html";
+          return;
+        }
+
+        let branches = [];
+        try {
+          branches = JSON.parse(localStorage.getItem('userBranches') || '[]');
+        } catch (e) {
+          branches = [];
+        }
+
+        loggedInUser = { id: userId, name: userName, role: userRole, branches: branches };
+
+        showPermissionMessage();
+        await loadData();
+      } catch (err) {
+        console.error('خطأ في init:', err);
+        showTableError(`خطأ: ${err.message || 'فشل تحميل الصفحة'}`);
       }
-
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id, full_name, role, branches')
-        .eq('id', userId)
-        .single();
-
-      if (userError || !user) {
-        alert("خطأ في تحميل بيانات المستخدم. تأكد أنك سجلت الدخول بشكل صحيح.");
-        console.error("خطأ:", userError);
-        window.location.href = "index.html";
-        return;
-      }
-
-      loggedInUser = {
-        id: user.id,
-        name: user.full_name,
-        role: user.role,
-        branches: user.branches
-      };
-
-      // عرض رسالة الصلاحيات
-      showPermissionMessage();
-      
-      await loadData();
     }
 
     function showPermissionMessage() {
       const permissionMessage = document.getElementById('permissionMessage');
-      const roleMessages = {
-        'admin': {
-          text: 'أنت مدير - يمكنك تعديل جميع الحقول',
-          class: 'permission-admin'
-        },
-        'data_entry': {
-          text: 'أنت مدخل بيانات - يمكنك تعديل البيانات الأساسية',
-          class: 'permission-data-entry'
-        },
-        'internal_reviewer': {
-          text: 'أنت مراجع - يمكنك عرض السجل فقط ولا يمكنك تعديل البيانات الأساسية من هنا',
-          class: 'permission-other'
-        }
-      };
-      
-      const message = roleMessages[loggedInUser.role] || {
-        text: 'صلاحياتك محدودة في التعديل',
-        class: 'permission-other'
-      };
-      
+      const message = ROLE_MESSAGES[loggedInUser.role] || { text: 'صلاحياتك محدودة في التعديل', class: 'permission-other' };
       permissionMessage.textContent = message.text;
       permissionMessage.className = `permission-message ${message.class}`;
     }
 
     async function loadData() {
       document.getElementById('tableContainer').innerHTML = '<div class="loading">جارٍ تحميل البيانات...</div>';
-      
-      let query = supabase
-        .from('operations_with_details')
-        .select('*');
-        
-      // ✅ تصفية حسب الصلاحيات
-      if (loggedInUser.role === 'internal_reviewer') {
-        // المراجعون يرون فقط السجلات التي تحتاج مراجعة
-        query = query.eq('المراجعة الداخلية', 'لم تتم المراجعة');
-      } else if (loggedInUser.role !== 'admin' && loggedInUser.branches) {
-        // الموظفين (مثل مدخل البيانات) يرون فقط فروعهم
-        query = query.in('الفرع', loggedInUser.branches);
+
+      try {
+        let query = db.from('operations_with_details').select('*');
+
+        if (loggedInUser.role === 'internal_reviewer') {
+          // المراجعون يرون فقط السجلات التي تحتاج مراجعة
+          query = query.eq('المراجعة الداخلية', 'لم تتم المراجعة');
+        } else if (loggedInUser.role !== 'admin' && loggedInUser.branches && loggedInUser.branches.length > 0) {
+          // مدخل البيانات يرى فقط فروعه
+          query = query.in('الفرع', loggedInUser.branches);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('خطأ في تحميل البيانات:', error);
+          showTableError(`خطأ في تحميل البيانات: ${error.message}`);
+          return;
+        }
+
+        allData = data || [];
+        renderFilters();
+        applyFilters();
+      } catch (err) {
+        console.error('خطأ غير متوقع في loadData:', err);
+        showTableError(`خطأ غير متوقع: ${err.message || err}`);
       }
-        
-      const { data, error } = await query.order('created_at', { ascending: false });
-        
-      if (error) {
-        document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ في تحميل البيانات: ${error.message}</div>`;
-        return;
-      }
-      
-      allData = data;
-      renderFilters();
-      applyFilters();
     }
 
     function renderFilters() {
@@ -255,7 +335,7 @@
         opt.textContent = v;
         branchSelect.appendChild(opt);
       });
-      
+
       const officerSelect = document.getElementById('filterOfficer');
       officerSelect.innerHTML = '<option value="">اسم الأخصائي (الكل)</option>';
       officers.forEach(v => {
@@ -274,11 +354,11 @@
       const nationalId = document.getElementById('searchNationalId').value.trim();
       const clientCode = document.getElementById('searchClientCode').value.trim();
 
-      let filtered = allData.filter(row => {
+      const filtered = allData.filter(row => {
         if (branch && row["الفرع"] !== branch) return false;
         if (officer && row["اسم الاخصائى"] !== officer) return false;
-        if (nationalId && !row["رقم البطاقة العميل"]?.includes(nationalId)) return false;
-        if (clientCode && !row["كود_العميل"]?.includes(clientCode)) return false;
+        if (nationalId && !(row["رقم البطاقة العميل"] || '').includes(nationalId)) return false;
+        if (clientCode && !(row["كود_العميل"] || '').includes(clientCode)) return false;
         return true;
       });
 
@@ -335,12 +415,11 @@
       html += `</tbody></table>`;
       document.getElementById('tableContainer').innerHTML = html;
     }
-    
+
     function openEditModal(recordId) {
       const record = allData.find(r => r.id == recordId);
       if (!record) return;
 
-      // ✅ ملء البيانات
       document.getElementById('editRecordId').value = record.id;
       document.getElementById('editNationalId').value = record["رقم البطاقة العميل"] || '';
       document.getElementById('editGuarantorId').value = record["رقم بطاقة الضامن"] || '';
@@ -351,7 +430,7 @@
       document.getElementById('editRegion').value = record["المنطقه"] || '';
       document.getElementById('editBranch').value = record["الفرع"] || '';
       document.getElementById('editCommittee').value = record["رقم اللجنة"] || '';
-      
+
       document.getElementById('currentReview').value = record["المراجعة الداخلية"] || '';
       document.getElementById('currentSupervisor').value = record["مسؤول المتابعة"] || '';
       document.getElementById('currentAdmin').value = record["الادارة"] || '';
@@ -359,55 +438,16 @@
       document.getElementById('currentDataEntry').value = record["اسم القائم بالادخال"] || '';
       document.getElementById('requestNotes').value = '';
 
-      // ✅ تطبيق الصلاحيات
       setupEditModalPermissions();
-      
+
       document.getElementById('editModal').style.display = 'block';
     }
 
     function setupEditModalPermissions() {
       const role = loggedInUser.role;
-      
-      // الحقول التي يمكن تعديلها حسب الدور
-      const editableFields = {
-        'admin': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
-                  'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee'],
-        'data_entry': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
-                        'editInstallments', 'editOfficer', 'editRegion', 'editBranch'],
-        'internal_reviewer': [] // المراجعين لا يمكنهم تعديل البيانات الأساسية من هنا، لهم صفحة المراجعة الخاصة
-      };
-      
-      // رسائل الصلاحيات في المودال
-      const roleModalMessages = {
-        'admin': {
-          text: 'أنت مدير - يمكنك تعديل جميع الحقول',
-          class: 'permission-admin'
-        },
-        'data_entry': {
-          text: 'أنت مدخل بيانات - يمكنك تعديل البيانات الأساسية',
-          class: 'permission-data-entry'
-        },
-        'internal_reviewer': {
-          text: 'أنت مراجع - لا يمكنك تعديل البيانات الأساسية من هنا (استخدم صفحة المراجعة الخاصة)',
-          class: 'permission-other'
-        }
-      };
-      
-      // عرض رسالة الصلاحيات في المودال
-      const modalMessage = document.getElementById('modalPermissionMessage');
-      const message = roleModalMessages[role] || {
-        text: 'صلاحياتك محدودة في التعديل',
-        class: 'permission-other'
-      };
-      
-      modalMessage.textContent = message.text;
-      modalMessage.className = `permission-message ${message.class}`;
-      
-      // جعل جميع الحقول غير قابلة للتعديل أولاً
-      const allFields = ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount', 
-                        'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee'];
-      
-      allFields.forEach(fieldId => {
+
+      // قفل كل الحقول أولاً
+      ALL_EDIT_FIELDS.forEach(fieldId => {
         const element = document.getElementById(fieldId);
         if (element) {
           element.disabled = true;
@@ -415,18 +455,22 @@
           element.title = "غير مسموح لك بتعديل هذا الحقل بناءً على صلاحياتك";
         }
       });
-      
-      // تمكين الحقول المسموح بها حسب الدور
-      if (editableFields[role]) {
-        editableFields[role].forEach(fieldId => {
-          const element = document.getElementById(fieldId);
-          if (element) {
-            element.disabled = false;
-            element.classList.remove('disabled-field');
-            element.title = "";
-          }
-        });
-      }
+
+      // فتح الحقول المسموح بها للدور الحالي
+      const allowedFields = EDITABLE_FIELDS[role] || [];
+      allowedFields.forEach(fieldId => {
+        const element = document.getElementById(fieldId);
+        if (element) {
+          element.disabled = false;
+          element.classList.remove('disabled-field');
+          element.title = "";
+        }
+      });
+
+      const modalMessage = document.getElementById('modalPermissionMessage');
+      const message = ROLE_MESSAGES[role] || { text: 'صلاحياتك محدودة في التعديل', class: 'permission-other' };
+      modalMessage.textContent = message.text;
+      modalMessage.className = `permission-message ${message.class}`;
     }
 
     function closeModal() {
@@ -440,14 +484,13 @@
         alert("لم يتم العثور على السجل.");
         return;
       }
-      
+
       const notes = document.getElementById('requestNotes').value.trim();
       if (!notes) {
         alert("الرجاء إدخال سبب طلب التعديل.");
         return;
       }
-      
-      // ✅ البيانات الجديدة بحيث تتطابق مع أسماء أعمدة جدول operations
+
       const newValues = {
         "رقم البطاقة العميل": document.getElementById('editNationalId').value.trim(),
         "رقم بطاقة الضامن": document.getElementById('editGuarantorId').value.trim(),
@@ -461,8 +504,7 @@
         "القائم بالزياره": record["القائم بالزياره"] || '',
         "اسم القائم بالادخال": record["اسم القائم بالادخال"] || loggedInUser.name,
       };
-      
-      // ✅ البيانات القديمة
+
       const oldValues = {
         "رقم البطاقة العميل": record["رقم البطاقة العميل"],
         "رقم بطاقة الضامن": record["رقم بطاقة الضامن"],
@@ -477,7 +519,6 @@
         "اسم القائم بالادخال": record["اسم القائم بالادخال"] || '',
       };
 
-      // ✅ التحقق من وجود تغيير فعلي
       let hasChanged = false;
       for (const key in newValues) {
         const oldVal = oldValues[key] === null || oldValues[key] === undefined ? '' : String(oldValues[key]);
@@ -492,22 +533,20 @@
         alert("لم تقم بتغيير أي قيمة. الرجاء تعديل قيمة واحدة على الأقل.");
         return;
       }
-      
-      // ✅ التحقق من صحة رقم البطاقة (14 رقمًا)
+
       const nationalId = newValues["رقم البطاقة العميل"];
       const guarantorId = newValues["رقم بطاقة الضامن"];
-      
+
       if (nationalId && (nationalId.length !== 14 || !/^\d+$/.test(nationalId))) {
         alert("رقم بطاقة العميل يجب أن يكون 14 رقمًا فقط.");
         return;
       }
-      
+
       if (guarantorId && (guarantorId.length !== 14 || !/^\d+$/.test(guarantorId))) {
         alert("رقم بطاقة الضامن يجب أن يكون 14 رقمًا فقط.");
         return;
       }
-      
-      // ✅ إعداد بيانات الطلب
+
       const requestData = {
         operation_id: id,
         requester_id: loggedInUser.id,
@@ -518,30 +557,27 @@
         notes: notes,
         status: 'Pending',
       };
-      
+
       try {
-        console.log('بيانات الطلب المرسلة:', requestData);
-        
-        const { data, error } = await supabase
+        const { data, error } = await db
           .from('edit_requests')
           .insert([requestData])
           .select();
-          
+
         if (error) {
           console.error('خطأ في إرسال الطلب:', error);
           throw error;
         }
-        
-        console.log('تم إرسال الطلب بنجاح:', data);
+
         alert("✅ تم إرسال طلب التعديل بنجاح!");
         closeModal();
-        await loadData(); // إعادة تحميل البيانات
+        await loadData();
       } catch (e) {
         console.error('حدث خطأ:', e);
-        alert("❌ خطأ في إرسال الطلب: " + e.message);
+        alert("❌ خطأ في إرسال الطلب: " + (e.message || e));
       }
     }
-    
+
     function toggleDetail(recordId, event) {
       const row = allData.find(r => r.id == recordId);
       if (!row) return;
@@ -558,12 +594,12 @@
       const index = allData.findIndex(r => r.id == recordId);
       const tableBody = document.getElementById('tableBody');
       if (!tableBody) return;
-      
+
       const detailRowEl = document.createElement('tr');
       detailRowEl.id = detailRowId;
       detailRowEl.className = 'detail-row';
       detailRowEl.innerHTML = `
-        <td colspan="11"> 
+        <td colspan="11">
           <strong>بيانات تفصيلية:</strong><br>
           المبلغ المطلوب: ${row["المبلغ المطلوب"] || '—'}<br>
           عدد أيام التأخير: ${row["عدد ايام التاخير"] || '—'}<br>
@@ -611,10 +647,7 @@
       if (event.target.id === 'editModal') closeModal();
     };
 
-    init().catch(err => {
-      console.error('خطأ:', err);
-      document.getElementById('tableContainer').innerHTML = `<div class="error">خطأ: ${err.message}</div>`;
-    });
+    init();
   </script>
 </body>
 </html>

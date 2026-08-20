@@ -4,16 +4,72 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>عرض البيانات التفصيلي - نظام القروض</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- مكتبة SheetJS لتصدير Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
+    .top-header {
+      max-width: 1900px;
+      margin: 0 auto 18px;
+      background: linear-gradient(135deg, #6a5a9c 0%, #1c3f66 100%);
+      border-radius: 14px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .top-header .brand img {
+      height: 34px;
+      width: auto;
+      filter: drop-shadow(0 2px 6px rgba(15, 40, 70, 0.25));
+    }
+    .top-header .brand span {
+      color: white;
+      font-weight: 800;
+      font-size: 14px;
+    }
+    .top-header .nav-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .top-header .nav-actions a,
+    .top-header .nav-actions button {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      transition: background 0.2s ease;
+    }
+    .top-header .nav-actions a:hover,
+    .top-header .nav-actions button:hover {
+      background: rgba(255,255,255,0.28);
+    }
     body { 
       font-family: 'Segoe UI', Tahoma, sans-serif; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
       margin: 0; 
       padding: 20px; 
-      min-height: 100vh; 
+      min-height: 100vh;
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
     }
     .container { 
       max-width: 1900px; 
@@ -21,13 +77,23 @@
       background: white; 
       padding: 25px; 
       border-radius: 12px; 
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+      box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    .container::before {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #6a5a9c 0%, #c6a35f 50%, #6a5a9c 100%);
     }
     h2 { 
       text-align: center; 
-      color: #2c3e50; 
+      color: #142433; 
       margin-top: 0; 
-      font-size: 28px; 
+      font-size: 26px; 
+      font-weight: 800;
       margin-bottom: 10px; 
     }
     .header-controls {
@@ -69,12 +135,12 @@
       flex-wrap: wrap; 
     }
     .stat-card { 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      background: linear-gradient(135deg, #1c3f66 0%, #0f2846 100%); 
       color: white; 
       padding: 15px 30px; 
       border-radius: 8px; 
       text-align: center; 
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); 
+      box-shadow: 0 4px 15px rgba(15, 40, 70, 0.32); 
       transition: transform 0.3s; 
       flex: 1; 
       min-width: 180px; 
@@ -122,8 +188,8 @@
     }
     select:focus, input:focus { 
       outline: none; 
-      border-color: #667eea; 
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); 
+      border-color: #2e5c8a; 
+      box-shadow: 0 0 0 3px rgba(86, 134, 179, 0.18); 
     }
     .committee-filter {
       position: relative;
@@ -134,7 +200,7 @@
       top: 100%;
       right: 0;
       background: white;
-      border: 2px solid #667eea;
+      border: 2px solid #2e5c8a;
       border-radius: 6px;
       max-height: 300px;
       overflow-y: auto;
@@ -172,7 +238,7 @@
       align-items: center;
     }
     .committee-toggle:hover {
-      border-color: #667eea;
+      border-color: #2e5c8a;
     }
     .committee-buttons {
       display: flex;
@@ -185,7 +251,7 @@
       padding-bottom: 8px;
     }
     .committee-btn {
-      background: #667eea;
+      background: #2e5c8a;
       color: white;
       border: none;
       padding: 6px 12px;
@@ -196,7 +262,7 @@
       min-width: 120px;
     }
     .committee-btn:hover {
-      background: #764ba2;
+      background: #0f2846;
     }
     .committee-btn.select-all {
       background: #2ecc71;
@@ -220,7 +286,7 @@
       font-size: 13px; 
     }
     th { 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      background: linear-gradient(135deg, #1c3f66 0%, #0f2846 100%); 
       color: white; 
       position: sticky; 
       top: 0; 
@@ -243,7 +309,7 @@
       transition: background-color 0.3s; 
     }
     .expand-btn { 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      background: linear-gradient(135deg, #1c3f66 0%, #0f2846 100%); 
       color: white; 
       border: none; 
       padding: 6px 12px; 
@@ -254,7 +320,7 @@
     }
     .expand-btn:hover { 
       transform: scale(1.1); 
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); 
+      box-shadow: 0 4px 12px rgba(15, 40, 70, 0.32); 
     }
     .detail-row { 
       display: none; 
@@ -277,7 +343,7 @@
     .btn-apply { 
       grid-column: span 2; 
       padding: 12px; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      background: linear-gradient(135deg, #1c3f66 0%, #0f2846 100%); 
       color: white; 
       border: none; 
       border-radius: 6px; 
@@ -288,11 +354,11 @@
     }
     .btn-apply:hover { 
       transform: translateY(-2px); 
-      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); 
+      box-shadow: 0 6px 20px rgba(15, 40, 70, 0.32); 
     }
     .selected-committees {
       font-size: 12px;
-      color: #667eea;
+      color: #2e5c8a;
       margin-top: 4px;
       text-align: right;
     }
@@ -318,11 +384,11 @@
         border-bottom: 1px dashed #d0d0d0;
     }
     .detail-section h3 {
-        color: #764ba2;
+        color: #0f2846;
         font-size: 18px;
         margin-top: 0;
         margin-bottom: 15px;
-        border-bottom: 2px solid #764ba2;
+        border-bottom: 2px solid #0f2846;
         padding-bottom: 5px;
     }
     .detail-item {
@@ -354,6 +420,17 @@
   </style>
 </head>
 <body>
+  <div class="top-header">
+    <div class="brand">
+      <img src="logo.png" alt="Caritas Egypt" />
+      <span>نظام إدارة التمويل</span>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html">🏠 الرئيسية</a>
+      <button onclick="pageLogout()">تسجيل خروج</button>
+    </div>
+  </div>
+
   <div class="container">
     <div class="header-controls">
       <h2>عرض البيانات التفصيلي</h2>
@@ -450,6 +527,14 @@
   </div>
 
   <script>
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
     function validateSession() {
       const userId = localStorage.getItem('loggedInUserId');
       const userFullName = localStorage.getItem('loggedInUser');
@@ -934,7 +1019,7 @@
             <td>${row["المشروع"] || '—'}</td>
             <td>${row["رقم بطاقة الضامن"] || '—'}</td>
             <td>${row["اسم_الضامن"] || '—'}</td>
-            <td style="font-weight: bold; color: #667eea;">${row["المبلغ المطلوب"] || '—'}</td>
+            <td style="font-weight: bold; color: #2e5c8a;">${row["المبلغ المطلوب"] || '—'}</td>
             <td style="font-weight: bold; color: #2ecc71;">${transferredAmount ? transferredAmount.toLocaleString('ar-EG') : '—'}</td>
             <td style="font-weight: bold; color: #3498db;">${financeValue ? financeValue.toLocaleString('ar-EG') : '—'}</td>
             <td>${financeSystem}</td>
@@ -981,7 +1066,7 @@
                       ['نتيجة التقييم', 'نتيجة_التقييم'],
                       ['التقييم الرقمي', 'التقييم_الرقمى'],
                       ['تاريخ الاستعلام', 'تاريخ_استعلام_العميل'],
-                      ['تعليق الاستعلام', 'تعليق_استعلام_العميل', false, '#764ba2'],
+                      ['تعليق الاستعلام', 'تعليق_استعلام_العميل', false, '#0f2846'],
                       ['الإحداثيات', 'احداثيات الموقع', false, '', '9px']
                     ])}
                   </div>
@@ -993,7 +1078,7 @@
                       ['نتيجة التقييم', 'نتيجة_تقييم_الضامن'],
                       ['التقييم الرقمي', 'تقييم_رقمى_الضامن'],
                       ['تاريخ الاستعلام', 'تاريخ_استعلام_الضامن'],
-                      ['تعليق الاستعلام', 'تعليق_استعلام_الضامن', false, '#764ba2']
+                      ['تعليق الاستعلام', 'تعليق_استعلام_الضامن', false, '#0f2846']
                     ])}
                   </div>
                 </div>
@@ -1062,7 +1147,7 @@
       } else {
         detailRow.style.display = 'none';
         btn.textContent = 'تفاصيل';
-        btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        btn.style.background = 'linear-gradient(135deg, #1c3f66 0%, #0f2846 100%)';
       }
     }
 

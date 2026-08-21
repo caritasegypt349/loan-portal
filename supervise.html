@@ -271,6 +271,22 @@
       transform: scale(1.1); 
       box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4); 
     }
+    .history-btn {
+      background: linear-gradient(135deg, #a3813f 0%, #6b5628 100%);
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: bold;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .history-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(107, 86, 40, 0.4);
+    }
     .loading { 
       text-align: center; 
       padding: 40px; 
@@ -1060,10 +1076,13 @@
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
               <th>الإجراء</th>
+              <th>اللجان القديمة</th>
             </tr>
           </thead>
           <tbody id="tableBody">
       `;
+
+      window.currentTableData = data;
 
       data.forEach((row, idx) => {
         const reviewClass = getCellClass(row["المراجعة الداخلية"]);
@@ -1093,9 +1112,10 @@
               <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل</button>
               <button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button>
             </td>
+            <td><button class="history-btn" onclick="openClientHistory(${idx})">📜 اللجان القديمة</button></td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="18">
+            <td colspan="19">
               <div class="detail-container">
                 
                 <div class="detail-row-sections">
@@ -1339,6 +1359,21 @@
       if (modal) {
         modal.style.display = 'none';
       }
+    }
+
+    // ========== فتح السجل التاريخي (اللجان القديمة) للعميل ==========
+    function openClientHistory(idx) {
+      const row = (window.currentTableData || [])[idx];
+      if (!row) {
+        alert('تعذر العثور على بيانات هذا السجل.');
+        return;
+      }
+      const nid = row["رقم البطاقة العميل"];
+      if (!nid) {
+        alert('لا يوجد رقم بطاقة لهذا العميل.');
+        return;
+      }
+      window.open('client-history.html?nid=' + encodeURIComponent(nid), '_blank');
     }
 
     function exportToExcel() {

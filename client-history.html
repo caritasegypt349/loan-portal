@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>السجل التاريخي للعميل - اللجان القديمة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body {
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      color: #142433;
+    }
+    .top-header {
+      max-width: 1100px;
+      margin: 0 auto 18px;
+      background: linear-gradient(135deg, #a3813f 0%, #1c3f66 100%);
+      border-radius: 14px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand { display: flex; align-items: center; gap: 10px; }
+    .top-header .brand img { height: 34px; width: auto; filter: drop-shadow(0 2px 6px rgba(15, 40, 70, 0.25)); }
+    .top-header .brand span { color: white; font-weight: 800; font-size: 14px; }
+    .top-header .nav-actions { display: flex; gap: 10px; }
+    .top-header .nav-actions a, .top-header .nav-actions button {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      transition: background 0.2s ease;
+    }
+    .top-header .nav-actions a:hover, .top-header .nav-actions button:hover {
+      background: rgba(255,255,255,0.28);
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    .container::before {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #a3813f 0%, #1c3f66 50%, #a3813f 100%);
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .toolbar button {
+      background: #2e5c8a;
+      color: white;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+    }
+    .toolbar button.secondary { background: #f0f4f8; color: #2e5c8a; }
+
+    .loading, .empty-state {
+      text-align: center;
+      padding: 50px 20px;
+      color: #64768a;
+      font-size: 15px;
+    }
+    .error-box {
+      text-align: center;
+      padding: 30px;
+      color: #e74c3c;
+      font-weight: bold;
+    }
+
+    #reportCapture { background: white; }
+
+    .client-header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 18px;
+      border-bottom: 2px solid #eee;
+    }
+    .client-header .name {
+      font-size: 22px;
+      font-weight: 800;
+      color: #142433;
+    }
+    .client-header .nid {
+      font-size: 14px;
+      color: #64768a;
+      margin-top: 4px;
+      direction: ltr;
+      display: inline-block;
+    }
+    .client-header .count-badge {
+      display: inline-block;
+      margin-top: 10px;
+      background: #eef4fa;
+      color: #1c3f66;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .request-card {
+      border: 1px solid #e4ebf3;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+      background: #fbfcfe;
+    }
+    .request-card .request-title {
+      font-weight: 800;
+      font-size: 15px;
+      color: #a3813f;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .month-badge {
+      background: #fef9e7;
+      color: #7d6608;
+      border: 1px solid #f9e79f;
+      padding: 4px 12px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px 20px;
+    }
+    .detail-item {
+      font-size: 13px;
+      padding: 6px 0;
+      border-bottom: 1px dashed #eee;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .detail-item .k { color: #64768a; font-weight: 600; white-space: nowrap; }
+    .detail-item .v { color: #142433; text-align: left; word-break: break-word; }
+
+    .divider {
+      text-align: center;
+      margin: 24px 0;
+      position: relative;
+    }
+    .divider::before {
+      content: "";
+      position: absolute;
+      top: 50%; right: 0; left: 0;
+      height: 1px;
+      background: repeating-linear-gradient(90deg, #d0d8e2 0, #d0d8e2 6px, transparent 6px, transparent 12px);
+    }
+    .divider span {
+      position: relative;
+      background: white;
+      padding: 0 14px;
+      color: #a3813f;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    @media print {
+      .top-header, .toolbar { display: none !important; }
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-header">
+    <div class="brand">
+      <img src="logo.png" alt="Caritas Egypt" />
+      <span>نظام إدارة التمويل</span>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html">🏠 الرئيسية</a>
+      <button onclick="pageLogout()">تسجيل خروج</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="toolbar">
+      <h2 style="margin:0; color:#a3813f; font-weight:800;">📜 السجل التاريخي - اللجان القديمة</h2>
+      <div style="display:flex; gap:8px;">
+        <button onclick="window.print()">🖨️ طباعة</button>
+        <button class="secondary" onclick="copyReportImage()">📋 نسخ كصورة</button>
+      </div>
+    </div>
+
+    <div id="loadingState" class="loading">جارٍ البحث عن السجل التاريخي...</div>
+    <div id="errorState" class="error-box" style="display:none;"></div>
+    <div id="emptyState" class="empty-state" style="display:none;"></div>
+
+    <div id="reportCapture" style="display:none;">
+      <div class="client-header">
+        <div class="name" id="clientName">—</div>
+        <div class="nid" id="clientNid">—</div>
+        <div class="count-badge" id="countBadge">0 طلب</div>
+      </div>
+      <div id="requestsList"></div>
+    </div>
+  </div>
+
+  <script>
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
+    let db;
+    try {
+      db = window.supabase.createClient(
+        'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      );
+    } catch (err) {
+      console.error('فشل في تهيئة قاعدة البيانات:', err);
+    }
+
+    // الحقول اللي هتتعرض في كل كارت طلب (بالترتيب)، وبتستبعد الحقول اللي ظاهرة أصلاً فوق (الاسم/الرقم القومي) والحقول الداخلية
+    const DISPLAY_FIELDS = [
+      "كود العميل", "المشروع", "رقم بطاقة الضامن", "اسم الضامن",
+      "المبلغ المطلوب", "المبلغ المحول", "قيمة التمويل", "نظام التمويل", "المصاريف الإدارية",
+      "الأخصائي", "تم التحويل", "المراجعة الداخلية", "ملاحظات المراجعة الداخلية",
+      "مسؤول المتابعة", "تعليق مسؤول المتابعة", "الإدارة", "ملاحظات الإدارة",
+      "رقم اللجنة", "عدد أيام التأخير", "عدد الأقساط", "المنطقة", "الفرع",
+      "القائم بالزيارة", "القائم بالإدخال", "تاريخ الإدخال", "تاريخ القرض",
+      "أخصائي القرض", "النشاط الثاني", "فرع العميل",
+      "اسم العميل من التقييم", "نتيجة التقييم", "التقييم الرقمي",
+      "تاريخ استعلام العميل", "تعليق استعلام العميل",
+      "اسم الضامن من I-Score", "نتيجة تقييم الضامن", "تقييم رقمي الضامن",
+      "تاريخ استعلام الضامن", "تعليق استعلام الضامن"
+    ];
+
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    }
+
+    async function init() {
+      const nid = getQueryParam('nid');
+
+      if (!nid) {
+        showError('لم يتم تحديد رقم بطاقة العميل. افتح هذه الصفحة من زر "اللجان القديمة" جنب اسم العميل.');
+        return;
+      }
+
+      try {
+        const { data, error } = await db
+          .from('اللجان_القديمة')
+          .select('*')
+          .eq('رقم بطاقة العميل', nid)
+          .order('الشهر', { ascending: false });
+
+        if (error) throw error;
+
+        document.getElementById('loadingState').style.display = 'none';
+
+        if (!data || data.length === 0) {
+          document.getElementById('emptyState').textContent = 'لا توجد لجان قديمة مسجلة لهذا العميل (رقم البطاقة: ' + nid + ').';
+          document.getElementById('emptyState').style.display = 'block';
+          return;
+        }
+
+        renderReport(nid, data);
+        document.getElementById('reportCapture').style.display = 'block';
+
+      } catch (err) {
+        console.error('خطأ في تحميل السجل التاريخي:', err);
+        showError('حدث خطأ أثناء تحميل البيانات: ' + (err.message || err));
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').textContent = '❌ ' + msg;
+      document.getElementById('errorState').style.display = 'block';
+    }
+
+    function renderReport(nid, records) {
+      const first = records[0];
+      document.getElementById('clientName').textContent = first["اسم العميل"] || 'اسم غير متاح';
+      document.getElementById('clientNid').textContent = 'رقم البطاقة: ' + nid;
+      document.getElementById('countBadge').textContent = records.length + (records.length === 1 ? ' طلب مسجل' : ' طلبات مسجلة');
+
+      const listEl = document.getElementById('requestsList');
+      let html = '';
+
+      records.forEach((row, idx) => {
+        if (idx > 0) {
+          html += `<div class="divider"><span>▾ طلب آخر ▾</span></div>`;
+        }
+
+        html += `<div class="request-card">
+          <div class="request-title">
+            <span>طلب رقم ${idx + 1}${row["رقم اللجنة"] ? ' — لجنة: ' + escapeHtml(row["رقم اللجنة"]) : ''}</span>
+            <span class="month-badge">${escapeHtml(row["الشهر"] || '—')}</span>
+          </div>
+          <div class="detail-grid">`;
+
+        DISPLAY_FIELDS.forEach(field => {
+          const val = row[field];
+          if (val === null || val === undefined || val === '') return;
+          html += `<div class="detail-item"><span class="k">${escapeHtml(field)}</span><span class="v">${escapeHtml(val)}</span></div>`;
+        });
+
+        html += `</div></div>`;
+      });
+
+      listEl.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
+
+    function copyReportImage() {
+      const target = document.getElementById('reportCapture');
+      if (!target || target.style.display === 'none') {
+        alert('لا يوجد تقرير معروض حاليًا لنسخه.');
+        return;
+      }
+
+      if (typeof html2canvas === 'undefined') {
+        alert('تعذر تحميل مكتبة إنشاء الصورة. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.');
+        return;
+      }
+
+      html2canvas(target, { backgroundColor: '#ffffff', scale: 2, useCORS: true }).then(canvas => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            alert('تعذر إنشاء صورة التقرير.');
+            return;
+          }
+          try {
+            if (navigator.clipboard && window.ClipboardItem) {
+              await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+              alert('✅ تم نسخ السجل التاريخي كصورة! تقدر تلصقه دلوقتي في واتساب أو وورد.');
+            } else {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'السجل_التاريخي.png';
+              a.click();
+              URL.revokeObjectURL(url);
+              alert('متصفحك لا يدعم النسخ المباشر، تم تنزيل الصورة بدلًا من ذلك.');
+            }
+          } catch (e) {
+            console.error('خطأ في نسخ الصورة:', e);
+            alert('حدث خطأ أثناء نسخ الصورة.');
+          }
+        }, 'image/png');
+      }).catch(err => {
+        console.error('خطأ في إنشاء الصورة:', err);
+        alert('حدث خطأ أثناء إنشاء صورة التقرير.');
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

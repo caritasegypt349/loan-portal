@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     body { 
       font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; 
@@ -548,6 +549,7 @@
       
       <button onclick="resetFilters()" class="btn-apply" style="grid-column: span 2;">إعادة تعيين الفلاتر</button>
       <button onclick="exportToExcel()" id="exportBtn" class="btn-apply" style="grid-column: span 2; background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);">📊 تصدير للإكسل</button>
+      <button onclick="openStatsModal()" class="btn-apply" style="grid-column: span 2; background: linear-gradient(135deg, #16a085 0%, #1c3f66 100%);">📈 بيانات إحصائية</button>
     </div>
 
     <div class="table-wrapper">
@@ -715,6 +717,50 @@
       <div class="button-group">
         <button onclick="saveAdmin()" class="btn-save">حفظ الكل</button>
         <button onclick="closeModal()" class="btn-close">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="statsModal" class="modal">
+    <div class="modal-content" style="max-width: 1100px;">
+      <h3 style="text-align:center; color:#16a085; margin-top:0;">📈 بيانات إحصائية حسب الفرع</h3>
+
+      <div id="statsLoading" style="text-align:center; padding:30px; color:#777;">جارٍ تحميل البيانات...</div>
+      <div id="statsError" style="display:none; text-align:center; padding:20px; color:#e74c3c; font-weight:bold;"></div>
+
+      <div id="statsBody" style="display:none;">
+        <div style="overflow-x:auto; margin-bottom: 20px;">
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr style="background:#f2f2f2;">
+                <th style="border:1px solid #ddd; padding:10px;">الفرع</th>
+                <th style="border:1px solid #ddd; padding:10px;">إجمالي عدد الحالات</th>
+                <th style="border:1px solid #ddd; padding:10px;">إجمالي المبالغ المرفوعة</th>
+                <th style="border:1px solid #ddd; padding:10px;">عدد تم التحويل</th>
+                <th style="border:1px solid #ddd; padding:10px;">قيمة ما تم تحويله</th>
+                <th style="border:1px solid #ddd; padding:10px;">عدد المتبقي</th>
+                <th style="border:1px solid #ddd; padding:10px;">قيمة المتبقي</th>
+              </tr>
+            </thead>
+            <tbody id="statsTableBody"></tbody>
+          </table>
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 12px; flex-wrap: wrap;">
+          <div style="display:flex; gap:8px;">
+            <button onclick="renderStatsChart('count')" id="statsToggleCount" class="action-btn" style="background:#16a085; color:white;">عرض الأعداد</button>
+            <button onclick="renderStatsChart('amount')" id="statsToggleAmount" class="action-btn" style="background:#f0f8f5; color:#16a085;">عرض المبالغ</button>
+          </div>
+          <button onclick="copyStatsChartImage()" class="action-btn" style="background:#2e5c8a; color:white;">📋 نسخ الرسم كصورة</button>
+        </div>
+
+        <div style="background:#fafafa; border-radius:8px; padding:15px; border:1px solid #eee;">
+          <canvas id="statsChartCanvas" height="110"></canvas>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button class="btn-close" onclick="closeStatsModal()">إغلاق</button>
       </div>
     </div>
   </div>
@@ -1480,6 +1526,187 @@
     }
 
     // ========== إنشاء تقرير اعرف عميلك (KYC) معبأ مسبقًا ==========
+    // ========== بيانات إحصائية حسب الفرع ==========
+    let statsData = [];
+    let statsChartInstance = null;
+    let statsChartMode = 'count';
+
+    async function openStatsModal() {
+      document.getElementById('statsModal').style.display = 'block';
+      document.getElementById('statsLoading').style.display = 'block';
+      document.getElementById('statsError').style.display = 'none';
+      document.getElementById('statsBody').style.display = 'none';
+
+      try {
+        const { data, error } = await db
+          .from('summary_bank_export_view')
+          .select('*')
+          .order('فرع_العملية_الأصلية', { ascending: true });
+
+        if (error) throw error;
+
+        statsData = data || [];
+
+        if (statsData.length === 0) {
+          document.getElementById('statsLoading').style.display = 'none';
+          document.getElementById('statsError').textContent = 'لا توجد بيانات إحصائية متاحة حاليًا.';
+          document.getElementById('statsError').style.display = 'block';
+          return;
+        }
+
+        renderStatsTable();
+        renderStatsChart('count');
+
+        document.getElementById('statsLoading').style.display = 'none';
+        document.getElementById('statsBody').style.display = 'block';
+      } catch (err) {
+        console.error('خطأ في تحميل البيانات الإحصائية:', err);
+        document.getElementById('statsLoading').style.display = 'none';
+        document.getElementById('statsError').textContent = 'حدث خطأ في تحميل البيانات: ' + (err.message || err);
+        document.getElementById('statsError').style.display = 'block';
+      }
+    }
+
+    function closeStatsModal() {
+      document.getElementById('statsModal').style.display = 'none';
+    }
+
+    function formatNumber(n) {
+      return (Number(n) || 0).toLocaleString('ar-EG');
+    }
+
+    function renderStatsTable() {
+      const tbody = document.getElementById('statsTableBody');
+      let html = '';
+
+      statsData.forEach(row => {
+        html += `
+          <tr>
+            <td style="border:1px solid #ddd; padding:8px; font-weight:bold;">${row["فرع_العملية_الأصلية"] || '—'}</td>
+            <td style="border:1px solid #ddd; padding:8px; text-align:center;">${formatNumber(row["إجمالي_عدد_الحالات"])}</td>
+            <td style="border:1px solid #ddd; padding:8px; text-align:center;">${formatNumber(row["إجمالي_المبالغ_المرفوعة"])} ج.م</td>
+            <td style="border:1px solid #ddd; padding:8px; text-align:center; color:#16a085;">${formatNumber(row["عدد_تم_التحويل"])}</td>
+            <td style="border:1px solid #ddd; padding:8px; text-align:center; color:#16a085;">${formatNumber(row["قيمة_ما_تم_تحويله"])} ج.م</td>
+            <td style="border:1px solid #ddd; padding:8px; text-align:center; color:#e67e22;">${formatNumber(row["عدد_المتبقي"])}</td>
+            <td style="border:1px solid #ddd; padding:8px; text-align:center; color:#e67e22;">${formatNumber(row["قيمة_المتبقي"])} ج.م</td>
+          </tr>
+        `;
+      });
+
+      // صف الإجمالي العام
+      const totals = statsData.reduce((acc, row) => {
+        acc.cases += Number(row["إجمالي_عدد_الحالات"]) || 0;
+        acc.amount += Number(row["إجمالي_المبالغ_المرفوعة"]) || 0;
+        acc.transferredCount += Number(row["عدد_تم_التحويل"]) || 0;
+        acc.transferredAmount += Number(row["قيمة_ما_تم_تحويله"]) || 0;
+        acc.remainingCount += Number(row["عدد_المتبقي"]) || 0;
+        acc.remainingAmount += Number(row["قيمة_المتبقي"]) || 0;
+        return acc;
+      }, { cases: 0, amount: 0, transferredCount: 0, transferredAmount: 0, remainingCount: 0, remainingAmount: 0 });
+
+      html += `
+        <tr style="background:#eef4fa; font-weight:bold;">
+          <td style="border:1px solid #ddd; padding:8px;">الإجمالي العام</td>
+          <td style="border:1px solid #ddd; padding:8px; text-align:center;">${formatNumber(totals.cases)}</td>
+          <td style="border:1px solid #ddd; padding:8px; text-align:center;">${formatNumber(totals.amount)} ج.م</td>
+          <td style="border:1px solid #ddd; padding:8px; text-align:center; color:#16a085;">${formatNumber(totals.transferredCount)}</td>
+          <td style="border:1px solid #ddd; padding:8px; text-align:center; color:#16a085;">${formatNumber(totals.transferredAmount)} ج.م</td>
+          <td style="border:1px solid #ddd; padding:8px; text-align:center; color:#e67e22;">${formatNumber(totals.remainingCount)}</td>
+          <td style="border:1px solid #ddd; padding:8px; text-align:center; color:#e67e22;">${formatNumber(totals.remainingAmount)} ج.م</td>
+        </tr>
+      `;
+
+      tbody.innerHTML = html;
+    }
+
+    function renderStatsChart(mode) {
+      statsChartMode = mode;
+
+      const countBtn = document.getElementById('statsToggleCount');
+      const amountBtn = document.getElementById('statsToggleAmount');
+      if (mode === 'count') {
+        countBtn.style.background = '#16a085';
+        countBtn.style.color = 'white';
+        amountBtn.style.background = '#f0f8f5';
+        amountBtn.style.color = '#16a085';
+      } else {
+        amountBtn.style.background = '#16a085';
+        amountBtn.style.color = 'white';
+        countBtn.style.background = '#f0f8f5';
+        countBtn.style.color = '#16a085';
+      }
+
+      const labels = statsData.map(r => r["فرع_العملية_الأصلية"] || '—');
+
+      const datasets = mode === 'count' ? [
+        { label: 'إجمالي الحالات', data: statsData.map(r => Number(r["إجمالي_عدد_الحالات"]) || 0), backgroundColor: '#2e5c8a' },
+        { label: 'تم التحويل', data: statsData.map(r => Number(r["عدد_تم_التحويل"]) || 0), backgroundColor: '#16a085' },
+        { label: 'المتبقي', data: statsData.map(r => Number(r["عدد_المتبقي"]) || 0), backgroundColor: '#e67e22' }
+      ] : [
+        { label: 'إجمالي المبالغ المرفوعة', data: statsData.map(r => Number(r["إجمالي_المبالغ_المرفوعة"]) || 0), backgroundColor: '#2e5c8a' },
+        { label: 'قيمة ما تم تحويله', data: statsData.map(r => Number(r["قيمة_ما_تم_تحويله"]) || 0), backgroundColor: '#16a085' },
+        { label: 'قيمة المتبقي', data: statsData.map(r => Number(r["قيمة_المتبقي"]) || 0), backgroundColor: '#e67e22' }
+      ];
+
+      const ctx = document.getElementById('statsChartCanvas').getContext('2d');
+
+      if (statsChartInstance) {
+        statsChartInstance.destroy();
+      }
+
+      statsChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { font: { family: 'Tajawal', size: 12 } } },
+            title: { display: false }
+          },
+          scales: {
+            x: { ticks: { font: { family: 'Tajawal', size: 11 } } },
+            y: { beginAtZero: true, ticks: { font: { family: 'Tajawal', size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function copyStatsChartImage() {
+      const canvas = document.getElementById('statsChartCanvas');
+      if (!canvas) return;
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          alert('تعذر إنشاء صورة الرسم البياني.');
+          return;
+        }
+        try {
+          if (navigator.clipboard && window.ClipboardItem) {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            alert('✅ تم نسخ الرسم البياني كصورة! يمكنك الآن لصقه في وورد أو واتساب أو أي مكان آخر.');
+          } else {
+            // بديل: تنزيل الصورة مباشرة إذا لم يدعم المتصفح النسخ للحافظة
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `احصائيات_الفروع_${new Date().toISOString().slice(0,10)}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('متصفحك لا يدعم النسخ المباشر، تم تنزيل الصورة بدلًا من ذلك.');
+          }
+        } catch (e) {
+          console.error('خطأ في نسخ الصورة:', e);
+          alert('حدث خطأ أثناء نسخ الصورة. حاول مرة أخرى.');
+        }
+      }, 'image/png');
+    }
+
+    window.addEventListener('click', function(event) {
+      const statsModal = document.getElementById('statsModal');
+      if (event.target === statsModal) closeStatsModal();
+    });
+
     function openKYCReport(idx) {
       const row = (window.currentTableData || [])[idx];
       if (!row) {

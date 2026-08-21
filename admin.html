@@ -10,6 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     body { 
       font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif; 
@@ -729,33 +730,44 @@
       <div id="statsError" style="display:none; text-align:center; padding:20px; color:#e74c3c; font-weight:bold;"></div>
 
       <div id="statsBody" style="display:none;">
-        <div style="overflow-x:auto; margin-bottom: 20px;">
-          <table style="width:100%; border-collapse:collapse; font-size:13px;">
-            <thead>
-              <tr style="background:#f2f2f2;">
-                <th style="border:1px solid #ddd; padding:10px;">الفرع</th>
-                <th style="border:1px solid #ddd; padding:10px;">إجمالي عدد الحالات</th>
-                <th style="border:1px solid #ddd; padding:10px;">إجمالي المبالغ المرفوعة</th>
-                <th style="border:1px solid #ddd; padding:10px;">عدد تم التحويل</th>
-                <th style="border:1px solid #ddd; padding:10px;">قيمة ما تم تحويله</th>
-                <th style="border:1px solid #ddd; padding:10px;">عدد المتبقي</th>
-                <th style="border:1px solid #ddd; padding:10px;">قيمة المتبقي</th>
-              </tr>
-            </thead>
-            <tbody id="statsTableBody"></tbody>
-          </table>
-        </div>
 
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 12px; flex-wrap: wrap;">
           <div style="display:flex; gap:8px;">
             <button onclick="renderStatsChart('count')" id="statsToggleCount" class="action-btn" style="background:#16a085; color:white;">عرض الأعداد</button>
             <button onclick="renderStatsChart('amount')" id="statsToggleAmount" class="action-btn" style="background:#f0f8f5; color:#16a085;">عرض المبالغ</button>
           </div>
-          <button onclick="copyStatsChartImage()" class="action-btn" style="background:#2e5c8a; color:white;">📋 نسخ الرسم كصورة</button>
+          <div style="display:flex; gap:8px;">
+            <button onclick="copyFullStatsReportImage()" class="action-btn" style="background:#2e5c8a; color:white;">📋 نسخ التقرير كامل (جدول + رسم)</button>
+            <button onclick="copyStatsChartImage()" class="action-btn" style="background:#f0f4f8; color:#2e5c8a;">📊 نسخ الرسم فقط</button>
+          </div>
         </div>
 
-        <div style="background:#fafafa; border-radius:8px; padding:15px; border:1px solid #eee;">
-          <canvas id="statsChartCanvas" height="110"></canvas>
+        <div id="statsReportCapture" style="background:white; padding:20px; border-radius:8px;">
+          <div style="text-align:center; margin-bottom:15px;">
+            <div style="font-weight:800; font-size:18px; color:#142433;">تقرير إحصائي حسب الفرع</div>
+            <div style="font-size:12px; color:#64768a;" id="statsReportDate"></div>
+          </div>
+
+          <div style="overflow-x:auto; margin-bottom: 20px;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead>
+                <tr style="background:#f2f2f2;">
+                  <th style="border:1px solid #ddd; padding:10px;">الفرع</th>
+                  <th style="border:1px solid #ddd; padding:10px;">إجمالي عدد الحالات</th>
+                  <th style="border:1px solid #ddd; padding:10px;">إجمالي المبالغ المرفوعة</th>
+                  <th style="border:1px solid #ddd; padding:10px;">عدد تم التحويل</th>
+                  <th style="border:1px solid #ddd; padding:10px;">قيمة ما تم تحويله</th>
+                  <th style="border:1px solid #ddd; padding:10px;">عدد المتبقي</th>
+                  <th style="border:1px solid #ddd; padding:10px;">قيمة المتبقي</th>
+                </tr>
+              </thead>
+              <tbody id="statsTableBody"></tbody>
+            </table>
+          </div>
+
+          <div style="background:#fafafa; border-radius:8px; padding:15px; border:1px solid #eee;">
+            <canvas id="statsChartCanvas" height="110"></canvas>
+          </div>
         </div>
       </div>
 
@@ -1557,6 +1569,11 @@
         renderStatsTable();
         renderStatsChart('count');
 
+        const dateEl = document.getElementById('statsReportDate');
+        if (dateEl) {
+          dateEl.textContent = 'تاريخ التقرير: ' + new Date().toLocaleDateString('ar-EG') + ' - ' + new Date().toLocaleTimeString('ar-EG');
+        }
+
         document.getElementById('statsLoading').style.display = 'none';
         document.getElementById('statsBody').style.display = 'block';
       } catch (err) {
@@ -1669,6 +1686,45 @@
             y: { beginAtZero: true, ticks: { font: { family: 'Tajawal', size: 11 } } }
           }
         }
+      });
+    }
+
+    function copyFullStatsReportImage() {
+      const target = document.getElementById('statsReportCapture');
+      if (!target) return;
+
+      if (typeof html2canvas === 'undefined') {
+        alert('تعذر تحميل مكتبة إنشاء الصورة. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.');
+        return;
+      }
+
+      html2canvas(target, { backgroundColor: '#ffffff', scale: 2, useCORS: true }).then(canvas => {
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            alert('تعذر إنشاء صورة التقرير.');
+            return;
+          }
+          try {
+            if (navigator.clipboard && window.ClipboardItem) {
+              await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+              alert('✅ تم نسخ التقرير كامل (الجدول + الرسم) كصورة! تقدر تلصقه دلوقتي في واتساب أو وورد أو أي مكان.');
+            } else {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `تقرير_احصائي_${new Date().toISOString().slice(0,10)}.png`;
+              a.click();
+              URL.revokeObjectURL(url);
+              alert('متصفحك لا يدعم النسخ المباشر، تم تنزيل التقرير كصورة بدلًا من ذلك.');
+            }
+          } catch (e) {
+            console.error('خطأ في نسخ صورة التقرير:', e);
+            alert('حدث خطأ أثناء نسخ الصورة. حاول مرة أخرى.');
+          }
+        }, 'image/png');
+      }).catch(err => {
+        console.error('خطأ في إنشاء صورة التقرير:', err);
+        alert('حدث خطأ أثناء إنشاء صورة التقرير.');
       });
     }
 

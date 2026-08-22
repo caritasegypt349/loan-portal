@@ -111,6 +111,31 @@
     .permission-admin { background: #e8f6f3; color: #1d8348; border: 1px solid #a3e4d7; }
     .permission-data-entry { background: #fef9e7; color: #7d6608; border: 1px solid #f9e79f; }
     .permission-other { background: #f4ecf7; color: #6c3483; border: 1px solid #d7bde2; }
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      border-radius: 8px;
+    }
+    .table-wrapper table {
+      min-width: 700px;
+    }
+
+    @media (max-width: 900px) {
+      body { padding: 12px; }
+      .container { padding: 15px; }
+      .top-header { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
+      .top-header .brand { justify-content: center; }
+      .top-header .nav-actions { justify-content: center; }
+      .filters { grid-template-columns: 1fr 1fr; }
+      table th, table td { padding: 6px 8px !important; font-size: 12px !important; }
+      .modal-content { width: 95% !important; padding-left: 15px !important; padding-right: 15px !important; }
+      .form-grid { grid-template-columns: 1fr !important; }
+    }
+    @media (max-width: 520px) {
+      .filters { grid-template-columns: 1fr; }
+      h2 { font-size: 20px !important; }
+    }
   </style>
 </head>
 <body>
@@ -142,8 +167,10 @@
       <button onclick="applyFilters()" style="grid-column: span 2; padding: 10px; background: #3498db; color: white;">تطبيق الفلاتر</button>
     </div>
 
+    <div class="table-wrapper">
     <div id="tableContainer">
       <div class="loading">جارٍ تحميل البيانات...</div>
+    </div>
     </div>
   </div>
 

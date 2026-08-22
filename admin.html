@@ -299,17 +299,26 @@
       background: linear-gradient(135deg, #a3813f 0%, #6b5628 100%);
       color: white;
       border: none;
-      padding: 6px 10px;
+      padding: 4px 6px;
       border-radius: 4px;
       cursor: pointer;
       transition: all 0.3s;
       font-weight: bold;
-      font-size: 11px;
+      font-size: 10px;
       white-space: nowrap;
     }
     .history-btn:hover {
       transform: scale(1.05);
       box-shadow: 0 4px 12px rgba(107, 86, 40, 0.4);
+    }
+    .history-btn.disabled {
+      background: #e8e8e8;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+    .history-btn.disabled:hover {
+      transform: none;
+      box-shadow: none;
     }
     .loading { 
       text-align: center; 
@@ -474,6 +483,63 @@
       color: #cc0000;
       font-weight: bold;
     }
+  
+    /* ========== تجاوب الشاشة (Responsive) ========== */
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      border-radius: 8px;
+    }
+    .table-wrapper table {
+      min-width: 900px;
+    }
+
+    @media (max-width: 900px) {
+      body { padding: 12px; }
+      .container { padding: 15px; }
+      .top-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px 16px;
+      }
+      .top-header .brand { justify-content: center; }
+      .top-header .nav-actions { justify-content: center; }
+      .filters {
+        grid-template-columns: 1fr 1fr;
+        padding: 10px;
+        gap: 10px;
+      }
+      .stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      table th, table td {
+        padding: 6px 8px !important;
+        font-size: 12px !important;
+      }
+      .modal-content {
+        width: 95% !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+        margin: 3% auto !important;
+      }
+      .form-grid, .details-grid, .comparison-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .filters { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr !important; }
+      h2 { font-size: 20px !important; }
+      .top-header .brand span { font-size: 12px; }
+      .top-header .nav-actions a, .top-header .nav-actions button {
+        padding: 7px 12px;
+        font-size: 12px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -878,6 +944,7 @@
         }
 
         showLoading('جاري تحميل البيانات...');
+        await loadOldCommitteesNidSet();
         await loadData();
         
         // إغلاق dropdown اللجان عند الضغط خارجها
@@ -1245,7 +1312,7 @@
               <th>رقم اللجنة</th>
               <th>الإجراء</th>
               <th>اعرف عميلك</th>
-              <th>اللجان القديمة</th>
+              <th>لجان قديمة</th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -1257,6 +1324,10 @@
         const reviewClass = getCellClass(row["المراجعة الداخلية"]);
         const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
         const adminClass = getCellClass(row["الادارة"]);
+        const hasHistory = window.oldCommitteesNids && window.oldCommitteesNids.has(row["رقم البطاقة العميل"]);
+        const historyBtnHtml = hasHistory
+          ? `<button class="history-btn" onclick="openClientHistory(${idx})" title="يوجد لجان قديمة لهذا العميل">📜 لجان قديمة</button>`
+          : `<button class="history-btn disabled" disabled title="لا توجد لجان قديمة مسجلة لهذا العميل">📜 لجان قديمة</button>`;
 
         html += `
           <tr>
@@ -1282,7 +1353,7 @@
               <button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button>
             </td>
             <td><button class="kyc-btn" onclick="openKYCReport(${idx})">📄 إنشاء تقرير اعرف عميلك</button></td>
-            <td><button class="history-btn" onclick="openClientHistory(${idx})">📜 اللجان القديمة</button></td>
+            <td>${historyBtnHtml}</td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
             <td colspan="20">
@@ -1553,6 +1624,28 @@
 
     function closeModal() {
       document.getElementById('editModal').style.display = 'none';
+    }
+
+    // ========== تحميل قائمة أرقام بطاقات العملاء الذين لديهم لجان قديمة (لتفعيل/تعطيل الزر) ==========
+    async function loadOldCommitteesNidSet() {
+      window.oldCommitteesNids = new Set();
+      try {
+        let page = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data, error } = await db
+            .from('اللجان_القديمة')
+            .select('"رقم بطاقة العميل"')
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          data.forEach(r => { if (r["رقم بطاقة العميل"]) window.oldCommitteesNids.add(r["رقم بطاقة العميل"]); });
+          if (data.length < pageSize) break;
+          page++;
+        }
+      } catch (e) {
+        console.error('تعذر تحميل قائمة اللجان القديمة:', e);
+      }
     }
 
     // ========== فتح السجل التاريخي (اللجان القديمة) للعميل ==========

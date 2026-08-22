@@ -97,6 +97,29 @@
     .footer-actions button { margin: 0 10px; padding: 10px 20px; font-size: 16px; }
     .approve-btn { background: #2ecc71; color: white; }
     .reject-btn { background: #e74c3c; color: white; }
+    #requestsContainer {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      border-radius: 8px;
+    }
+    #requestsContainer table {
+      min-width: 700px;
+    }
+
+    @media (max-width: 900px) {
+      body { padding: 12px; }
+      .container { padding: 15px; }
+      .top-header { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
+      .top-header .brand { justify-content: center; }
+      .top-header .nav-actions { justify-content: center; }
+      .modal-content { width: 95% !important; padding-left: 15px !important; padding-right: 15px !important; }
+      .comparison-grid { grid-template-columns: 1fr !important; }
+      table th, table td { padding: 6px 8px !important; font-size: 12px !important; }
+    }
+    @media (max-width: 520px) {
+      h2 { font-size: 20px !important; }
+    }
   </style>
 </head>
 <body>

@@ -290,6 +290,18 @@
     }
 
     async function init() {
+      // ✅ التحقق من تسجيل الدخول
+      const userId = localStorage.getItem('loggedInUserId');
+      if (!userId) {
+        alert('الرجاء تسجيل الدخول أولًا!');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // ✅ صلاحية التعديل: admin و internal_reviewer بس، الباقي (زي followup_supervisor) يتفرج بس
+      const userRole = localStorage.getItem('userRole');
+      window.canEditVisitReport = ['admin', 'internal_reviewer'].includes(userRole);
+
       const id = getQueryParam('id');
       if (!id) {
         showError('لم يتم تحديد رقم تقرير الزيارة. افتح هذه الصفحة من زر "تقرير زيارة" في صفحة المراجعة.');
@@ -311,6 +323,7 @@
 
         currentRecord = data;
         fillForm(data);
+        applyPermissionMode();
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('formArea').style.display = 'block';
 
@@ -318,6 +331,27 @@
         console.error('خطأ في تحميل التقرير:', err);
         showError('حدث خطأ أثناء تحميل التقرير: ' + (err.message || err));
       }
+    }
+
+    function applyPermissionMode() {
+      if (window.canEditVisitReport) return;
+
+      // وضع العرض فقط: تعطيل كل الحقول القابلة للتعديل وإخفاء زرار الحفظ
+      const editableIds = ['f_phone', 'f_visit_date', 'f_visitor_name', 'f_case_type',
+        'f_status', 'f_specialist_reaction', 'f_visit_notes', 'f_rejection_reason'];
+      editableIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = true;
+      });
+
+      const saveBtn = document.querySelector('.btn-save');
+      if (saveBtn) saveBtn.style.display = 'none';
+
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:#fff3cd; color:#856404; border:1px solid #ffeaa7; padding:10px 14px; border-radius:8px; text-align:center; font-size:13px; font-weight:700; margin-bottom:18px;';
+      banner.textContent = '👁️ وضع العرض فقط — التعديل متاح فقط لمسؤولي المراجعة والإدارة';
+      const formArea = document.getElementById('formArea');
+      formArea.insertBefore(banner, formArea.firstChild);
     }
 
     function showError(msg) {
@@ -360,6 +394,11 @@
     }
 
     async function saveReport() {
+      if (!window.canEditVisitReport) {
+        alert('ليس لديك صلاحية تعديل تقارير الزيارة.');
+        return;
+      }
+
       const status = document.getElementById('f_status').value;
       const visitorName = document.getElementById('f_visitor_name').value.trim();
       const visitDate = document.getElementById('f_visit_date').value;

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>تقارير الزيارة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      color: #142433;
+    }
+    .top-header {
+      max-width: 1700px;
+      margin: 0 auto 18px;
+      background: linear-gradient(135deg, #16a085 0%, #1c3f66 100%);
+      border-radius: 14px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand { display: flex; align-items: center; gap: 10px; }
+    .top-header .brand img { height: 34px; width: auto; filter: drop-shadow(0 2px 6px rgba(15, 40, 70, 0.25)); }
+    .top-header .brand span { color: white; font-weight: 800; font-size: 14px; }
+    .top-header .nav-actions { display: flex; gap: 10px; }
+    .top-header .nav-actions a, .top-header .nav-actions button {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      transition: background 0.2s ease;
+    }
+    .top-header .nav-actions a:hover, .top-header .nav-actions button:hover {
+      background: rgba(255,255,255,0.28);
+    }
+
+    .container {
+      max-width: 1700px;
+      margin: 0 auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    .container::before {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #16a085 0%, #1c3f66 50%, #16a085 100%);
+    }
+    h2 { text-align: center; color: #16a085; font-weight: 800; margin-top: 0; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: #f8fdfb;
+      border: 1px solid #d5f4e6;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-card .label { font-size: 12px; color: #64768a; font-weight: 700; margin-bottom: 6px; }
+    .stat-card .value { font-size: 24px; font-weight: 800; color: #142433; }
+    .stat-card.accepted .value { color: #16a085; }
+    .stat-card.rejected .value { color: #e74c3c; }
+    .stat-card.pending .value { color: #e67e22; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8fdfb;
+      border-radius: 10px;
+      border: 1px solid #d5f4e6;
+    }
+    .filters label { display: block; font-size: 12px; font-weight: 700; color: #34495e; margin-bottom: 5px; }
+    .filters input, .filters select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+    .filters .btn-row { display: flex; align-items: flex-end; gap: 8px; }
+    .filters button {
+      padding: 9px 14px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      white-space: nowrap;
+    }
+    .btn-reset { background: #eef4fa; color: #1c3f66; }
+    .btn-export { background: linear-gradient(135deg, #16a085 0%, #0f2846 100%); color: white; }
+    .btn-print-all { background: #2e5c8a; color: white; }
+
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+    th, td { border: 1px solid #eee; padding: 8px 10px; text-align: right; font-size: 12.5px; }
+    th { background: #f2f2f2; position: sticky; top: 0; }
+    tr:hover { background: #fafcfb; }
+    .status-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .status-مقبول { background: #d4edda; color: #155724; }
+    .status-مرفوض { background: #f8d7da; color: #721c24; }
+    .status-قيد.المراجعة, .status-قيد { background: #fff3cd; color: #856404; }
+    .row-actions a, .row-actions button {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      margin: 1px;
+    }
+    .row-open { background: #16a085; color: white; }
+    .row-print { background: #2e5c8a; color: white; }
+
+    .loading, .no-data { text-align: center; padding: 40px; color: #64768a; }
+    .error-box { text-align: center; padding: 30px; color: #e74c3c; font-weight: bold; }
+    .result-count { font-size: 13px; color: #64768a; margin: 10px 0; }
+
+    @media (max-width: 900px) {
+      body { padding: 12px; }
+      .container { padding: 15px; }
+      .top-header { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
+      .top-header .brand { justify-content: center; }
+      .top-header .nav-actions { justify-content: center; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      table th, table td { padding: 6px 8px !important; font-size: 11.5px !important; }
+    }
+
+    @media print {
+      .top-header, .filters, .row-actions, .btn-row { display: none !important; }
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-header">
+    <div class="brand">
+      <img src="logo.png" alt="Caritas Egypt" />
+      <span>نظام إدارة التمويل</span>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html">🏠 الرئيسية</a>
+      <button onclick="pageLogout()">تسجيل خروج</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>📋 تقارير الزيارة</h2>
+
+    <div class="stats">
+      <div class="stat-card"><div class="label">إجمالي التقارير</div><div class="value" id="statTotal">0</div></div>
+      <div class="stat-card accepted"><div class="label">مقبول</div><div class="value" id="statAccepted">0</div></div>
+      <div class="stat-card rejected"><div class="label">مرفوض</div><div class="value" id="statRejected">0</div></div>
+      <div class="stat-card pending"><div class="label">قيد المراجعة</div><div class="value" id="statPending">0</div></div>
+    </div>
+
+    <div class="filters">
+      <div>
+        <label>الحالة</label>
+        <select id="filterStatus" onchange="applyFilters()">
+          <option value="">الكل</option>
+          <option value="مقبول">مقبول</option>
+          <option value="مرفوض">مرفوض</option>
+          <option value="قيد المراجعة">قيد المراجعة</option>
+        </select>
+      </div>
+      <div>
+        <label>نوع الحالة</label>
+        <select id="filterCaseType" onchange="applyFilters()">
+          <option value="">الكل</option>
+          <option value="جديد">جديد</option>
+          <option value="تجديد">تجديد</option>
+        </select>
+      </div>
+      <div>
+        <label>الفرع</label>
+        <input type="text" id="filterBranch" placeholder="بحث بالفرع" oninput="applyFilters()">
+      </div>
+      <div>
+        <label>بحث بالاسم / الكود / رقم البطاقة</label>
+        <input type="text" id="filterSearch" placeholder="اكتب هنا..." oninput="applyFilters()">
+      </div>
+      <div>
+        <label>من تاريخ</label>
+        <input type="date" id="filterDateFrom" onchange="applyFilters()">
+      </div>
+      <div>
+        <label>إلى تاريخ</label>
+        <input type="date" id="filterDateTo" onchange="applyFilters()">
+      </div>
+      <div class="btn-row">
+        <button class="btn-reset" onclick="resetFilters()">مسح الفلاتر</button>
+        <button class="btn-export" onclick="exportToExcel()">📊 Excel</button>
+        <button class="btn-print-all" onclick="window.print()">🖨️ طباعة القائمة</button>
+      </div>
+    </div>
+
+    <div class="result-count" id="resultCount"></div>
+
+    <div id="tableContainer">
+      <div class="loading">جارٍ تحميل التقارير...</div>
+    </div>
+  </div>
+
+  <script>
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
+    let db;
+    try {
+      db = window.supabase.createClient(
+        'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      );
+    } catch (err) {
+      console.error('فشل في تهيئة قاعدة البيانات:', err);
+    }
+
+    let allReports = [];
+    let filteredReports = [];
+
+    async function init() {
+      try {
+        const { data, error } = await db
+          .from('visit_reports')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        allReports = data || [];
+        updateStats(allReports);
+        applyFilters();
+      } catch (err) {
+        console.error('خطأ في تحميل التقارير:', err);
+        document.getElementById('tableContainer').innerHTML =
+          `<div class="error-box">❌ حدث خطأ في تحميل البيانات: ${err.message || err}</div>`;
+      }
+    }
+
+    function updateStats(data) {
+      document.getElementById('statTotal').textContent = data.length.toLocaleString('ar-EG');
+      document.getElementById('statAccepted').textContent = data.filter(r => r.status === 'مقبول').length.toLocaleString('ar-EG');
+      document.getElementById('statRejected').textContent = data.filter(r => r.status === 'مرفوض').length.toLocaleString('ar-EG');
+      document.getElementById('statPending').textContent = data.filter(r => r.status === 'قيد المراجعة' || !r.status).length.toLocaleString('ar-EG');
+    }
+
+    function applyFilters() {
+      const status = document.getElementById('filterStatus').value;
+      const caseType = document.getElementById('filterCaseType').value;
+      const branch = document.getElementById('filterBranch').value.trim().toLowerCase();
+      const search = document.getElementById('filterSearch').value.trim().toLowerCase();
+      const dateFrom = document.getElementById('filterDateFrom').value;
+      const dateTo = document.getElementById('filterDateTo').value;
+
+      filteredReports = allReports.filter(r => {
+        if (status && r.status !== status) return false;
+        if (caseType && r.case_type !== caseType) return false;
+        if (branch && !(r.branch || '').toLowerCase().includes(branch)) return false;
+        if (search) {
+          const hay = `${r.name || ''} ${r.code || ''} ${r.national_id || ''}`.toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        if (dateFrom && r.visit_date && r.visit_date < dateFrom) return false;
+        if (dateTo && r.visit_date && r.visit_date > dateTo) return false;
+        return true;
+      });
+
+      renderTable(filteredReports);
+    }
+
+    function resetFilters() {
+      document.getElementById('filterStatus').value = '';
+      document.getElementById('filterCaseType').value = '';
+      document.getElementById('filterBranch').value = '';
+      document.getElementById('filterSearch').value = '';
+      document.getElementById('filterDateFrom').value = '';
+      document.getElementById('filterDateTo').value = '';
+      applyFilters();
+    }
+
+    function renderTable(data) {
+      document.getElementById('resultCount').textContent = `${data.length.toLocaleString('ar-EG')} تقرير`;
+
+      if (!data || data.length === 0) {
+        document.getElementById('tableContainer').innerHTML = '<div class="no-data">لا توجد تقارير مطابقة</div>';
+        return;
+      }
+
+      let html = `
+        <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>الكود</th>
+              <th>اسم العميل</th>
+              <th>الفرع</th>
+              <th>رقم البطاقة</th>
+              <th>تليفون العميل</th>
+              <th>تاريخ الزيارة</th>
+              <th>القائم بالزيارة</th>
+              <th>النشاط</th>
+              <th>نوع الحالة</th>
+              <th>اسم الأخصائي</th>
+              <th>الحالة</th>
+              <th>سبب الرفض</th>
+              <th>ملاحظات الزيارة</th>
+              <th>اسم الضامن</th>
+              <th>بطاقة الضامن</th>
+              <th>مبلغ التمويل</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      data.forEach(r => {
+        const statusClass = r.status === 'مقبول' ? 'status-مقبول' : r.status === 'مرفوض' ? 'status-مرفوض' : 'status-قيد';
+        html += `
+          <tr>
+            <td>${r.code || '—'}</td>
+            <td>${r.name || '—'}</td>
+            <td>${r.branch || '—'}</td>
+            <td>${r.national_id || '—'}</td>
+            <td>${r.phone || '—'}</td>
+            <td>${r.visit_date || '—'}</td>
+            <td>${r.visitor_name || '—'}</td>
+            <td>${r.activity || '—'}</td>
+            <td>${r.case_type || '—'}</td>
+            <td>${r.specialist_name || '—'}</td>
+            <td><span class="status-badge ${statusClass}">${r.status || 'غير محدد'}</span></td>
+            <td>${r.rejection_reason || '—'}</td>
+            <td>${r.visit_notes || '—'}</td>
+            <td>${r.guarantor_name || '—'}</td>
+            <td>${r.guarantor_national_id || '—'}</td>
+            <td>${r.financing_amount ? Number(r.financing_amount).toLocaleString('ar-EG') : '—'}</td>
+            <td class="row-actions">
+              <a class="row-open" href="visit-report-edit.html?id=${r.id}" target="_blank">فتح</a>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table></div>`;
+      document.getElementById('tableContainer').innerHTML = html;
+    }
+
+    function exportToExcel() {
+      if (!filteredReports || filteredReports.length === 0) {
+        alert('لا توجد بيانات للتصدير!');
+        return;
+      }
+
+      try {
+        const exportData = filteredReports.map((r, idx) => ({
+          'م': idx + 1,
+          'الكود': r.code || '',
+          'اسم العميل': r.name || '',
+          'الفرع': r.branch || '',
+          'رقم البطاقة': r.national_id || '',
+          'تليفون العميل': r.phone || '',
+          'تاريخ الزيارة': r.visit_date || '',
+          'القائم بالزيارة': r.visitor_name || '',
+          'النشاط': r.activity || '',
+          'نوع الحالة': r.case_type || '',
+          'اسم الأخصائي': r.specialist_name || '',
+          'الحالة': r.status || '',
+          'سبب الرفض': r.rejection_reason || '',
+          'ملاحظات الزيارة': r.visit_notes || '',
+          'اسم الضامن': r.guarantor_name || '',
+          'رقم بطاقة الضامن': r.guarantor_national_id || '',
+          'مبلغ التمويل المطلوب': r.financing_amount || '',
+          'تاريخ الإنشاء': r.created_at ? new Date(r.created_at).toLocaleDateString('ar-EG') : ''
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        worksheet['!cols'] = Object.keys(exportData[0] || {}).map(k => ({ wch: Math.max(14, k.length + 4) }));
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'تقارير الزيارة');
+
+        const fileName = `تقارير_الزيارة_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+      } catch (err) {
+        console.error('خطأ في التصدير:', err);
+        alert('حدث خطأ أثناء التصدير.');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

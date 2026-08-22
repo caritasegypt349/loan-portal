@@ -254,6 +254,17 @@
       transition: all 0.3s;
       width: auto;
     }
+    .actions-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 150px;
+    }
+    .actions-cell button {
+      width: 100%;
+      margin: 0;
+      white-space: nowrap;
+    }
     .edit-btn:hover {
       transform: scale(1.05);
       box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4);
@@ -1310,9 +1321,7 @@
               <th>المتابعة</th>
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
-              <th>الإجراء</th>
-              <th>اعرف عميلك</th>
-              <th>لجان قديمة</th>
+              <th>الإجراءات</th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -1348,15 +1357,15 @@
             <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
             <td class="${adminClass}">${row["الادارة"] || '—'}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
-            <td>
+            <td class="actions-cell">
               <button class="edit-btn" onclick="openEditModal(${row.id})">تعديل الكل</button>
               <button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button>
+              <button class="kyc-btn" onclick="openKYCReport(${idx})">📄 اعرف عميلك</button>
+              ${historyBtnHtml}
             </td>
-            <td><button class="kyc-btn" onclick="openKYCReport(${idx})">📄 إنشاء تقرير اعرف عميلك</button></td>
-            <td>${historyBtnHtml}</td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="20">
+            <td colspan="18">
               <div class="detail-container">
                 
                 <div class="detail-row-sections">

@@ -229,6 +229,17 @@
       transition: all 0.3s; 
       font-weight: bold; 
     }
+    .actions-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 150px;
+    }
+    .actions-cell button {
+      width: 100%;
+      margin: 0;
+      white-space: nowrap;
+    }
     .expand-btn:hover { 
       transform: scale(1.1); 
       box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4); 
@@ -1062,7 +1073,6 @@
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
               <th>الإجراءات</th>
-              <th>لجان قديمة</th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -1113,14 +1123,14 @@
             <td><span class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</span></td>
             <td><span class="${adminClass}">${row["الادارة"] || '—'}</span></td>
             <td>${row["رقم اللجنة"] || '—'}</td>
-            <td>
+            <td class="actions-cell">
               <button class="edit-btn" onclick="openEditModal('${row.id}')">✏️ تعديل</button>
               <button class="expand-btn" onclick="toggleDetail(${idx}, event)">📄 تفاصيل</button>
+              ${historyBtnHtml}
             </td>
-            <td>${historyBtnHtml}</td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="20">
+            <td colspan="19">
               <div class="detail-container">
                 
                 <div class="detail-row-sections">

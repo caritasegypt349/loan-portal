@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>تقرير زيارة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      color: #142433;
+    }
+    .top-header {
+      max-width: 950px;
+      margin: 0 auto 18px;
+      background: linear-gradient(135deg, #16a085 0%, #1c3f66 100%);
+      border-radius: 14px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand { display: flex; align-items: center; gap: 10px; }
+    .top-header .brand img { height: 34px; width: auto; filter: drop-shadow(0 2px 6px rgba(15, 40, 70, 0.25)); }
+    .top-header .brand span { color: white; font-weight: 800; font-size: 14px; }
+    .top-header .nav-actions { display: flex; gap: 10px; }
+    .top-header .nav-actions a, .top-header .nav-actions button {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      transition: background 0.2s ease;
+    }
+    .top-header .nav-actions a:hover, .top-header .nav-actions button:hover {
+      background: rgba(255,255,255,0.28);
+    }
+
+    .container {
+      max-width: 950px;
+      margin: 0 auto;
+      background: white;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    .container::before {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #16a085 0%, #1c3f66 50%, #16a085 100%);
+    }
+
+    h2 { text-align: center; color: #16a085; font-weight: 800; margin-top: 0; }
+
+    .loading, .error-box { text-align: center; padding: 40px; }
+    .error-box { color: #e74c3c; font-weight: bold; }
+
+    .section-label {
+      font-weight: 800;
+      color: #1c3f66;
+      margin: 22px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #eef4fa;
+      font-size: 14px;
+    }
+    .section-label.first { margin-top: 0; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.span2 { grid-column: span 2; }
+    .form-group.span3 { grid-column: span 3; }
+    label { font-size: 13px; font-weight: 700; color: #34495e; }
+    input, select, textarea {
+      padding: 10px 12px;
+      border: 1.5px solid #dde5ee;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Tajawal', sans-serif;
+      background: #fbfcfe;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #16a085;
+      box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.15);
+    }
+    input[readonly] {
+      background: #f0f4f8;
+      color: #5b6b7a;
+    }
+    textarea { resize: vertical; min-height: 70px; }
+
+    #rejectionGroup { display: none; }
+
+    .actions-bar {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 2px solid #eee;
+    }
+    .actions-bar button {
+      padding: 12px 26px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+    }
+    .btn-save { background: linear-gradient(135deg, #16a085 0%, #0f2846 100%); color: white; }
+    .btn-print { background: #2e5c8a; color: white; }
+    .save-status { text-align: center; margin-top: 10px; font-size: 13px; font-weight: 700; min-height: 18px; }
+    .save-status.ok { color: #16a085; }
+    .save-status.err { color: #e74c3c; }
+
+    /* ===== تقرير الطباعة (مخفي على الشاشة) ===== */
+    #printReport { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      #printReport, #printReport * { visibility: visible; }
+      #printReport {
+        display: block;
+        position: absolute;
+        top: 0; right: 0; left: 0;
+        padding: 20px;
+      }
+      .top-header, .container > *:not(#printReport) { display: none !important; }
+    }
+    .print-title { text-align: center; margin-bottom: 4px; }
+    .print-date { text-align: center; color: #666; font-size: 12px; margin-bottom: 20px; }
+    .print-table { width: 100%; border-collapse: collapse; }
+    .print-table td { border: 1px solid #999; padding: 8px 10px; font-size: 13px; }
+    .print-table td.key { background: #f2f2f2; font-weight: bold; width: 30%; }
+
+    @media (max-width: 700px) {
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      .form-group.span2, .form-group.span3 { grid-column: span 2; }
+      .top-header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .top-header .brand { justify-content: center; }
+      .top-header .nav-actions { justify-content: center; }
+      .container { padding: 18px; }
+    }
+    @media (max-width: 420px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.span2, .form-group.span3 { grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-header">
+    <div class="brand">
+      <img src="logo.png" alt="Caritas Egypt" />
+      <span>نظام إدارة التمويل</span>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html">🏠 الرئيسية</a>
+      <button onclick="pageLogout()">تسجيل خروج</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>📋 تقرير زيارة</h2>
+
+    <div id="loadingState" class="loading">جارٍ تحميل التقرير...</div>
+    <div id="errorState" class="error-box" style="display:none;"></div>
+
+    <div id="formArea" style="display:none;">
+      <div class="section-label first">بيانات العميل (من النظام)</div>
+      <div class="form-grid">
+        <div class="form-group"><label>الكود</label><input type="text" id="f_code" readonly></div>
+        <div class="form-group span2"><label>اسم العميل</label><input type="text" id="f_name" readonly></div>
+        <div class="form-group"><label>الفرع</label><input type="text" id="f_branch" readonly></div>
+        <div class="form-group"><label>رقم البطاقة</label><input type="text" id="f_national_id" readonly></div>
+        <div class="form-group"><label>النشاط</label><input type="text" id="f_activity" readonly></div>
+        <div class="form-group"><label>اسم الأخصائي</label><input type="text" id="f_specialist_name" readonly></div>
+        <div class="form-group"><label>اسم الضامن</label><input type="text" id="f_guarantor_name" readonly></div>
+        <div class="form-group"><label>رقم بطاقة الضامن</label><input type="text" id="f_guarantor_national_id" readonly></div>
+        <div class="form-group"><label>مبلغ التمويل المطلوب</label><input type="text" id="f_financing_amount" readonly></div>
+      </div>
+
+      <div class="section-label">بيانات الزيارة (استكملها المراجع)</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>رقم تليفون العميل</label>
+          <input type="tel" id="f_phone" maxlength="11" inputmode="numeric" placeholder="01xxxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label>تاريخ الزيارة <span style="color:#e74c3c;">*</span></label>
+          <input type="date" id="f_visit_date">
+        </div>
+        <div class="form-group">
+          <label>القائم بالزيارة <span style="color:#e74c3c;">*</span></label>
+          <input type="text" id="f_visitor_name">
+        </div>
+        <div class="form-group">
+          <label>نوع الحالة <span style="color:#e74c3c;">*</span></label>
+          <select id="f_case_type">
+            <option value="" selected disabled>اختر النوع</option>
+            <option value="جديد">جديد</option>
+            <option value="تجديد">تجديد</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>حالة العميل <span style="color:#e74c3c;">*</span></label>
+          <select id="f_status">
+            <option value="" selected disabled>اختر الحالة</option>
+            <option value="مقبول">مقبول</option>
+            <option value="مرفوض">مرفوض</option>
+            <option value="قيد المراجعة">قيد المراجعة</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ردة فعل الأخصائي</label>
+          <input type="text" id="f_specialist_reaction">
+        </div>
+        <div class="form-group span3" id="rejectionGroup">
+          <label>سبب الرفض</label>
+          <input type="text" id="f_rejection_reason">
+        </div>
+        <div class="form-group span3">
+          <label>ملاحظات الزيارة</label>
+          <textarea id="f_visit_notes"></textarea>
+        </div>
+      </div>
+
+      <div class="actions-bar">
+        <button class="btn-save" onclick="saveReport()">💾 حفظ التقرير</button>
+        <button class="btn-print" onclick="printReport()">🖨️ طباعة</button>
+      </div>
+      <div id="saveStatus" class="save-status"></div>
+    </div>
+  </div>
+
+  <!-- تقرير الطباعة -->
+  <div id="printReport">
+    <h1 class="print-title">تقرير مراجعة عميل</h1>
+    <p class="print-date" id="printDate"></p>
+    <table class="print-table" id="printTable"></table>
+  </div>
+
+  <script>
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
+    let db;
+    try {
+      db = window.supabase.createClient(
+        'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      );
+    } catch (err) {
+      console.error('فشل في تهيئة قاعدة البيانات:', err);
+    }
+
+    let currentRecord = null;
+
+    function getQueryParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    async function init() {
+      const id = getQueryParam('id');
+      if (!id) {
+        showError('لم يتم تحديد رقم تقرير الزيارة. افتح هذه الصفحة من زر "تقرير زيارة" في صفحة المراجعة.');
+        return;
+      }
+
+      try {
+        const { data, error } = await db
+          .from('visit_reports')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        if (!data) {
+          showError('لم يتم العثور على هذا التقرير.');
+          return;
+        }
+
+        currentRecord = data;
+        fillForm(data);
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('formArea').style.display = 'block';
+
+      } catch (err) {
+        console.error('خطأ في تحميل التقرير:', err);
+        showError('حدث خطأ أثناء تحميل التقرير: ' + (err.message || err));
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').textContent = '❌ ' + msg;
+      document.getElementById('errorState').style.display = 'block';
+    }
+
+    function fillForm(rec) {
+      document.getElementById('f_code').value = rec.code || '';
+      document.getElementById('f_name').value = rec.name || '';
+      document.getElementById('f_branch').value = rec.branch || '';
+      document.getElementById('f_national_id').value = rec.national_id || '';
+      document.getElementById('f_activity').value = rec.activity || '';
+      document.getElementById('f_specialist_name').value = rec.specialist_name || '';
+      document.getElementById('f_guarantor_name').value = rec.guarantor_name || '';
+      document.getElementById('f_guarantor_national_id').value = rec.guarantor_national_id || '';
+      document.getElementById('f_financing_amount').value = rec.financing_amount ? Number(rec.financing_amount).toLocaleString('ar-EG') + ' ج.م' : '';
+
+      document.getElementById('f_phone').value = rec.phone || '';
+      document.getElementById('f_visit_date').value = rec.visit_date || new Date().toISOString().slice(0, 10);
+      document.getElementById('f_visitor_name').value = rec.visitor_name || '';
+      document.getElementById('f_case_type').value = rec.case_type || '';
+      document.getElementById('f_status').value = rec.status || '';
+      document.getElementById('f_specialist_reaction').value = rec.specialist_reaction || '';
+      document.getElementById('f_visit_notes').value = rec.visit_notes || '';
+      document.getElementById('f_rejection_reason').value = rec.rejection_reason || '';
+
+      toggleRejectionField();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const statusEl = document.getElementById('f_status');
+      if (statusEl) statusEl.addEventListener('change', toggleRejectionField);
+    });
+
+    function toggleRejectionField() {
+      const status = document.getElementById('f_status').value;
+      document.getElementById('rejectionGroup').style.display = (status === 'مرفوض') ? 'flex' : 'none';
+    }
+
+    async function saveReport() {
+      const status = document.getElementById('f_status').value;
+      const visitorName = document.getElementById('f_visitor_name').value.trim();
+      const visitDate = document.getElementById('f_visit_date').value;
+      const caseType = document.getElementById('f_case_type').value;
+
+      if (!visitDate || !visitorName || !caseType || !status) {
+        setStatus('الرجاء تعبئة: تاريخ الزيارة، القائم بالزيارة، نوع الحالة، وحالة العميل.', false);
+        return;
+      }
+
+      const updates = {
+        phone: document.getElementById('f_phone').value.trim() || null,
+        visit_date: visitDate,
+        visitor_name: visitorName,
+        case_type: caseType,
+        status: status,
+        specialist_reaction: document.getElementById('f_specialist_reaction').value.trim() || null,
+        visit_notes: document.getElementById('f_visit_notes').value.trim() || null,
+        rejection_reason: status === 'مرفوض' ? (document.getElementById('f_rejection_reason').value.trim() || null) : null,
+        updated_at: new Date().toISOString()
+      };
+
+      try {
+        const { error } = await db
+          .from('visit_reports')
+          .update(updates)
+          .eq('id', currentRecord.id);
+
+        if (error) throw error;
+
+        currentRecord = { ...currentRecord, ...updates };
+        setStatus('✅ تم حفظ التقرير بنجاح.', true);
+      } catch (err) {
+        console.error('خطأ في الحفظ:', err);
+        setStatus('❌ حدث خطأ أثناء الحفظ: ' + (err.message || err), false);
+      }
+    }
+
+    function setStatus(msg, ok) {
+      const el = document.getElementById('saveStatus');
+      el.textContent = msg;
+      el.className = 'save-status ' + (ok ? 'ok' : 'err');
+    }
+
+    function printReport() {
+      const rows = [
+        ['الكود', document.getElementById('f_code').value],
+        ['اسم العميل', document.getElementById('f_name').value],
+        ['الفرع', document.getElementById('f_branch').value],
+        ['رقم البطاقة', document.getElementById('f_national_id').value],
+        ['رقم تليفون العميل', document.getElementById('f_phone').value],
+        ['تاريخ الزيارة', document.getElementById('f_visit_date').value],
+        ['القائم بالزيارة', document.getElementById('f_visitor_name').value],
+        ['النشاط', document.getElementById('f_activity').value],
+        ['نوع الحالة', document.getElementById('f_case_type').value],
+        ['اسم الأخصائي', document.getElementById('f_specialist_name').value],
+        ['حالة العميل', document.getElementById('f_status').value],
+        ['ردة فعل الأخصائي', document.getElementById('f_specialist_reaction').value],
+        ['ملاحظات الزيارة', document.getElementById('f_visit_notes').value],
+        ['اسم الضامن', document.getElementById('f_guarantor_name').value],
+        ['رقم بطاقة الضامن', document.getElementById('f_guarantor_national_id').value],
+        ['مبلغ التمويل المطلوب', document.getElementById('f_financing_amount').value],
+      ];
+      if (document.getElementById('f_status').value === 'مرفوض') {
+        rows.push(['سبب الرفض', document.getElementById('f_rejection_reason').value]);
+      }
+
+      let html = '';
+      rows.forEach(([key, val]) => {
+        if (!val) return;
+        html += `<tr><td class="key">${escapeHtml(key)}</td><td>${escapeHtml(val)}</td></tr>`;
+      });
+
+      document.getElementById('printTable').innerHTML = html;
+      document.getElementById('printDate').textContent = 'تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-EG');
+
+      window.print();
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
+
+    init();
+  </script>
+</body>
+</html>

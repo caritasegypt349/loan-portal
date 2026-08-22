@@ -235,6 +235,22 @@
       gap: 4px;
       min-width: 150px;
     }
+    .visit-btn {
+      background: linear-gradient(135deg, #16a085 0%, #0f2846 100%);
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 11px;
+      white-space: nowrap;
+      transition: all 0.3s;
+    }
+    .visit-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(22, 160, 133, 0.4);
+    }
     .actions-cell button {
       width: 100%;
       margin: 0;
@@ -1126,6 +1142,7 @@
             <td class="actions-cell">
               <button class="edit-btn" onclick="openEditModal('${row.id}')">✏️ تعديل</button>
               <button class="expand-btn" onclick="toggleDetail(${idx}, event)">📄 تفاصيل</button>
+              <button class="visit-btn" onclick="createVisitReport(${idx})">📋 تقرير زيارة</button>
               ${historyBtnHtml}
             </td>
           </tr>
@@ -1394,6 +1411,44 @@
         }
       } catch (e) {
         console.error('تعذر تحميل قائمة اللجان القديمة:', e);
+      }
+    }
+
+    // ========== إنشاء تقرير زيارة جديد من بيانات النظام المتاحة ==========
+    async function createVisitReport(idx) {
+      const row = (window.currentTableData || [])[idx];
+      if (!row) {
+        alert('تعذر العثور على بيانات هذا السجل.');
+        return;
+      }
+
+      const newRecord = {
+        operation_id: row.id || null,
+        code: row["كود_العميل"] || null,
+        name: row["اسم_العميل"] || null,
+        branch: row["الفرع"] || null,
+        national_id: row["رقم البطاقة العميل"] || null,
+        activity: row["المشروع"] || null,
+        specialist_name: row["اسم الاخصائى"] || null,
+        guarantor_name: row["اسم_الضامن"] || null,
+        guarantor_national_id: row["رقم بطاقة الضامن"] || null,
+        financing_amount: row["المبلغ المطلوب"] || null,
+        created_by: localStorage.getItem('loggedInUser') || null
+      };
+
+      try {
+        const { data, error } = await mySupabase
+          .from('visit_reports')
+          .insert([newRecord])
+          .select();
+
+        if (error) throw error;
+
+        const newId = data[0].id;
+        window.open('visit-report-edit.html?id=' + newId, '_blank');
+      } catch (err) {
+        console.error('خطأ في إنشاء تقرير الزيارة:', err);
+        alert('❌ حدث خطأ في إنشاء تقرير الزيارة: ' + (err.message || err));
       }
     }
 

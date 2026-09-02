@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>نموذج اعرف عميلك - كاريتاس مصر</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#eef2f5;font-family:"Segoe UI",Tahoma,Arial;color:#222}
 .container{max-width:1100px;margin:20px auto;padding:0 14px}.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 3px 15px #0001}
@@ -105,10 +106,12 @@ html,body{background:#fff!important;margin:0!important;padding:0!important}
 <div style="font-size:12px;line-height:1.5">أقر بصحة كافة البيانات المدونة أعلاه وأتحمل المسؤولية المدنية والجنائية في حالة عدم صحة أي من تلك البيانات، كما أتعهد بعدم التعامل بأي أموال مشبوهة وأخطر الجمعية بتحديث البيانات عند حدوث أي تغيير.</div>
 
 <div class="status" id="status">نسبة استكمال KYC: 0%</div>
-<div class="note">Save Template يحفظ ملف العميل بصيغة .kyc، ويمكن استدعاؤه لاحقاً بدون حفظ البيانات داخل البرنامج.</div>
+<div class="status" id="dbStatus" style="color:#b3463a;">⚠️ لم يتم الحفظ في قاعدة البيانات بعد</div>
+<div class="note">Save Template يحفظ ملف العميل بصيغة .kyc على جهازك فقط (نسخة احتياطية محلية)، منفصل عن الحفظ في قاعدة البيانات.</div>
 <div class="actions">
-<button class="print" onclick="prepareReport()">🖨️ عرض وطباعة التقرير</button>
-<button class="save" onclick="saveTemplate()">💾 Save Template</button>
+<button class="save" id="dbSaveBtn" onclick="saveToDatabase(true)" style="background:#16a085;">💾 حفظ في قاعدة البيانات</button>
+<button class="print" onclick="saveThenPrint()">🖨️ حفظ وطباعة التقرير</button>
+<button class="save" onclick="saveTemplate()">📁 Save Template (محلي)</button>
 <button class="load" onclick="fileInput.click()">📂 استدعاء Template</button>
 <button class="clear" onclick="clearForm()">مسح النموذج</button>
 </div>
@@ -181,18 +184,210 @@ const box=document.querySelector(".report-box");
 if(box)box.style.zoom="1";
 });
 
-/* ========== إضافة: استيراد بيانات تلقائي عند الفتح من نظام إدارة التمويل ========== */
-/* هذا الجزء إضافي بالكامل ولا يغيّر أي شيء في منطق النموذج الأصلي أو طريقة عمله يدويًا */
-(function importPrefillData(){
+/* ========== الاتصال بقاعدة البيانات ========== */
+let db;
+try {
+  db = window.supabase.createClient(
+    'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+  );
+} catch (e) {
+  console.error('فشل في تهيئة قاعدة البيانات:', e);
+}
+
+let currentRecordId = null;
+let currentOperationId = null;
+let kycDirty = false;
+
+function getQueryParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+// تحويل بيانات النموذج (getData) إلى صف جاهز للحفظ في قاعدة البيانات
+// ملاحظة: حقل "nid" في النموذج بيتخزن في عمود "national_id" بالجدول
+function buildDbPayload() {
+  const d = getData();
+  const f = d.fields;
+  const percent = items.length ? Math.round(d.checks.filter(x => x === "تم").length / items.length * 100) : 0;
+
+  return {
+    operation_id: currentOperationId,
+    name: f.name || null,
+    national_id: f.nid || null,
+    "birthDate": f.birthDate || null,
+    "issuedBy": f.issuedBy || null,
+    "issueDate": f.issueDate || null,
+    date: f.date || null,
+    "homePhone": f.homePhone || null,
+    phone: f.phone || null,
+    "workPhone": f.workPhone || null,
+    address: f.address || null,
+    area: f.area || null,
+    job: f.job || null,
+    "workAddress": f.workAddress || null,
+    activity: f.activity || null,
+    beneficiary: f.beneficiary || null,
+    "beneficiaryRelation": f.beneficiaryRelation || null,
+    "accountType": f.accountType || null,
+    "otherBanks": f.otherBanks || null,
+    "mainIncome": f.mainIncome || null,
+    "otherIncome": f.otherIncome || null,
+    purpose: f.purpose || null,
+    loan: f.loan || null,
+    "emergencyName": f.emergencyName || null,
+    "emergencyRelation": f.emergencyRelation || null,
+    "emergencyPhone": f.emergencyPhone || null,
+    risk: f.risk || null,
+    gps: f.gps || null,
+    notes: f.notes || null,
+    "workNature": d.workNature || null,
+    checks: d.checks,
+    completion_percent: percent,
+    updated_at: new Date().toISOString()
+  };
+}
+
+// تحويل صف من قاعدة البيانات إلى شكل setData() المتوقع من النموذج الأصلي
+function dbRecordToSetData(rec) {
+  return {
+    fields: {
+      name: rec.name || '',
+      nid: rec.national_id || '',
+      birthDate: rec["birthDate"] || '',
+      issuedBy: rec["issuedBy"] || '',
+      issueDate: rec["issueDate"] || '',
+      date: rec.date || new Date().toISOString().slice(0, 10),
+      homePhone: rec["homePhone"] || '',
+      phone: rec.phone || '',
+      workPhone: rec["workPhone"] || '',
+      address: rec.address || '',
+      area: rec.area || '',
+      job: rec.job || '',
+      workAddress: rec["workAddress"] || '',
+      activity: rec.activity || '',
+      beneficiary: rec.beneficiary || '',
+      beneficiaryRelation: rec["beneficiaryRelation"] || '',
+      accountType: rec["accountType"] || '',
+      otherBanks: rec["otherBanks"] || '',
+      mainIncome: rec["mainIncome"] || '',
+      otherIncome: rec["otherIncome"] || '',
+      purpose: rec.purpose || '',
+      loan: rec.loan || '',
+      emergencyName: rec["emergencyName"] || '',
+      emergencyRelation: rec["emergencyRelation"] || '',
+      emergencyPhone: rec["emergencyPhone"] || '',
+      risk: rec.risk || '',
+      gps: rec.gps || '',
+      notes: rec.notes || ''
+    },
+    workNature: rec["workNature"] || '',
+    checks: rec.checks || []
+  };
+}
+
+function setDbStatus(text, ok) {
+  const el = document.getElementById('dbStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = ok ? '#16a085' : '#b3463a';
+}
+
+async function saveToDatabase(showAlert) {
+  const nameVal = document.getElementById('name').value.trim();
+  const nidVal = document.getElementById('nid').value.trim();
+  if (!nameVal || !nidVal) {
+    if (showAlert) alert('لازم تكتب اسم العميل والرقم القومي على الأقل قبل الحفظ.');
+    return false;
+  }
+
+  const payload = buildDbPayload();
+
+  try {
+    if (currentRecordId) {
+      const { error } = await db.from('kyc_reports').update(payload).eq('id', currentRecordId);
+      if (error) throw error;
+    } else {
+      payload.created_by = localStorage.getItem('loggedInUser') || null;
+      const { data, error } = await db.from('kyc_reports').insert([payload]).select();
+      if (error) throw error;
+      currentRecordId = data[0].id;
+      const url = new URL(window.location.href);
+      url.searchParams.set('id', currentRecordId);
+      window.history.replaceState({}, '', url);
+    }
+
+    kycDirty = false;
+    setDbStatus('✅ تم الحفظ في قاعدة البيانات بنجاح', true);
+    if (showAlert) alert('✅ تم حفظ كل بيانات التقرير في قاعدة البيانات بنجاح.');
+    return true;
+
+  } catch (err) {
+    console.error('خطأ في الحفظ:', err);
+    setDbStatus('❌ حدث خطأ أثناء الحفظ - لم يتم الحفظ', false);
+    alert('❌ حدث خطأ أثناء الحفظ في قاعدة البيانات: ' + (err.message || err) + '\n\nلن تتمكن من الطباعة قبل نجاح الحفظ.');
+    return false;
+  }
+}
+
+async function saveThenPrint() {
+  const ok = await saveToDatabase(false);
+  if (ok) {
+    prepareReport();
+  }
+  // لو الحفظ فشل، ما بيحصلش طباعة خالص - رسالة الخطأ ظهرت بالفعل من saveToDatabase
+}
+
+async function loadExistingRecord(id) {
+  try {
+    const { data, error } = await db.from('kyc_reports').select('*').eq('id', id).single();
+    if (error) throw error;
+    if (!data) {
+      setDbStatus('⚠️ لم يتم العثور على سجل بهذا الرقم - سيتم إنشاء سجل جديد عند الحفظ', false);
+      return;
+    }
+    currentRecordId = data.id;
+    currentOperationId = data.operation_id || null;
+    setData(dbRecordToSetData(data));
+    kycDirty = false;
+    setDbStatus('✅ تم تحميل بيانات محفوظة مسبقًا لهذا العميل', true);
+  } catch (e) {
+    console.error('تعذر تحميل السجل:', e);
+    setDbStatus('❌ تعذر تحميل السجل المطلوب', false);
+  }
+}
+
+/* ========== تحديد مصدر البيانات عند فتح الصفحة ========== */
+(function initDataSource() {
+  const idParam = getQueryParam('id');
+  const opParam = getQueryParam('operation_id');
+  if (opParam) currentOperationId = opParam;
+
+  if (idParam) {
+    loadExistingRecord(idParam);
+    return;
+  }
+
+  // مسار احتياطي قديم: فتح مباشر بدون id (نادر الاستخدام بعد الربط بالنظام)
   try {
     const raw = localStorage.getItem('kyc_prefill_data');
-    if (!raw) return;
-    const prefill = JSON.parse(raw);
-    setData(prefill);
-    localStorage.removeItem('kyc_prefill_data');
-  } catch(e) {
+    if (raw) {
+      const prefill = JSON.parse(raw);
+      setData(prefill);
+      localStorage.removeItem('kyc_prefill_data');
+    }
+  } catch (e) {
     console.error('تعذر استيراد البيانات التلقائية:', e);
   }
 })();
+
+// تتبّع أي تعديل بعد الحفظ عشان نوضح للمستخدم إن فيه تغييرات لسه محفوظتش
+document.querySelector('.card').addEventListener('input', () => {
+  if (!kycDirty) {
+    kycDirty = true;
+    if (currentRecordId) {
+      setDbStatus('✏️ فيه تعديلات لسه محفوظتش - اضغط "حفظ" أو "حفظ وطباعة"', false);
+    }
+  }
+});
 </script>
 </body></html>

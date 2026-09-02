@@ -210,6 +210,9 @@
 
           <label>رقم اللجنة (الجديد)</label>
           <input type="text" id="editCommittee" />
+
+          <label>القائم بالزيارة (الجديد)</label>
+          <input type="text" id="editVisitor" />
         </div>
 
         <div>
@@ -268,9 +271,9 @@
     // الحقول القابلة للتعديل حسب الدور
     const EDITABLE_FIELDS = {
       'admin': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount',
-                'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee'],
+                'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee', 'editVisitor'],
       'data_entry': ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount',
-                      'editInstallments', 'editOfficer', 'editRegion', 'editBranch'],
+                      'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editVisitor'],
       'internal_reviewer': []
     };
 
@@ -281,7 +284,7 @@
     };
 
     const ALL_EDIT_FIELDS = ['editNationalId', 'editGuarantorId', 'editProject', 'editAmount',
-      'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee'];
+      'editInstallments', 'editOfficer', 'editRegion', 'editBranch', 'editCommittee', 'editVisitor'];
 
     let allData = [];
     let loggedInUser = { id: '', name: '', role: '', branches: [] };
@@ -470,6 +473,7 @@
       document.getElementById('editRegion').value = record["المنطقه"] || '';
       document.getElementById('editBranch').value = record["الفرع"] || '';
       document.getElementById('editCommittee').value = record["رقم اللجنة"] || '';
+      document.getElementById('editVisitor').value = record["القائم بالزياره"] || '';
 
       document.getElementById('currentReview').value = record["المراجعة الداخلية"] || '';
       document.getElementById('currentSupervisor').value = record["مسؤول المتابعة"] || '';
@@ -541,7 +545,7 @@
         "المنطقه": document.getElementById('editRegion').value.trim(),
         "الفرع": document.getElementById('editBranch').value.trim(),
         "رقم اللجنة": document.getElementById('editCommittee').value.trim(),
-        "القائم بالزياره": record["القائم بالزياره"] || '',
+        "القائم بالزياره": document.getElementById('editVisitor').value.trim(),
         "اسم القائم بالادخال": record["اسم القائم بالادخال"] || loggedInUser.name,
       };
 

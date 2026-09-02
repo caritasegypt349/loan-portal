@@ -723,6 +723,7 @@
 
         showLoading('جاري تحميل البيانات...');
         await loadOldCommitteesNidSet();
+        await loadKycReportsMap();
         await loadData();
         
         document.addEventListener('click', function(e) {
@@ -1106,6 +1107,10 @@
         const historyBtnHtml = hasHistory
           ? `<button class="history-btn" onclick="openClientHistory(${idx})" title="يوجد لجان قديمة لهذا العميل">📜 لجان قديمة</button>`
           : `<button class="history-btn disabled" disabled title="لا توجد لجان قديمة مسجلة لهذا العميل">📜 لجان قديمة</button>`;
+        const hasKyc = window.kycReportsByOperation && window.kycReportsByOperation.has(row.id);
+        const kycBtnHtml = hasKyc
+          ? `<button class="kyc-btn" onclick="openKYCReport(${idx}, this)" title="تم إنشاء تقرير اعرف عميلك لهذا العميل من قبل">📂 اعرف عميلك (تم الإنشاء)</button>`
+          : `<button class="kyc-btn" onclick="openKYCReport(${idx}, this)">📄 اعرف عميلك</button>`;
         const getCellClass = (value) => {
           if (!value) return '';
           const lowerValue = value.toLowerCase();
@@ -1148,7 +1153,7 @@
             <td>${row["رقم اللجنة"] || '—'}</td>
             <td class="actions-cell">
               <button class="expand-btn" onclick="toggleDetail(${idx}, event)">تفاصيل</button>
-              <button class="kyc-btn" onclick="openKYCReport(${idx})">📄 اعرف عميلك</button>
+              ${kycBtnHtml}
               ${historyBtnHtml}
             </td>
           </tr>
@@ -1308,35 +1313,116 @@
       window.open('client-history.html?nid=' + encodeURIComponent(nid), '_blank');
     }
 
+    // ========== تحميل خريطة (operation_id -> kyc report id) لمعرفة مين اتعمله تقرير اعرف عميلك بالفعل ==========
+    async function loadKycReportsMap() {
+      window.kycReportsByOperation = new Map();
+      try {
+        let page = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data, error } = await db
+            .from('kyc_reports')
+            .select('id, operation_id')
+            .not('operation_id', 'is', null)
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          data.forEach(r => {
+            if (r.operation_id && !window.kycReportsByOperation.has(r.operation_id)) {
+              window.kycReportsByOperation.set(r.operation_id, r.id);
+            }
+          });
+          if (data.length < pageSize) break;
+          page++;
+        }
+      } catch (e) {
+        console.error('تعذر تحميل سجل تقارير اعرف عميلك:', e);
+      }
+    }
+
     // ========== إنشاء تقرير اعرف عميلك (KYC) معبأ مسبقًا ==========
-    function openKYCReport(idx) {
+    async function openKYCReport(idx, btnEl) {
       const row = (window.currentTableData || [])[idx];
       if (!row) {
         alert('تعذر العثور على بيانات هذا السجل.');
         return;
       }
 
-      // نجهز أكبر قدر ممكن من البيانات المتاحة فعليًا لدينا لنموذج الـ KYC
-      const prefill = {
-        fields: {
-          name: row["اسم_العميل"] || row["اسم_العميل_من_بيانات_القروض"] || row["اسم_العميل_من_التقييم"] || '',
-          nid: row["رقم البطاقة العميل"] || '',
-          area: row["المنطقه"] || row["الفرع"] || '',
-          activity: row["المشروع"] || row["النشاط_الثانى"] || '',
-          purpose: row["المشروع"] || '',
-          loan: row["المبلغ المطلوب"] || '',
-          gps: row["احداثيات الموقع"] || '',
-          notes: `تم استيراد البيانات الأساسية تلقائيًا من نظام إدارة التمويل بتاريخ ${new Date().toLocaleDateString('ar-EG')} (كود العميل: ${row["كود_العميل"] || '—'})`
-        }
-      };
-
-      try {
-        localStorage.setItem('kyc_prefill_data', JSON.stringify(prefill));
-      } catch (e) {
-        console.error('تعذر تجهيز بيانات الاستيراد التلقائي:', e);
+      if (btnEl && btnEl.disabled) return;
+      const originalText = btnEl ? btnEl.textContent : '';
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.style.opacity = '0.6';
+        btnEl.textContent = '⏳ جارٍ التحقق...';
       }
 
-      window.open('kyc-report.html', '_blank');
+      try {
+        // ✅ فحص من قاعدة البيانات مباشرة قبل الإنشاء - يمنع تكرار السجل نهائيًا
+        let existingId = window.kycReportsByOperation && window.kycReportsByOperation.get(row.id);
+
+        if (!existingId) {
+          const { data: existing, error: checkError } = await db
+            .from('kyc_reports')
+            .select('id')
+            .eq('operation_id', row.id)
+            .limit(1);
+
+          if (checkError) throw checkError;
+
+          if (existing && existing.length > 0) {
+            existingId = existing[0].id;
+            if (window.kycReportsByOperation) window.kycReportsByOperation.set(row.id, existingId);
+          }
+        }
+
+        if (existingId) {
+          window.open('kyc-report.html?id=' + existingId, '_blank');
+          return;
+        }
+
+        // مفيش تقرير قبل كده - نعمل واحد جديد ومعبّى بأكبر قدر من البيانات المتاحة فعليًا
+        const newRecord = {
+          operation_id: row.id || null,
+          code: row["كود_العميل"] || null,
+          name: row["اسم_العميل"] || row["اسم_العميل_من_بيانات_القروض"] || row["اسم_العميل_من_التقييم"] || null,
+          national_id: row["رقم البطاقة العميل"] || null,
+          area: row["المنطقه"] || row["الفرع"] || null,
+          activity: row["المشروع"] || row["النشاط_الثانى"] || null,
+          purpose: row["المشروع"] || null,
+          loan: row["المبلغ المطلوب"] || null,
+          gps: row["احداثيات الموقع"] || null,
+          date: new Date().toISOString().slice(0, 10),
+          notes: `تم استيراد البيانات الأساسية تلقائيًا من نظام إدارة التمويل بتاريخ ${new Date().toLocaleDateString('ar-EG')}`,
+          created_by: localStorage.getItem('loggedInUser') || null
+        };
+
+        const { data: inserted, error: insertError } = await db
+          .from('kyc_reports')
+          .insert([newRecord])
+          .select();
+
+        if (insertError) throw insertError;
+
+        const newId = inserted[0].id;
+        if (window.kycReportsByOperation) window.kycReportsByOperation.set(row.id, newId);
+
+        if (btnEl) {
+          btnEl.textContent = '📂 اعرف عميلك (تم الإنشاء)';
+          btnEl.setAttribute('title', 'تم إنشاء تقرير اعرف عميلك لهذا العميل من قبل');
+        }
+
+        window.open('kyc-report.html?id=' + newId, '_blank');
+
+      } catch (e) {
+        console.error('خطأ في فتح/إنشاء تقرير اعرف عميلك:', e);
+        alert('❌ حدث خطأ: ' + (e.message || e));
+        if (btnEl) btnEl.textContent = originalText;
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.style.opacity = '1';
+        }
+      }
     }
 
     // 🔽🔽🔽 دالة تصدير البيانات إلى Excel 🔽🔽🔽

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حاسبات التمويل</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+        background:
+            radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+            radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+            linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+        background-attachment: fixed;
+        direction: rtl;
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+        color: #142433;
+    }
+    .top-header {
+        max-width: 900px;
+        margin: 0 auto 18px;
+        background: linear-gradient(135deg, #2e5c8a 0%, #1c3f66 100%);
+        border-radius: 14px;
+        padding: 14px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand { display: flex; align-items: center; gap: 10px; }
+    .top-header .brand img { height: 34px; width: auto; filter: drop-shadow(0 2px 6px rgba(15, 40, 70, 0.25)); }
+    .top-header .brand span { color: white; font-weight: 800; font-size: 14px; }
+    .top-header .nav-actions { display: flex; gap: 10px; }
+    .top-header .nav-actions a, .top-header .nav-actions button {
+        background: rgba(255,255,255,0.15);
+        color: white;
+        border: 1px solid rgba(255,255,255,0.35);
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        font-family: 'Tajawal', sans-serif;
+        transition: background 0.2s ease;
+    }
+    .top-header .nav-actions a:hover, .top-header .nav-actions button:hover {
+        background: rgba(255,255,255,0.28);
+    }
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 28px;
+        background-color: #fff;
+        box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18);
+        border-radius: 14px;
+        position: relative;
+        overflow: hidden;
+    }
+    .container::before {
+        content: "";
+        position: absolute;
+        top: 0; right: 0; left: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #2e5c8a 0%, #c6a35f 50%, #2e5c8a 100%);
+    }
+    h1 { text-align: center; color: #142433; font-weight: 800; margin-bottom: 6px; }
+    h2 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 8px; margin-top: 45px; font-weight: 800; }
+    h2.declining { color: #27ae60; border-bottom-color: #27ae60; }
+    h2.rate { color: #8e44ad; border-bottom-color: #8e44ad; }
+    form { display: flex; flex-direction: column; }
+    label { margin-top: 12px; color: #34495e; font-weight: 700; font-size: 14px; }
+    input {
+        padding: 11px 14px; margin-top: 6px; border: 1.5px solid #dde5ee;
+        border-radius: 8px; font-size: 15px; font-family: 'Tajawal', sans-serif;
+        background: #fbfcfe;
+    }
+    input:focus {
+        outline: none; border-color: #2e5c8a;
+        box-shadow: 0 0 0 3px rgba(86, 134, 179, 0.18);
+    }
+    button {
+        margin-top: 20px; padding: 13px; background-color: #007bff; color: #fff;
+        border: none; border-radius: 8px; cursor: pointer; font-size: 15px;
+        font-weight: 700; font-family: 'Tajawal', sans-serif; transition: filter 0.15s ease, transform 0.15s ease;
+    }
+    button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    button.green { background-color: #27ae60; }
+    button.purple { background-color: #8e44ad; }
+    #result_interest, #result_caretas, #result_monthly, #result_compound, #result_declining {
+        margin-top: 20px; font-size: 16px; color: #333; text-align: center;
+        background-color: #e8f4fd; padding: 15px; border-radius: 10px; line-height: 1.8;
+    }
+    #result_interest { background-color: #f5eef8; }
+    #result_declining { background-color: #e8f8f0; }
+    .note-box {
+        background-color: #fff3cd; border: 1px solid #ffc107; padding: 12px;
+        border-radius: 10px; margin: 20px 0; text-align: center; color: #856404; font-size: 14px;
+    }
+    @media (max-width: 700px) {
+        body { padding: 12px; }
+        .container { padding: 18px; }
+        .top-header { flex-direction: column; align-items: stretch; gap: 10px; }
+        .top-header .brand { justify-content: center; }
+        .top-header .nav-actions { justify-content: center; }
+    }
+</style>
+</head>
+<body>
+
+<div class="top-header">
+    <div class="brand">
+        <img src="logo.png" alt="Caritas Egypt" />
+        <span>نظام إدارة التمويل</span>
+    </div>
+    <div class="nav-actions">
+        <a href="index.html">🏠 الرئيسية</a>
+        <button onclick="pageLogout()">تسجيل خروج</button>
+    </div>
+</div>
+
+<div class="container">
+    <h1>🧮 حاسبات التمويل</h1>
+    <p style="text-align:center; color:#64768a;">أداة مساعدة لحساب الأقساط ونسب الفائدة</p>
+
+    <div class="note-box">
+        <strong>ملاحظة:</strong> هذه الحاسبات لمساعدتك في التقدير السريع فقط، وجميع النتائج تقريبية. لا تُستخدم مع العملاء كأرقام نهائية إلا بعد التأكد من الإدارة.
+    </div>
+
+    <!-- حاسبة معدل الفائدة -->
+    <h2 class="rate">حاسبة معدل الفائدة (من القسط والمدة)</h2>
+    <form onsubmit="event.preventDefault(); calculateInterestRate();">
+        <label>قيمة أصل التمويل (جنيه):</label>
+        <input type="number" id="loan_amount" step="any" placeholder="مثال: 50000">
+        <label>قيمة القسط الشهري (جنيه):</label>
+        <input type="number" id="installment_value" step="any" placeholder="مثال: 2500">
+        <label>عدد الأقساط (المدة بالشهور):</label>
+        <input type="number" id="num_installments" step="1" placeholder="مثال: 24">
+        <button type="submit" class="purple">احسب نسبة الفائدة (ثابتة + متناقصة)</button>
+    </form>
+    <div id="result_interest"></div>
+
+    <!-- فائدة ثابتة -->
+    <h2>حاسبة القسط الشهري (فائدة ثابتة)</h2>
+    <form onsubmit="event.preventDefault(); calculateInstallment();">
+        <label>قيمة أصل التمويل (جنيه):</label>
+        <input type="number" id="loan_amount_caretas" step="any" placeholder="مثال: 50000">
+        <label>مدة التمويل (بالأشهر):</label>
+        <input type="number" id="loan_term_caretas" step="1" placeholder="مثال: 36">
+        <label>نسبة الفائدة السنوية الثابتة (%):</label>
+        <input type="number" id="interest_rate_caretas" step="0.1" placeholder="مثال: 22.5">
+        <button type="submit">احسب القسط + النسبة المتناقصة المكافئة + الجدول</button>
+    </form>
+    <div id="result_caretas"></div>
+    <div id="schedule_table_container"></div>
+
+    <!-- فائدة متناقصة -->
+    <h2 class="declining">حاسبة الفائدة المتناقصة</h2>
+    <form onsubmit="event.preventDefault(); calculateDecliningBalance();">
+        <label>قيمة أصل التمويل (جنيه):</label>
+        <input type="number" id="loan_amount_declining" step="any" placeholder="مثال: 50000">
+        <label>مدة التمويل (بالأشهر):</label>
+        <input type="number" id="loan_term_declining" step="1" placeholder="مثال: 36">
+        <label>نسبة الفائدة السنوية المتناقصة (%):</label>
+        <input type="number" id="interest_rate_declining" step="0.1" placeholder="مثال: 22">
+        <button type="submit" class="green">احسب القسط + النسبة الثابتة المكافئة + الجدول</button>
+    </form>
+    <div id="result_declining"></div>
+    <div id="schedule_declining_container"></div>
+
+    <!-- حاسبة عامة -->
+    <h2>حاسبة القسط الشهري (فائدة ثابتة عامة)</h2>
+    <form onsubmit="event.preventDefault(); calculateMonthlyInstallment();">
+        <label>قيمة أصل التمويل:</label>
+        <input type="number" id="loan_amount_monthly" step="any" placeholder="مثال: 100000">
+        <label>مدة التمويل (بالأشهر):</label>
+        <input type="number" id="loan_term_monthly" step="1" placeholder="مثال: 48">
+        <label>نسبة الفائدة السنوية (%):</label>
+        <input type="number" id="interest_rate_monthly" step="0.1" placeholder="مثال: 20">
+        <button type="submit">احسب القسط الشهري</button>
+    </form>
+    <div id="result_monthly"></div>
+
+    <!-- فائدة مركبة -->
+    <h2>حاسبة الفائدة المركبة</h2>
+    <form onsubmit="event.preventDefault(); calculateCompoundInterest();">
+        <label>القيمة الأصلية:</label>
+        <input type="number" id="principal" step="any" placeholder="مثال: 10000">
+        <label>نسبة الفائدة السنوية (%):</label>
+        <input type="number" id="rate" step="0.1" placeholder="مثال: 15">
+        <label>مدة الاستثمار (بالسنوات):</label>
+        <input type="number" id="time" step="1" placeholder="مثال: 5">
+        <label>عدد مرات التركيب في السنة:</label>
+        <input type="number" id="frequency" step="1" placeholder="مثال: 12">
+        <button type="submit">احسب الفائدة المركبة</button>
+    </form>
+    <div id="result_compound"></div>
+</div>
+
+<script>
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
+    // ==================== حاسبة معدل الفائدة ====================
+    function calculateInterestRate() {
+        let loanAmount = parseFloat(document.getElementById('loan_amount').value);
+        let monthlyInstallment = parseFloat(document.getElementById('installment_value').value);
+        let numInstallments = parseInt(document.getElementById('num_installments').value);
+
+        if (isNaN(loanAmount) || isNaN(monthlyInstallment) || isNaN(numInstallments) || 
+            loanAmount <= 0 || monthlyInstallment <= 0 || numInstallments <= 0) {
+            document.getElementById('result_interest').innerHTML = "المدخلات غير صحيحة.";
+            return;
+        }
+
+        let totalPaid = monthlyInstallment * numInstallments;
+        let totalInterest = totalPaid - loanAmount;
+        let years = numInstallments / 12;
+        let flatRate = (totalInterest / loanAmount) / years * 100;
+        let decliningRate = findEquivalentDecliningRate(loanAmount, numInstallments, monthlyInstallment);
+
+        if (totalInterest < 0) {
+            document.getElementById('result_interest').innerHTML = `<strong style="color:#c0392b;">القسط أقل من قيمة الأصل الموزعة!</strong>`;
+            return;
+        }
+
+        document.getElementById('result_interest').innerHTML = `
+            <strong>إجمالي المدفوع:</strong> ${Math.round(totalPaid).toLocaleString('ar-EG')} جنيه<br>
+            <strong>إجمالي الفائدة:</strong> ${Math.round(totalInterest).toLocaleString('ar-EG')} جنيه<br>
+            <hr style="margin: 12px 0; border: none; border-top: 1px solid #ccc;">
+            <strong style="color:#007bff;">نسبة الفائدة الثابتة ≈ ${flatRate.toFixed(2)}% سنويًا</strong><br>
+            <strong style="color:#27ae60;">نسبة الفائدة المتناقصة المكافئة ≈ ${decliningRate.toFixed(2)}% سنويًا</strong>
+            <br><small style="color:#666;">جميع النسب تقريبية</small>
+        `;
+    }
+
+    function findEquivalentDecliningRate(principal, term, targetEMI) {
+        let low = 0, high = 150, mid, calculatedEMI, precision = 0.005, iterations = 0;
+        while (high - low > precision && iterations < 120) {
+            mid = (low + high) / 2;
+            let monthlyRate = mid / 100 / 12;
+            calculatedEMI = monthlyRate === 0 ? principal / term :
+                principal * monthlyRate * Math.pow(1 + monthlyRate, term) / (Math.pow(1 + monthlyRate, term) - 1);
+            if (calculatedEMI < targetEMI) low = mid; else high = mid;
+            iterations++;
+        }
+        return (low + high) / 2;
+    }
+
+    // ==================== فائدة ثابتة ====================
+    function calculateInstallment() {
+        let loanAmount = parseFloat(document.getElementById('loan_amount_caretas').value);
+        let loanTerm = parseInt(document.getElementById('loan_term_caretas').value);
+        let interestRatePercent = parseFloat(document.getElementById('interest_rate_caretas').value);
+
+        if (isNaN(loanAmount) || isNaN(loanTerm) || isNaN(interestRatePercent) || loanAmount <= 0 || loanTerm <= 0 || interestRatePercent < 0) {
+            document.getElementById('result_caretas').innerHTML = "المدخلات غير صحيحة.";
+            document.getElementById('schedule_table_container').innerHTML = "";
+            return;
+        }
+
+        let interestRate = interestRatePercent / 100;
+        let totalInterest = loanAmount * interestRate * (loanTerm / 12);
+        let totalAmount = loanAmount + totalInterest;
+        let monthlyInstallment = Math.ceil(totalAmount / loanTerm);
+        let equivalentDecliningRate = findEquivalentDecliningRate(loanAmount, loanTerm, monthlyInstallment);
+
+        document.getElementById('result_caretas').innerHTML = `
+            <strong>القسط الشهري:</strong> ${monthlyInstallment.toLocaleString('ar-EG')} جنيه<br>
+            <strong>إجمالي الفائدة:</strong> ${Math.round(totalInterest).toLocaleString('ar-EG')} جنيه<br>
+            <strong>إجمالي المبلغ المستحق:</strong> ${Math.round(totalAmount).toLocaleString('ar-EG')} جنيه<br>
+            <hr style="margin: 12px 0; border: none; border-top: 1px solid #ccc;">
+            <strong style="color:#27ae60;">نسبة الفائدة المتناقصة المكافئة ≈ ${equivalentDecliningRate.toFixed(2)}%</strong>
+            <br><small style="color:#666;">(تقريبي)</small>
+        `;
+
+        generateFlatScheduleTable(loanAmount, monthlyInstallment, loanTerm, totalInterest);
+    }
+
+    function generateFlatScheduleTable(principal, monthlyInstallment, term, totalInterest) {
+        let monthlyInterest = totalInterest / term;
+        let monthlyPrincipal = principal / term;
+        let html = `
+            <h3 style="margin-top: 25px; text-align: center;">جدول الأقساط (فائدة ثابتة) - تقريبي</h3>
+            <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">
+                <thead>
+                    <tr style="background-color: #007bff; color: white;">
+                        <th style="border: 1px solid #ddd; padding: 8px;">رقم القسط</th>
+                        <th style="border: 1px solid #ddd; padding: 8px;">أصل التمويل المتبقي</th>
+                        <th style="border: 1px solid #ddd; padding: 8px;">الفائدة الشهرية</th>
+                        <th style="border: 1px solid #ddd; padding: 8px;">أصل القسط</th>
+                        <th style="border: 1px solid #ddd; padding: 8px;">إجمالي القسط</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        let remainingPrincipal = principal;
+        for (let i = 1; i <= term; i++) {
+            let interestThisMonth = monthlyInterest;
+            let principalThisMonth = (i === term) ? remainingPrincipal : monthlyPrincipal;
+            remainingPrincipal = Math.max(0, remainingPrincipal - principalThisMonth);
+            let rowBg = i % 2 === 0 ? "#f9f9f9" : "#ffffff";
+            html += `
+                <tr style="background-color: ${rowBg};">
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${i}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${Math.round(remainingPrincipal + principalThisMonth).toLocaleString('ar-EG')}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${Math.round(interestThisMonth).toLocaleString('ar-EG')}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${Math.round(principalThisMonth).toLocaleString('ar-EG')}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${monthlyInstallment.toLocaleString('ar-EG')}</td>
+                </tr>
+            `;
+        }
+        html += `</tbody></table></div>
+            <p style="text-align: center; color: #c0392b; font-size: 13px; margin-top: 10px; font-weight: bold;">
+                ⚠ ملاحظة: هذا الجدول تقريبي.
+            </p>`;
+        document.getElementById('schedule_table_container').innerHTML = html;
+    }
+
+    // ==================== فائدة متناقصة ====================
+    function calculateDecliningBalance() {
+        let principal = parseFloat(document.getElementById('loan_amount_declining').value);
+        let term = parseInt(document.getElementById('loan_term_declining').value);
+        let annualRate = parseFloat(document.getElementById('interest_rate_declining').value);
+
+        if (isNaN(principal) || isNaN(term) || isNaN(annualRate) || principal <= 0 || term <= 0 || annualRate < 0) {
+            document.getElementById('result_declining').innerHTML = "المدخلات غير صحيحة.";
+            document.getElementById('schedule_declining_container').innerHTML = "";
+            return;
+        }
+
+        let monthlyRate = annualRate / 100 / 12;
+        let emi = monthlyRate === 0 ? principal / term :
+            principal * monthlyRate * Math.pow(1 + monthlyRate, term) / (Math.pow(1 + monthlyRate, term) - 1);
+        emi = Math.ceil(emi);
+
+        let totalPaid = emi * term;
+        let totalInterestApprox = totalPaid - principal;
+        let years = term / 12;
+        let equivalentFlatRate = (totalInterestApprox / principal) / years * 100;
+
+        document.getElementById('result_declining').innerHTML = `
+            <strong>القسط الشهري التقريبي:</strong> ${emi.toLocaleString('ar-EG')} جنيه<br>
+            <strong>إجمالي الفائدة التقريبي:</strong> ${Math.round(totalInterestApprox).toLocaleString('ar-EG')} جنيه<br>
+            <strong>إجمالي المبلغ المستحق التقريبي:</strong> ${Math.round(totalPaid).toLocaleString('ar-EG')} جنيه<br>
+            <hr style="margin: 12px 0; border: none; border-top: 1px solid #ccc;">
+            <strong style="color:#007bff;">نسبة الفائدة الثابتة المكافئة ≈ ${equivalentFlatRate.toFixed(2)}%</strong>
+            <br><small style="color:#666;">(تقريبي)</small>
+        `;
+
+        generateDecliningSchedule(principal, emi, term, monthlyRate);
+    }
+
+    function generateDecliningSchedule(principal, emi, term, monthlyRate) {
+        let html = `
+            <h3 style="margin-top: 25px; text-align: center;">جدول الأقساط التقريبي (فائدة متناقصة)</h3>
+            <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">
+                <thead>
+                    <tr style="background-color: #27ae60; color: white;">
+                        <th style="border: 1px solid #ddd; padding: 8px;">رقم القسط</th>
+                        <th style="border: 1px solid #ddd; padding: 8px;">الرصيد المتبقي قبل القسط</th>
+                        <th style="border: 1px solid #ddd; padding: 8px;">الفائدة الشهرية</th>
+                        <th style="border: 1px solid #ddd; padding: 8px;">أصل القسط</th>
+                        <th style="border: 1px solid #ddd; padding: 8px;">إجمالي القسط</th>
+                        <th style="border: 1px solid #ddd; padding: 8px;">الرصيد بعد القسط</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        let balance = principal;
+        for (let i = 1; i <= term; i++) {
+            let interest = balance * monthlyRate;
+            let principalPart = emi - interest;
+            if (i === term || principalPart > balance) {
+                principalPart = balance;
+                interest = emi - principalPart;
+                if (interest < 0) interest = 0;
+            }
+            let newBalance = Math.max(0, balance - principalPart);
+            let rowBg = i % 2 === 0 ? "#f0f9f4" : "#ffffff";
+            html += `
+                <tr style="background-color: ${rowBg};">
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${i}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${Math.round(balance).toLocaleString('ar-EG')}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${Math.round(interest).toLocaleString('ar-EG')}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${Math.round(principalPart).toLocaleString('ar-EG')}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${emi.toLocaleString('ar-EG')}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${Math.round(newBalance).toLocaleString('ar-EG')}</td>
+                </tr>
+            `;
+            balance = newBalance;
+        }
+        html += `</tbody></table></div>
+            <p style="text-align: center; color: #c0392b; font-size: 13px; margin-top: 12px; font-weight: bold; background-color: #fdecea; padding: 10px; border-radius: 6px;">
+                ⚠ ملاحظة هامة: هذا الجدول <u>تقريبي</u>.
+            </p>`;
+        document.getElementById('schedule_declining_container').innerHTML = html;
+    }
+
+    function calculateMonthlyInstallment() {
+        let loanAmount = parseFloat(document.getElementById('loan_amount_monthly').value);
+        let loanTerm = parseInt(document.getElementById('loan_term_monthly').value);
+        let interestRate = parseFloat(document.getElementById('interest_rate_monthly').value) / 100;
+        if (isNaN(loanAmount) || isNaN(loanTerm) || isNaN(interestRate) || loanAmount < 0 || loanTerm <= 0 || interestRate < 0) {
+            document.getElementById('result_monthly').innerText = "المدخلات غير صحيحة.";
+            return;
+        }
+        let totalInterest = loanAmount * interestRate * (loanTerm / 12);
+        let totalAmount = loanAmount + totalInterest;
+        let monthlyInstallment = Math.ceil(totalAmount / loanTerm);
+        document.getElementById('result_monthly').innerText = `القسط الشهري: ${monthlyInstallment.toLocaleString('ar-EG')} جنيه`;
+    }
+
+    function calculateCompoundInterest() {
+        let principal = parseFloat(document.getElementById('principal').value);
+        let rate = parseFloat(document.getElementById('rate').value) / 100;
+        let time = parseInt(document.getElementById('time').value);
+        let compoundingFrequency = parseInt(document.getElementById('frequency').value);
+        if (isNaN(principal) || isNaN(rate) || isNaN(time) || isNaN(compoundingFrequency) || principal <= 0 || time <= 0 || compoundingFrequency <= 0) {
+            document.getElementById('result_compound').innerText = "المدخلات غير صحيحة.";
+            return;
+        }
+        let amount = principal * (1 + (rate / compoundingFrequency)) ** (compoundingFrequency * time);
+        let interest = amount - principal;
+        document.getElementById('result_compound').innerHTML = `الفائدة المركبة: ${interest.toFixed(2)} جنيه<br>المبلغ الكلي: ${amount.toFixed(2)} جنيه`;
+    }
+</script>
+</body>
+</html>

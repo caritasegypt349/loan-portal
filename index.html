@@ -388,7 +388,7 @@
 
         const { data, error } = await mySupabase
           .from('users')
-          .select('id, full_name, role, branches')
+          .select('id, full_name, role, branches, is_project_officer')
           .eq('id', email)
           .eq('password_hash', password)
           .single();
@@ -403,6 +403,7 @@
         localStorage.setItem('loggedInUser', data.full_name);
         localStorage.setItem('userRole', data.role);
         localStorage.setItem('userBranches', JSON.stringify(data.branches || []));
+        localStorage.setItem('isProjectOfficer', data.is_project_officer ? 'true' : 'false');
 
         const sessionId = 'fin_sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('sessionId', sessionId);
@@ -475,14 +476,25 @@
       else if (role === 'followup_supervisor') {
         pages.push({ label: "متابعة العمليات", icon: "📌", url: "supervise.html", cls: "page-btn supervise", badgeKey: "supervise" });
       }
+      else if (role === 'project_officer') {
+        pages.push({ label: "موافقات مسئول المشروع", icon: "🗂️", url: "project-officer.html", cls: "page-btn review", badgeKey: "projectOfficer" });
+      }
       else if (role === 'admin') {
         pages.push({ label: "إدخال بيانات", icon: "📝", url: "entry.html", cls: "page-btn" });
         pages.push({ label: "المراجعة", icon: "🔎", url: "review.html", cls: "page-btn review", badgeKey: "review" });
         pages.push({ label: "المتابعة", icon: "📌", url: "supervise.html", cls: "page-btn supervise", badgeKey: "supervise" });
+        pages.push({ label: "موافقات مسئول المشروع", icon: "🗂️", url: "project-officer.html", cls: "page-btn review", badgeKey: "projectOfficer" });
         pages.push({ label: "لوحة الإدارة", icon: "🛠️", url: "admin.html", cls: "page-btn admin", badgeKey: "admin" });
         pages.push({ label: "طلب تعديل", icon: "✏️", url: "request_edit.html", cls: "page-btn" });
         pages.push({ label: "إدارة طلبات التعديل", icon: "✅", url: "admin_requests.html", cls: "page-btn admin", badgeKey: "editRequests" });
         pages.push({ label: "البحث في اللجان القديمة", icon: "🔎", url: "search-old-committees.html", cls: "page-btn admin" });
+      }
+
+      // ✅ صلاحية إضافية مستقلة عن الدور الأساسي: أي حد معلّم كـ"مسئول مشروع" بياخد الزرار ده كمان
+      // حتى لو دوره الأساسي حاجة تانية (team_leader, data_entry...) - بدون ما يأثر على صلاحياته التانية
+      const isProjectOfficer = localStorage.getItem('isProjectOfficer') === 'true';
+      if (isProjectOfficer && role !== 'admin' && !pages.some(p => p.url === 'project-officer.html')) {
+        pages.push({ label: "موافقات مسئول المشروع", icon: "🗂️", url: "project-officer.html", cls: "page-btn review", badgeKey: "projectOfficer" });
       }
 
       pages.forEach((page, i) => {
@@ -530,6 +542,13 @@
             .select('id', { count: 'exact', head: true })
             .eq('الادارة', 'لم تتم المراجعة');
           counts.admin = count || 0;
+        }
+        if (neededKeys.has('projectOfficer')) {
+          const { count } = await mySupabase
+            .from('operations')
+            .select('id', { count: 'exact', head: true })
+            .eq('موافقة مسئول المشروع', 'لم تتم المراجعة');
+          counts.projectOfficer = count || 0;
         }
         if (neededKeys.has('editRequests')) {
           const { count } = await mySupabase

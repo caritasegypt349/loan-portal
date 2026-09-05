@@ -799,6 +799,15 @@
         <option value="تاريخ الاستعلام قديم. يرجى عمل استعلام جديد">تاريخ الاستعلام الخاص بالعميل قديم. يرجى عمل استعلام جديد، حيث لا يعتد بالاستعلام الحالي</option>
         <option value="تم الغاء الطلب من العميل">تم الغاء الطلب من العميل</option>
           </select>
+
+          <label>موافقة مسئول المشروع</label>
+          <select id="editProjectOfficer">
+            <option value="لم تتم المراجعة">لم تتم المراجعة</option>
+            <option value="تمت المراجعة مقبول">تمت المراجعة مقبول</option>
+            <option value="تمت المراجعة مرفوض">تمت المراجعة مرفوض</option>
+            <option value="تحت المراجعة للنقاش">تحت المراجعة للنقاش</option>
+            <option value="مناقشه المبلغ">مناقشه المبلغ</option>
+          </select>
           
           <label>ملاحظات المراجعة</label>
           <textarea id="editReviewNotes" rows="2"></textarea>
@@ -808,6 +817,9 @@
           
           <label>ملاحظات الإدارة</label>
           <textarea id="editAdminNotes" rows="2"></textarea>
+
+          <label>ملاحظات مسئول المشروع</label>
+          <textarea id="editProjectOfficerNotes" rows="2"></textarea>
         </div>
       </div>
       
@@ -1262,6 +1274,10 @@
         const status = row["مسؤول المتابعة"];
         return !status || status.trim() === '' || status === 'لم تتم المراجعة';
       }).length;
+      const pendingProjectOfficer = allData.filter(row => {
+        const status = row["موافقة مسئول المشروع"];
+        return !status || status.trim() === '' || status === 'لم تتم المراجعة';
+      }).length;
 
       let pendingEditRequests = 0;
       try {
@@ -1274,13 +1290,14 @@
         console.error('تعذر تحميل عدد طلبات التعديل:', e);
       }
 
-      const totalPending = pendingAdmin + pendingReview + pendingSupervise + pendingEditRequests;
+      const totalPending = pendingAdmin + pendingReview + pendingSupervise + pendingProjectOfficer + pendingEditRequests;
       const banner = document.getElementById('notifBanner');
       if (banner) {
         if (totalPending > 0) {
           banner.innerHTML = `<div style="background:#fff3cd; border:1px solid #ffeaa7; color:#856404; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-weight:700; text-align:center; line-height:1.9;">
             🔔 <span style="font-size:16px;">${pendingReview}</span> لسه محتاج مراجعة داخلية &nbsp;|&nbsp;
             <span style="font-size:16px;">${pendingSupervise}</span> لسه محتاج متابعة &nbsp;|&nbsp;
+            <span style="font-size:16px;">${pendingProjectOfficer}</span> لسه محتاج موافقة مسئول مشروع &nbsp;|&nbsp;
             <span style="font-size:16px;">${pendingAdmin}</span> لسه محتاج اعتماد إداري &nbsp;|&nbsp;
             <span style="font-size:16px;">${pendingEditRequests}</span> طلب تعديل معلّق
           </div>`;
@@ -1315,6 +1332,7 @@
           <div style="display:flex; flex-wrap:wrap; gap:10px;">`;
         html += buildPanel('المراجعة الداخلية', 'المراجعة الداخلية');
         html += buildPanel('مسؤول المتابعة', 'مسؤول المتابعة');
+        html += buildPanel('موافقة مسئول المشروع', 'موافقة مسئول المشروع');
         html += buildPanel('الإدارة', 'الادارة');
         html += `</div></div>`;
         breakdownEl.innerHTML = html;
@@ -1394,6 +1412,7 @@
               <th>تم التحويل</th>
               <th>المراجعة</th>
               <th>المتابعة</th>
+              <th>مسئول المشروع</th>
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
               <th>الإجراءات</th>
@@ -1408,6 +1427,7 @@
         const reviewClass = getCellClass(row["المراجعة الداخلية"]);
         const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
         const adminClass = getCellClass(row["الادارة"]);
+        const projectOfficerClass = getCellClass(row["موافقة مسئول المشروع"]);
         const hasHistory = window.oldCommitteesNids && window.oldCommitteesNids.has(row["رقم البطاقة العميل"]);
         const historyBtnHtml = hasHistory
           ? `<button class="history-btn" onclick="openClientHistory(${idx})" title="يوجد لجان قديمة لهذا العميل">📜 لجان قديمة</button>`
@@ -1434,6 +1454,7 @@
             <td>${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
             <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
             <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
+            <td class="${projectOfficerClass}">${row["موافقة مسئول المشروع"] || '—'}</td>
             <td class="${adminClass}">${row["الادارة"] || '—'}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
             <td class="actions-cell">
@@ -1444,7 +1465,7 @@
             </td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="18">
+            <td colspan="19">
               <div class="detail-container">
                 
                 <div class="detail-row-sections">
@@ -1651,9 +1672,11 @@
       document.getElementById('editReview').value = record["المراجعة الداخلية"] || 'لم تتم المراجعة';
       document.getElementById('editSupervisor').value = record["مسؤول المتابعة"] || 'لم تتم المراجعة';
       document.getElementById('editAdmin').value = record["الادارة"] || 'لم تتم المراجعة';
+      document.getElementById('editProjectOfficer').value = record["موافقة مسئول المشروع"] || 'لم تتم المراجعة';
       document.getElementById('editReviewNotes').value = record["ملاحظات المراجعة الداخلية"] || '';
       document.getElementById('editSupervisorComment').value = record["تعليق مسؤول المتابعة"] || '';
       document.getElementById('editAdminNotes').value = record["ملاحظات الادارة"] || '';
+      document.getElementById('editProjectOfficerNotes').value = record["ملاحظات مسئول المشروع"] || '';
 
       document.getElementById('editModal').style.display = 'block';
     }
@@ -1684,9 +1707,11 @@
         "المراجعة الداخلية": document.getElementById('editReview').value,
         "مسؤول المتابعة": document.getElementById('editSupervisor').value,
         "الادارة": document.getElementById('editAdmin').value,
+        "موافقة مسئول المشروع": document.getElementById('editProjectOfficer').value,
         "ملاحظات المراجعة الداخلية": document.getElementById('editReviewNotes').value.trim() || null,
         "تعليق مسؤول المتابعة": document.getElementById('editSupervisorComment').value.trim() || null,
-        "ملاحظات الادارة": document.getElementById('editAdminNotes').value.trim() || null
+        "ملاحظات الادارة": document.getElementById('editAdminNotes').value.trim() || null,
+        "ملاحظات مسئول المشروع": document.getElementById('editProjectOfficerNotes').value.trim() || null
       };
 
       const { error } = await db

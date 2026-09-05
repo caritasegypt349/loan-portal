@@ -547,6 +547,7 @@
         <span>📥</span> تصدير البيانات إلى Excel
       </button>
     </div>
+    <div id="notifBanner"></div>
 
     <div class="stats">
       <div class="stat-card">
@@ -758,6 +759,7 @@
         renderFilters();
         renderTable(filteredData);
         updateStats(filteredData);
+        renderNotifBanner();
         
         // تفعيل زر التصدير بعد تحميل البيانات
         document.getElementById('exportBtn').disabled = false;
@@ -1023,6 +1025,31 @@
       document.getElementById('totalTransferred').textContent = totalTransferred.toLocaleString('ar-EG') + ' ج.م';
       document.getElementById('totalFinance').textContent = totalFinance.toLocaleString('ar-EG') + ' ج.م';
       document.getElementById('totalAdminFees').textContent = totalAdminFees.toLocaleString('ar-EG') + ' ج.م';
+    }
+
+    // ========== إشعار سريع بعدد العمليات المعلّقة في كل مرحلة (بيعتمد على كل البيانات) ==========
+    function renderNotifBanner() {
+      const banner = document.getElementById('notifBanner');
+      if (!banner) return;
+
+      const pendingReview = allData.filter(row => row["المراجعة الداخلية"] === 'لم تتم المراجعة').length;
+      const pendingSupervise = allData.filter(row => {
+        const s = row["مسؤول المتابعة"];
+        return !s || s.trim() === '' || s === 'لم تتم المراجعة';
+      }).length;
+      const pendingAdmin = allData.filter(row => {
+        const s = row["الادارة"];
+        return !s || s.trim() === '' || s === 'لم تتم المراجعة';
+      }).length;
+
+      const total = pendingReview + pendingSupervise + pendingAdmin;
+      if (total > 0) {
+        banner.innerHTML = `<div style="background:#fff3cd; border:1px solid #ffeaa7; color:#856404; padding:10px 16px; border-radius:8px; margin-bottom:15px; font-weight:700; text-align:center; font-size:13px;">
+          🔔 ${pendingReview} لسه محتاج مراجعة داخلية &nbsp;|&nbsp; ${pendingSupervise} لسه محتاج متابعة &nbsp;|&nbsp; ${pendingAdmin} لسه محتاج اعتماد إداري
+        </div>`;
+      } else {
+        banner.innerHTML = '';
+      }
     }
 
     function renderTable(data) {

@@ -218,9 +218,29 @@
     gap: 6px;
     border-right: 4px solid var(--navy-mid);
     transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    position: relative;
   }
 
   .page-btn .icon { font-size: 20px; }
+
+  .page-btn .notif-badge {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    background: var(--danger);
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    border: 2px solid white;
+  }
 
   .page-btn:hover {
     background: #ffffff;
@@ -449,29 +469,89 @@
         pages.push({ label: "عرض فريق العمل", icon: "👥", url: "team-view.html", cls: "page-btn team" });
       }
       else if (role === 'internal_reviewer') {
-        pages.push({ label: "المراجعة الداخلية", icon: "🔎", url: "review.html", cls: "page-btn review" });
+        pages.push({ label: "المراجعة الداخلية", icon: "🔎", url: "review.html", cls: "page-btn review", badgeKey: "review" });
         pages.push({ label: "طلب تعديل", icon: "✏️", url: "request_edit.html", cls: "page-btn" });
       }
       else if (role === 'followup_supervisor') {
-        pages.push({ label: "متابعة العمليات", icon: "📌", url: "supervise.html", cls: "page-btn supervise" });
+        pages.push({ label: "متابعة العمليات", icon: "📌", url: "supervise.html", cls: "page-btn supervise", badgeKey: "supervise" });
       }
       else if (role === 'admin') {
         pages.push({ label: "إدخال بيانات", icon: "📝", url: "entry.html", cls: "page-btn" });
-        pages.push({ label: "المراجعة", icon: "🔎", url: "review.html", cls: "page-btn review" });
-        pages.push({ label: "المتابعة", icon: "📌", url: "supervise.html", cls: "page-btn supervise" });
-        pages.push({ label: "لوحة الإدارة", icon: "🛠️", url: "admin.html", cls: "page-btn admin" });
+        pages.push({ label: "المراجعة", icon: "🔎", url: "review.html", cls: "page-btn review", badgeKey: "review" });
+        pages.push({ label: "المتابعة", icon: "📌", url: "supervise.html", cls: "page-btn supervise", badgeKey: "supervise" });
+        pages.push({ label: "لوحة الإدارة", icon: "🛠️", url: "admin.html", cls: "page-btn admin", badgeKey: "admin" });
         pages.push({ label: "طلب تعديل", icon: "✏️", url: "request_edit.html", cls: "page-btn" });
-        pages.push({ label: "إدارة طلبات التعديل", icon: "✅", url: "admin_requests.html", cls: "page-btn admin" });
+        pages.push({ label: "إدارة طلبات التعديل", icon: "✅", url: "admin_requests.html", cls: "page-btn admin", badgeKey: "editRequests" });
         pages.push({ label: "البحث في اللجان القديمة", icon: "🔎", url: "search-old-committees.html", cls: "page-btn admin" });
       }
 
-      pages.forEach(page => {
+      pages.forEach((page, i) => {
         const btn = document.createElement('a');
         btn.href = page.url;
         btn.className = page.cls;
         btn.target = "_blank";
+        btn.id = 'pageBtn_' + i;
         btn.innerHTML = `<span class="icon">${page.icon}</span><span>${page.label}</span>`;
         buttonsDiv.appendChild(btn);
+        if (page.badgeKey) {
+          btn.dataset.badgeKey = page.badgeKey;
+        }
+      });
+
+      loadNotificationBadges();
+    }
+
+    // ========== إشعارات: عدد العناصر المعلّقة لكل شاشة ==========
+    async function loadNotificationBadges() {
+      const badgeButtons = document.querySelectorAll('#pageButtons a[data-badge-key]');
+      if (badgeButtons.length === 0) return;
+
+      const neededKeys = new Set(Array.from(badgeButtons).map(b => b.dataset.badgeKey));
+      const counts = {};
+
+      try {
+        if (neededKeys.has('review')) {
+          const { count } = await mySupabase
+            .from('operations')
+            .select('id', { count: 'exact', head: true })
+            .eq('المراجعة الداخلية', 'لم تتم المراجعة');
+          counts.review = count || 0;
+        }
+        if (neededKeys.has('supervise')) {
+          const { count } = await mySupabase
+            .from('operations')
+            .select('id', { count: 'exact', head: true })
+            .eq('مسؤول المتابعة', 'لم تتم المراجعة');
+          counts.supervise = count || 0;
+        }
+        if (neededKeys.has('admin')) {
+          const { count } = await mySupabase
+            .from('operations')
+            .select('id', { count: 'exact', head: true })
+            .eq('الادارة', 'لم تتم المراجعة');
+          counts.admin = count || 0;
+        }
+        if (neededKeys.has('editRequests')) {
+          const { count } = await mySupabase
+            .from('edit_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'Pending');
+          counts.editRequests = count || 0;
+        }
+      } catch (e) {
+        console.error('تعذر تحميل الإشعارات:', e);
+        return;
+      }
+
+      badgeButtons.forEach(btn => {
+        const key = btn.dataset.badgeKey;
+        const n = counts[key];
+        if (n && n > 0) {
+          const badge = document.createElement('span');
+          badge.className = 'notif-badge';
+          badge.textContent = n > 99 ? '99+' : n;
+          btn.appendChild(badge);
+        }
       });
     }
 

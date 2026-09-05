@@ -538,6 +538,8 @@
 
   <div class="container">
     <h2>متابعة العمليات</h2>
+    <div id="notifBanner"></div>
+    <div id="statusBreakdown"></div>
 
     <div class="stats">
       <div class="stat-card">
@@ -826,6 +828,7 @@
         renderFilters();
         renderTable(filteredData);
         updateStats(filteredData);
+        renderNotifAndBreakdown();
 
       } catch (err) {
         console.error('خطأ في loadData:', err);
@@ -1076,6 +1079,49 @@
           return !status || status.trim() === '' || status === 'لم تتم المراجعة';
         }).length;
         pendingCount.textContent = count.toLocaleString('ar-EG');
+      }
+    }
+
+    // ========== إشعار + جدول تصنيفات ديناميكي (بيعتمد على كل البيانات مش المفلترة فقط) ==========
+    function renderNotifAndBreakdown() {
+      const pending = allData.filter(row => {
+        const status = row["مسؤول المتابعة"];
+        return !status || status.trim() === '' || status === 'لم تتم المراجعة';
+      }).length;
+
+      const banner = document.getElementById('notifBanner');
+      if (banner) {
+        if (pending > 0) {
+          banner.innerHTML = `<div style="background:#fff3cd; border:1px solid #ffeaa7; color:#856404; padding:12px 16px; border-radius:8px; margin-bottom:15px; font-weight:700; text-align:center;">
+            🔔 يوجد <span style="font-size:16px;">${pending}</span> عملية لسه لم تتم متابعتها
+          </div>`;
+        } else {
+          banner.innerHTML = `<div style="background:#e8f6f3; border:1px solid #a3e4d7; color:#1d8348; padding:10px 16px; border-radius:8px; margin-bottom:15px; font-weight:700; text-align:center;">
+            ✅ مفيش عمليات معلّقة للمتابعة حاليًا
+          </div>`;
+        }
+      }
+
+      const breakdownEl = document.getElementById('statusBreakdown');
+      if (breakdownEl) {
+        const counts = {};
+        allData.forEach(row => {
+          const status = row["مسؤول المتابعة"] || 'غير محدد';
+          counts[status] = (counts[status] || 0) + 1;
+        });
+
+        const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        let html = `<div style="background:#f8f9fa; border:1px solid #eee; border-radius:8px; padding:12px 16px; margin-bottom:15px;">
+          <div style="font-weight:800; color:#1c3f66; margin-bottom:8px; font-size:13px;">📊 توزيع الحالات الحالي</div>
+          <div style="display:flex; flex-wrap:wrap; gap:10px;">`;
+        entries.forEach(([status, count]) => {
+          const color = status === 'لم تتم المراجعة' ? '#e67e22' : status.includes('مقبول') ? '#16a085' : status.includes('مرفوض') ? '#e74c3c' : '#2e5c8a';
+          html += `<div style="background:white; border:1px solid #eee; border-right:3px solid ${color}; border-radius:6px; padding:8px 14px; font-size:12.5px;">
+            <span style="font-weight:700; color:${color};">${count}</span> ${status}
+          </div>`;
+        });
+        html += `</div></div>`;
+        breakdownEl.innerHTML = html;
       }
     }
 

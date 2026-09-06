@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>إعدادات الفروع والمشاريع</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      color: #142433;
+    }
+    .top-header {
+      max-width: 1400px;
+      margin: 0 auto 18px;
+      background: linear-gradient(135deg, #b3463a 0%, #1c3f66 100%);
+      border-radius: 14px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand { display: flex; align-items: center; gap: 10px; }
+    .top-header .brand img { height: 34px; width: auto; filter: drop-shadow(0 2px 6px rgba(15, 40, 70, 0.25)); }
+    .top-header .brand span { color: white; font-weight: 800; font-size: 14px; }
+    .top-header .nav-actions { display: flex; gap: 10px; }
+    .top-header .nav-actions a, .top-header .nav-actions button {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: 'Tajawal', sans-serif;
+      transition: background 0.2s ease;
+    }
+    .top-header .nav-actions a:hover, .top-header .nav-actions button:hover {
+      background: rgba(255,255,255,0.28);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .container::before {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #b3463a 0%, #1c3f66 50%, #b3463a 100%);
+    }
+    h2 { color: #b3463a; font-weight: 800; margin-top: 0; }
+    h3 { color: #1c3f66; font-weight: 800; font-size: 16px; margin-top: 0; }
+
+    .denied-box { text-align: center; padding: 60px 20px; color: #b3463a; font-weight: 700; font-size: 16px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 2fr; gap: 25px; align-items: start; }
+
+    .form-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .form-row input, .form-row select {
+      padding: 10px 12px; border: 1.5px solid #dde5ee; border-radius: 8px;
+      font-size: 14px; font-family: 'Tajawal', sans-serif; flex: 1; min-width: 120px;
+    }
+    .form-row input:focus, .form-row select:focus {
+      outline: none; border-color: #b3463a; box-shadow: 0 0 0 3px rgba(179, 70, 58, 0.15);
+    }
+    .form-row button {
+      padding: 10px 20px; border: none; border-radius: 8px; font-weight: 700;
+      font-size: 13px; cursor: pointer; font-family: 'Tajawal', sans-serif;
+      background: linear-gradient(135deg, #b3463a 0%, #1c3f66 100%); color: white; white-space: nowrap;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+    th, td { border: 1px solid #eee; padding: 8px 10px; text-align: right; }
+    th { background: #f2f2f2; }
+    tr:hover { background: #fafcfb; }
+
+    .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .badge-active { background: #d4edda; color: #155724; }
+    .badge-inactive { background: #f8d7da; color: #721c24; }
+
+    .row-actions button {
+      padding: 4px 10px; border: none; border-radius: 4px; font-size: 11px;
+      font-weight: 700; cursor: pointer; margin: 1px; color: white;
+    }
+    .btn-edit { background: #2e5c8a; }
+    .btn-delete { background: #e74c3c; }
+    .btn-toggle-on { background: #e67e22; }
+    .btn-toggle-off { background: #16a085; }
+
+    .project-card {
+      border: 1px solid #e4ebf3; border-radius: 10px; padding: 16px; margin-bottom: 14px;
+      background: #fbfcfe;
+    }
+    .project-card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 10px;
+    }
+    .project-title { font-weight: 800; font-size: 15px; color: #142433; }
+    .project-meta { font-size: 12.5px; color: #64768a; margin-top: 3px; }
+    .directive-list { margin-top: 10px; border-top: 1px dashed #eee; padding-top: 10px; }
+    .directive-row {
+      display: flex; align-items: center; gap: 10px; font-size: 12.5px;
+      padding: 5px 0; border-bottom: 1px dashed #f0f0f0;
+    }
+    .directive-row .branch-name { font-weight: 700; color: #1c3f66; min-width: 120px; }
+    .directive-row .code { color: #64768a; font-family: monospace; }
+
+    .modal { display: none; position: fixed; z-index: 1000; inset: 0; background: rgba(0,0,0,0.5); }
+    .modal-content {
+      background: white; margin: 4% auto; padding: 25px; width: 90%; max-width: 500px;
+      border-radius: 12px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-content label { display: block; font-weight: 700; font-size: 13px; color: #34495e; margin: 12px 0 5px; }
+    .modal-content input, .modal-content select {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #dde5ee; border-radius: 8px;
+      font-size: 14px; font-family: 'Tajawal', sans-serif; box-sizing: border-box;
+    }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: center; }
+    .modal-actions button {
+      padding: 10px 24px; border: none; border-radius: 8px; font-weight: 700;
+      cursor: pointer; font-family: 'Tajawal', sans-serif;
+    }
+    .btn-save { background: #16a085; color: white; }
+    .btn-cancel { background: #eee; color: #333; }
+
+    .loading, .empty-state { text-align: center; padding: 30px; color: #64768a; }
+
+    @media (max-width: 800px) {
+      .two-col { grid-template-columns: 1fr; }
+      .top-header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .top-header .brand { justify-content: center; }
+      .top-header .nav-actions { justify-content: center; }
+      body { padding: 12px; }
+      .container { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-header">
+    <div class="brand">
+      <img src="logo.png" alt="Caritas Egypt" />
+      <span>نظام إدارة التمويل</span>
+    </div>
+    <div class="nav-actions">
+      <a href="index.html">🏠 الرئيسية</a>
+      <button onclick="pageLogout()">تسجيل خروج</button>
+    </div>
+  </div>
+
+  <div id="accessDenied" class="container" style="display:none;">
+    <div class="denied-box">🚫 هذه الصفحة متاحة للمدير فقط.</div>
+  </div>
+
+  <div id="mainContainer" style="display:none;">
+
+    <!-- الفروع -->
+    <div class="container">
+      <h2>🏢 الفروع</h2>
+      <div class="form-row">
+        <input type="text" id="newBranchName" placeholder="اسم الفرع الجديد (مثال: فرع قنا)">
+        <button onclick="addBranch()">➕ إضافة فرع</button>
+      </div>
+      <div id="branchesTableContainer"><div class="loading">جارٍ التحميل...</div></div>
+    </div>
+
+    <!-- المشاريع + التوجيهات المحاسبية -->
+    <div class="container">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin-bottom:0;">📁 المشاريع والتوجيهات المحاسبية</h2>
+        <button onclick="openProjectModal()" style="padding:10px 20px; border:none; border-radius:8px; font-weight:700; cursor:pointer; background:linear-gradient(135deg, #16a085 0%, #0f2846 100%); color:white; font-family:'Tajawal', sans-serif;">➕ مشروع جديد</button>
+      </div>
+      <div id="projectsContainer" style="margin-top:15px;"><div class="loading">جارٍ التحميل...</div></div>
+    </div>
+
+  </div>
+
+  <!-- مودال المشروع -->
+  <div id="projectModal" class="modal">
+    <div class="modal-content">
+      <h3 id="projectModalTitle">مشروع جديد</h3>
+      <input type="hidden" id="editProjectId">
+      <label>اسم المشروع</label>
+      <input type="text" id="pName" placeholder="مثال: قروض كاريتاس مصر 20 %">
+      <label>معدل الفائدة (%)</label>
+      <input type="number" id="pRate" step="0.1" placeholder="20">
+      <label>المصاريف الإدارية (%)</label>
+      <input type="number" id="pFee" step="0.1" placeholder="2.5">
+      <label>الحد الأدنى للصرف (جنيه)</label>
+      <input type="number" id="pMin" placeholder="اختياري">
+      <label>الحد الأقصى للصرف (جنيه)</label>
+      <input type="number" id="pMax" placeholder="اختياري">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:700;">
+        <input type="checkbox" id="pActive" style="width:auto;" checked> مفعّل (متاح للاستخدام في العقود)
+      </label>
+      <div class="modal-actions">
+        <button class="btn-save" onclick="saveProject()">💾 حفظ</button>
+        <button class="btn-cancel" onclick="closeProjectModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال إضافة توجيه محاسبي -->
+  <div id="directiveModal" class="modal">
+    <div class="modal-content">
+      <h3>إضافة توجيه محاسبي</h3>
+      <input type="hidden" id="directiveProjectId">
+      <label>الفرع</label>
+      <select id="dBranch"></select>
+      <label>كود التوجيه المحاسبي</label>
+      <input type="text" id="dCode" placeholder="مثال: 1-02-01-01-0031">
+      <div class="modal-actions">
+        <button class="btn-save" onclick="saveDirective()">💾 إضافة</button>
+        <button class="btn-cancel" onclick="closeDirectiveModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      }
+    }
+
+    let db;
+    try {
+      db = window.supabase.createClient(
+        'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      );
+    } catch (e) {
+      console.error('فشل في تهيئة قاعدة البيانات:', e);
+    }
+
+    let branches = [];
+    let projects = [];
+    let directives = [];
+
+    async function init() {
+      const userId = localStorage.getItem('loggedInUserId');
+      if (!userId) {
+        alert('الرجاء تسجيل الدخول أولًا!');
+        window.location.href = 'index.html';
+        return;
+      }
+      const userRole = localStorage.getItem('userRole');
+      if (userRole !== 'admin') {
+        document.getElementById('accessDenied').style.display = 'block';
+        return;
+      }
+      document.getElementById('mainContainer').style.display = 'block';
+      await loadAll();
+    }
+
+    async function loadAll() {
+      try {
+        const [branchesRes, projectsRes, directivesRes] = await Promise.all([
+          db.from('branches').select('*').order('name'),
+          db.from('projects').select('*').order('name'),
+          db.from('project_accounting_directives').select('*')
+        ]);
+
+        if (branchesRes.error) throw branchesRes.error;
+        if (projectsRes.error) throw projectsRes.error;
+        if (directivesRes.error) throw directivesRes.error;
+
+        branches = branchesRes.data || [];
+        projects = projectsRes.data || [];
+        directives = directivesRes.data || [];
+
+        renderBranches();
+        renderProjects();
+      } catch (e) {
+        console.error('خطأ في تحميل البيانات:', e);
+        document.getElementById('branchesTableContainer').innerHTML = `<div class="empty-state">❌ خطأ: ${e.message || e}</div>`;
+      }
+    }
+
+    // ========== الفروع ==========
+    function renderBranches() {
+      const el = document.getElementById('branchesTableContainer');
+      if (branches.length === 0) {
+        el.innerHTML = '<div class="empty-state">لا توجد فروع مضافة بعد.</div>';
+        return;
+      }
+      let html = `<table><thead><tr><th>اسم الفرع</th><th>عدد المشاريع المتاحة له</th><th></th></tr></thead><tbody>`;
+      branches.forEach(b => {
+        const count = directives.filter(d => d.branch_id === b.id).length;
+        html += `<tr>
+          <td>${escapeHtml(b.name)}</td>
+          <td>${count}</td>
+          <td class="row-actions"><button class="btn-delete" onclick="deleteBranch(${b.id})">حذف</button></td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      el.innerHTML = html;
+    }
+
+    async function addBranch() {
+      const nameInput = document.getElementById('newBranchName');
+      const name = nameInput.value.trim();
+      if (!name) {
+        alert('اكتب اسم الفرع الأول.');
+        return;
+      }
+      try {
+        const { error } = await db.from('branches').insert([{ name }]);
+        if (error) throw error;
+        nameInput.value = '';
+        await loadAll();
+      } catch (e) {
+        alert('❌ خطأ: ' + (e.message || e));
+      }
+    }
+
+    async function deleteBranch(id) {
+      if (!confirm('حذف الفرع ده؟ هيتحذف معاه أي توجيهات محاسبية مرتبطة بيه.')) return;
+      try {
+        const { error } = await db.from('branches').delete().eq('id', id);
+        if (error) throw error;
+        await loadAll();
+      } catch (e) {
+        alert('❌ خطأ: ' + (e.message || e));
+      }
+    }
+
+    // ========== المشاريع ==========
+    function renderProjects() {
+      const el = document.getElementById('projectsContainer');
+      if (projects.length === 0) {
+        el.innerHTML = '<div class="empty-state">لا توجد مشاريع مضافة بعد.</div>';
+        return;
+      }
+
+      let html = '';
+      projects.forEach(p => {
+        const projDirectives = directives.filter(d => d.project_id === p.id);
+        const statusBadge = p.is_active
+          ? '<span class="badge badge-active">مفعّل</span>'
+          : '<span class="badge badge-inactive">غير مفعّل</span>';
+
+        let rangeText = '';
+        if (p.min_amount || p.max_amount) {
+          rangeText = ` &nbsp;|&nbsp; النطاق: ${p.min_amount ? Number(p.min_amount).toLocaleString('ar-EG') : '—'} إلى ${p.max_amount ? Number(p.max_amount).toLocaleString('ar-EG') : '—'} ج.م`;
+        }
+
+        html += `<div class="project-card">
+          <div class="project-card-header">
+            <div>
+              <div class="project-title">${escapeHtml(p.name)} ${statusBadge}</div>
+              <div class="project-meta">فائدة: ${p.interest_rate}% &nbsp;|&nbsp; مصاريف إدارية: ${p.admin_fee_percent}%${rangeText}</div>
+            </div>
+            <div class="row-actions">
+              <button class="${p.is_active ? 'btn-toggle-on' : 'btn-toggle-off'}" onclick="toggleProjectActive(${p.id}, ${p.is_active})">${p.is_active ? '⏸️ تعطيل' : '▶️ تفعيل'}</button>
+              <button class="btn-edit" onclick="openProjectModal(${p.id})">تعديل</button>
+              <button class="btn-delete" onclick="deleteProject(${p.id})">حذف</button>
+            </div>
+          </div>
+          <div class="directive-list">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="font-size:12.5px; color:#1c3f66;">التوجيهات المحاسبية حسب الفرع:</strong>
+              <button onclick="openDirectiveModal(${p.id})" style="padding:4px 12px; border:none; border-radius:6px; background:#2e5c8a; color:white; font-size:11px; cursor:pointer;">➕ إضافة فرع</button>
+            </div>`;
+
+        if (projDirectives.length === 0) {
+          html += `<div style="font-size:12px; color:#aaa; margin-top:6px;">لسه مفيش أي فرع متاح له المشروع ده.</div>`;
+        } else {
+          projDirectives.forEach(d => {
+            const branch = branches.find(b => b.id === d.branch_id);
+            html += `<div class="directive-row">
+              <span class="branch-name">${branch ? escapeHtml(branch.name) : '—'}</span>
+              <span class="code">${escapeHtml(d.accounting_code)}</span>
+              <button class="btn-delete" style="padding:2px 8px; font-size:10px;" onclick="deleteDirective(${d.id})">حذف</button>
+            </div>`;
+          });
+        }
+
+        html += `</div></div>`;
+      });
+
+      el.innerHTML = html;
+    }
+
+    function openProjectModal(id) {
+      document.getElementById('projectModal').style.display = 'block';
+      if (id) {
+        const p = projects.find(x => x.id === id);
+        document.getElementById('projectModalTitle').textContent = 'تعديل مشروع';
+        document.getElementById('editProjectId').value = p.id;
+        document.getElementById('pName').value = p.name;
+        document.getElementById('pRate').value = p.interest_rate;
+        document.getElementById('pFee').value = p.admin_fee_percent;
+        document.getElementById('pMin').value = p.min_amount || '';
+        document.getElementById('pMax').value = p.max_amount || '';
+        document.getElementById('pActive').checked = p.is_active;
+      } else {
+        document.getElementById('projectModalTitle').textContent = 'مشروع جديد';
+        document.getElementById('editProjectId').value = '';
+        document.getElementById('pName').value = '';
+        document.getElementById('pRate').value = '';
+        document.getElementById('pFee').value = '';
+        document.getElementById('pMin').value = '';
+        document.getElementById('pMax').value = '';
+        document.getElementById('pActive').checked = true;
+      }
+    }
+
+    function closeProjectModal() {
+      document.getElementById('projectModal').style.display = 'none';
+    }
+
+    async function saveProject() {
+      const id = document.getElementById('editProjectId').value;
+      const name = document.getElementById('pName').value.trim();
+      const rate = parseFloat(document.getElementById('pRate').value);
+      const fee = parseFloat(document.getElementById('pFee').value);
+      const min = document.getElementById('pMin').value ? parseFloat(document.getElementById('pMin').value) : null;
+      const max = document.getElementById('pMax').value ? parseFloat(document.getElementById('pMax').value) : null;
+      const active = document.getElementById('pActive').checked;
+
+      if (!name || isNaN(rate) || isNaN(fee)) {
+        alert('اكتب اسم المشروع ومعدل الفائدة والمصاريف الإدارية على الأقل.');
+        return;
+      }
+      if (min !== null && max !== null && min > max) {
+        alert('الحد الأدنى لازم يكون أقل من أو يساوي الحد الأقصى.');
+        return;
+      }
+
+      const payload = {
+        name, interest_rate: rate, admin_fee_percent: fee,
+        min_amount: min, max_amount: max, is_active: active,
+        updated_at: new Date().toISOString()
+      };
+
+      try {
+        let error;
+        if (id) {
+          ({ error } = await db.from('projects').update(payload).eq('id', id));
+        } else {
+          ({ error } = await db.from('projects').insert([payload]));
+        }
+        if (error) throw error;
+        closeProjectModal();
+        await loadAll();
+      } catch (e) {
+        alert('❌ خطأ: ' + (e.message || e));
+      }
+    }
+
+    async function toggleProjectActive(id, current) {
+      try {
+        const { error } = await db.from('projects').update({ is_active: !current }).eq('id', id);
+        if (error) throw error;
+        await loadAll();
+      } catch (e) {
+        alert('❌ خطأ: ' + (e.message || e));
+      }
+    }
+
+    async function deleteProject(id) {
+      if (!confirm('حذف المشروع ده؟ هيتحذف معاه كل توجيهاته المحاسبية.')) return;
+      try {
+        const { error } = await db.from('projects').delete().eq('id', id);
+        if (error) throw error;
+        await loadAll();
+      } catch (e) {
+        alert('❌ خطأ: ' + (e.message || e));
+      }
+    }
+
+    // ========== التوجيهات المحاسبية ==========
+    function openDirectiveModal(projectId) {
+      document.getElementById('directiveProjectId').value = projectId;
+      const select = document.getElementById('dBranch');
+      select.innerHTML = '';
+      const usedBranchIds = directives.filter(d => d.project_id === projectId).map(d => d.branch_id);
+      const availableBranches = branches.filter(b => !usedBranchIds.includes(b.id));
+
+      if (availableBranches.length === 0) {
+        select.innerHTML = '<option value="">كل الفروع متاحة للمشروع ده بالفعل</option>';
+      } else {
+        availableBranches.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.id;
+          opt.textContent = b.name;
+          select.appendChild(opt);
+        });
+      }
+      document.getElementById('dCode').value = '';
+      document.getElementById('directiveModal').style.display = 'block';
+    }
+
+    function closeDirectiveModal() {
+      document.getElementById('directiveModal').style.display = 'none';
+    }
+
+    async function saveDirective() {
+      const projectId = parseInt(document.getElementById('directiveProjectId').value);
+      const branchId = parseInt(document.getElementById('dBranch').value);
+      const code = document.getElementById('dCode').value.trim();
+
+      if (!branchId) {
+        alert('اختر فرع.');
+        return;
+      }
+      if (!code) {
+        alert('اكتب كود التوجيه المحاسبي.');
+        return;
+      }
+
+      try {
+        const { error } = await db.from('project_accounting_directives').insert([{
+          project_id: projectId, branch_id: branchId, accounting_code: code
+        }]);
+        if (error) throw error;
+        closeDirectiveModal();
+        await loadAll();
+      } catch (e) {
+        alert('❌ خطأ: ' + (e.message || e));
+      }
+    }
+
+    async function deleteDirective(id) {
+      if (!confirm('حذف التوجيه المحاسبي ده؟')) return;
+      try {
+        const { error } = await db.from('project_accounting_directives').delete().eq('id', id);
+        if (error) throw error;
+        await loadAll();
+      } catch (e) {
+        alert('❌ خطأ: ' + (e.message || e));
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
+
+    window.onclick = function(event) {
+      if (event.target.id === 'projectModal') closeProjectModal();
+      if (event.target.id === 'directiveModal') closeDirectiveModal();
+    };
+
+    init();
+  </script>
+</body>
+</html>

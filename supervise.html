@@ -1198,6 +1198,7 @@
               <th>تم التحويل</th>
               <th>المراجعة</th>
               <th>المتابعة</th>
+              <th>مسئول المشروع</th>
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
               <th>الإجراء</th>
@@ -1212,6 +1213,7 @@
         const reviewClass = getCellClass(row["المراجعة الداخلية"]);
         const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
         const adminClass = getCellClass(row["الادارة"]);
+        const projectOfficerClass = getCellClass(row["موافقة مسئول المشروع"]);
         const hasHistory = window.oldCommitteesNids && window.oldCommitteesNids.has(row["رقم البطاقة العميل"]);
         const historyBtnHtml = hasHistory
           ? `<button class="history-btn" onclick="openClientHistory(${idx})" title="يوجد لجان قديمة لهذا العميل">📜 لجان قديمة</button>`
@@ -1234,6 +1236,7 @@
             <td>${row["تم التحويل"] ? '<span style="color: #27ae60;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
             <td class="${reviewClass}">${row["المراجعة الداخلية"] || '—'}</td>
             <td class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</td>
+            <td class="${projectOfficerClass}">${row["موافقة مسئول المشروع"] || '—'}</td>
             <td class="${adminClass}">${row["الادارة"] || '—'}</td>
             <td>${row["رقم اللجنة"] || '—'}</td>
             <td class="actions-cell">
@@ -1243,7 +1246,7 @@
             </td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="18">
+            <td colspan="19">
               <div class="detail-container">
                 
                 <div class="detail-row-sections">
@@ -1387,6 +1390,16 @@
                       <div class="detail-item">
                         <span class="detail-label">تعليق المتابعة:</span>
                         <span class="detail-value">${row["تعليق مسؤول المتابعة"] || '—'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="detail-item">
+                        <span class="detail-label">موافقة مسئول المشروع:</span>
+                        <span class="detail-value">${row["موافقة مسئول المشروع"] || '—'}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">ملاحظات مسئول المشروع:</span>
+                        <span class="detail-value">${row["ملاحظات مسئول المشروع"] || '—'}</span>
                       </div>
                     </div>
                     <div>
@@ -1557,6 +1570,8 @@
           'تعليق مسؤول المتابعة': row["تعليق مسؤول المتابعة"] || '',
           'الإدارة': row["الادارة"] || '',
           'ملاحظات الإدارة': row["ملاحظات الادارة"] || '',
+          'موافقة مسئول المشروع': row["موافقة مسئول المشروع"] || '',
+          'ملاحظات مسئول المشروع': row["ملاحظات مسئول المشروع"] || '',
           'رقم اللجنة': row["رقم اللجنة"] || '',
           'عدد أيام التأخير': row["عدد ايام التاخير"] || '',
           'عدد الأقساط': row["عدد الاقساط"] || '',

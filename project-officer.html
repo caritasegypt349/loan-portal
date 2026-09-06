@@ -1127,7 +1127,8 @@
               <th>المبلغ</th>
               <th>الأخصائي</th>
               <th>تم التحويل</th>
-              <th>المراجعة</th>
+              <th>المراجعة الداخلية</th>
+              <th>مسئول المشروع</th>
               <th>المتابعة</th>
               <th>الإدارة</th>
               <th>رقم اللجنة</th>
@@ -1163,6 +1164,7 @@
           return '';
         };
 
+        const internalReviewClass = getCellClass(row["المراجعة الداخلية"]);
         const reviewClass = getCellClass(row["موافقة مسئول المشروع"]);
         const supervisorClass = getCellClass(row["مسؤول المتابعة"]);
         const adminClass = getCellClass(row["الادارة"]);
@@ -1182,6 +1184,7 @@
             <td style="font-weight: bold; color: #e67e22;">${row["المبلغ المطلوب"] || '—'}</td>
             <td>${row["اسم الاخصائى"] || '—'}</td>
             <td>${row["تم التحويل"] ? '<span style="color: #2ecc71;">✓ نعم</span>' : '<span style="color: #e74c3c;">✗ لا</span>'}</td>
+            <td><span class="${internalReviewClass}">${row["المراجعة الداخلية"] || '—'}</span></td>
             <td><span class="${reviewClass}">${row["موافقة مسئول المشروع"] || '—'}</span></td>
             <td><span class="${supervisorClass}">${row["مسؤول المتابعة"] || '—'}</span></td>
             <td><span class="${adminClass}">${row["الادارة"] || '—'}</span></td>
@@ -1194,7 +1197,7 @@
             </td>
           </tr>
           <tr class="detail-row" id="detail-${idx}">
-            <td colspan="19">
+            <td colspan="20">
               <div class="detail-container">
                 
                 <div class="detail-row-sections">
@@ -1302,14 +1305,24 @@
 
                                           <div class="detail-section-full">
                                             <h3>✅ المراجعة والمتابعة</h3>
-                                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                                              <div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">المراجعة الداخلية:</span>
+                                                  <span class="detail-value"><span class="${internalReviewClass}">${row["المراجعة الداخلية"] || '—'}</span></span>
+                                                </div>
+                                                <div class="detail-item">
+                                                  <span class="detail-label">ملاحظات المراجعة:</span>
+                                                  <span class="detail-value">${row["ملاحظات المراجعة الداخلية"] || '—'}</span>
+                                                </div>
+                                              </div>
                                               <div>
                                                 <div class="detail-item">
                                                   <span class="detail-label">موافقة مسئول المشروع:</span>
                                                   <span class="detail-value"><span class="${reviewClass}">${row["موافقة مسئول المشروع"] || '—'}</span></span>
                                                 </div>
                                                 <div class="detail-item">
-                                                  <span class="detail-label">ملاحظات المراجعة:</span>
+                                                  <span class="detail-label">ملاحظات مسئول المشروع:</span>
                                                   <span class="detail-value">${row["ملاحظات مسئول المشروع"] || '—'}</span>
                                                 </div>
                                                 <div class="detail-item">
@@ -1615,6 +1628,8 @@
           'المبلغ المطلوب': row["المبلغ المطلوب"] || 0,
           'الأخصائي': row["اسم الاخصائى"] || '',
           'تم التحويل': row["تم التحويل"] ? 'نعم' : 'لا',
+          'المراجعة الداخلية': row["المراجعة الداخلية"] || '',
+          'ملاحظات المراجعة الداخلية': row["ملاحظات المراجعة الداخلية"] || '',
           'موافقة مسئول المشروع': row["موافقة مسئول المشروع"] || '',
           'ملاحظات مسئول المشروع': row["ملاحظات مسئول المشروع"] || '',
           'مسؤول المتابعة': row["مسؤول المتابعة"] || '',

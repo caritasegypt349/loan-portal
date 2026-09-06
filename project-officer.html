@@ -235,22 +235,6 @@
       gap: 4px;
       min-width: 150px;
     }
-    .visit-btn {
-      background: linear-gradient(135deg, #16a085 0%, #0f2846 100%);
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 11px;
-      white-space: nowrap;
-      transition: all 0.3s;
-    }
-    .visit-btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(22, 160, 133, 0.4);
-    }
     .actions-cell button {
       width: 100%;
       margin: 0;
@@ -800,7 +784,6 @@
       }
 
       await loadOldCommitteesNidSet();
-      await loadVisitReportsMap();
       await loadData();
       
       // إغلاق dropdown اللجان عند الضغط خارجها
@@ -1145,10 +1128,6 @@
         const historyBtnHtml = hasHistory
           ? `<button class="history-btn" onclick="openClientHistory(${idx})" title="يوجد لجان قديمة لهذا العميل">📜 لجان قديمة</button>`
           : `<button class="history-btn disabled" disabled title="لا توجد لجان قديمة مسجلة لهذا العميل">📜 لجان قديمة</button>`;
-        const existingReportId = window.visitReportsByOperation && window.visitReportsByOperation.get(row.id);
-        const visitBtnHtml = existingReportId
-          ? `<button class="visit-btn" onclick="window.open('visit-report-edit.html?id=${existingReportId}', '_blank')" title="فتح تقرير الزيارة الموجود">📂 فتح تقرير الزيارة</button>`
-          : `<button class="visit-btn" onclick="createVisitReport(${idx}, this)">📋 تقرير زيارة</button>`;
         const getCellClass = (value) => {
           if (!value) return '';
           const lowerValue = value.toLowerCase();
@@ -1192,7 +1171,6 @@
             <td class="actions-cell">
               <button class="edit-btn" onclick="openEditModal('${row.id}')">✏️ تعديل</button>
               <button class="expand-btn" onclick="toggleDetail(${idx}, event)">📄 تفاصيل</button>
-              ${visitBtnHtml}
               ${historyBtnHtml}
             </td>
           </tr>
@@ -1471,120 +1449,6 @@
         }
       } catch (e) {
         console.error('تعذر تحميل قائمة اللجان القديمة:', e);
-      }
-    }
-
-    // ========== تحميل خريطة (operation_id -> report_id) لتقارير الزيارة الموجودة بالفعل ==========
-    async function loadVisitReportsMap() {
-      window.visitReportsByOperation = new Map();
-      try {
-        let page = 0;
-        const pageSize = 1000;
-        while (true) {
-          const { data, error } = await mySupabase
-            .from('visit_reports')
-            .select('id, operation_id')
-            .not('operation_id', 'is', null)
-            .range(page * pageSize, (page + 1) * pageSize - 1);
-          if (error) throw error;
-          if (!data || data.length === 0) break;
-          data.forEach(r => {
-            if (r.operation_id && !window.visitReportsByOperation.has(r.operation_id)) {
-              window.visitReportsByOperation.set(r.operation_id, r.id);
-            }
-          });
-          if (data.length < pageSize) break;
-          page++;
-        }
-      } catch (e) {
-        console.error('تعذر تحميل قائمة تقارير الزيارة:', e);
-      }
-    }
-
-    // ========== إنشاء تقرير زيارة جديد (أو فتح الموجود لو اتعمل بالفعل) ==========
-    async function createVisitReport(idx, btnEl) {
-      const row = (window.currentTableData || [])[idx];
-      if (!row) {
-        alert('تعذر العثور على بيانات هذا السجل.');
-        return;
-      }
-
-      if (btnEl.disabled) return;
-      const originalText = btnEl.textContent;
-      btnEl.disabled = true;
-      btnEl.style.opacity = '0.6';
-      btnEl.style.cursor = 'not-allowed';
-      btnEl.textContent = '⏳ جارٍ التحقق...';
-
-      try {
-        // ✅ فحص مباشر من قاعدة البيانات قبل الإنشاء (أهم خطوة لمنع التكرار نهائيًا،
-        // حتى لو الصفحة اتفتحت في أكتر من تاب أو الخريطة المحلية كانت قديمة)
-        const { data: existing, error: checkError } = await mySupabase
-          .from('visit_reports')
-          .select('id')
-          .eq('operation_id', row.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (checkError) throw checkError;
-
-        if (existing && existing.length > 0) {
-          // فيه تقرير موجود بالفعل - افتحه بدل ما نعمل واحد جديد
-          window.open('visit-report-edit.html?id=' + existing[0].id, '_blank');
-          if (window.visitReportsByOperation) {
-            window.visitReportsByOperation.set(row.id, existing[0].id);
-          }
-          return;
-        }
-
-        btnEl.textContent = '⏳ جارٍ الإنشاء...';
-
-        const newRecord = {
-          operation_id: row.id || null,
-          code: row["كود_العميل"] || null,
-          name: row["اسم_العميل"] || null,
-          branch: row["الفرع"] || null,
-          national_id: row["رقم البطاقة العميل"] || null,
-          activity: row["المشروع"] || null,
-          specialist_name: row["اسم الاخصائى"] || null,
-          guarantor_name: row["اسم_الضامن"] || null,
-          guarantor_national_id: row["رقم بطاقة الضامن"] || null,
-          financing_amount: row["المبلغ المطلوب"] || null,
-          created_by: localStorage.getItem('loggedInUser') || null
-        };
-
-        const { data, error } = await mySupabase
-          .from('visit_reports')
-          .insert([newRecord])
-          .select();
-
-        if (error) throw error;
-
-        const newId = data[0].id;
-        if (window.visitReportsByOperation) {
-          window.visitReportsByOperation.set(row.id, newId);
-        }
-        window.open('visit-report-edit.html?id=' + newId, '_blank');
-
-        // تحديث الزرار في الصفحة الحالية عشان لو دوس تاني يفتح نفس التقرير بدل ما يعمل واحد جديد
-        btnEl.textContent = '📂 فتح تقرير الزيارة';
-        btnEl.setAttribute('onclick', `window.open('visit-report-edit.html?id=${newId}', '_blank')`);
-        btnEl.disabled = false;
-        btnEl.style.opacity = '1';
-        btnEl.style.cursor = 'pointer';
-        return;
-
-      } catch (err) {
-        console.error('خطأ في إنشاء/فتح تقرير الزيارة:', err);
-        alert('❌ حدث خطأ: ' + (err.message || err));
-      } finally {
-        if (!btnEl.disabled) return;
-        setTimeout(() => {
-          btnEl.disabled = false;
-          btnEl.style.opacity = '1';
-          btnEl.style.cursor = 'pointer';
-          btnEl.textContent = originalText;
-        }, 500);
       }
     }
 

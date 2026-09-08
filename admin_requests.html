@@ -649,7 +649,7 @@
     async function addElementAsPdfPage(pdf, element, isFirstPage) {
       document.body.appendChild(element);
       try {
-        const canvas = await html2canvas(element, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
+        const canvas = await html2canvas(element, { backgroundColor: '#ffffff', scale: 1.5, useCORS: true });
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         const margin = 8;
@@ -666,7 +666,9 @@
         const y = margin;
 
         if (!isFirstPage) pdf.addPage();
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, imgWidth, imgHeight);
+        // ✅ JPEG بجودة 0.85 بدل PNG عشان نقلل حجم الملف جدًا (PNG كان بيطلّع ملفات ضخمة جدًا)
+        const imgData = canvas.toDataURL('image/jpeg', 0.85);
+        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'FAST');
       } finally {
         document.body.removeChild(element);
       }

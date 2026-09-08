@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
@@ -413,111 +413,263 @@
     }
 
     // ============================================================
-    // 📊 تصدير Excel تفصيلي (شيت ملخص + شيت لكل حقل اتغير في كل طلب)
+    // 📊 تصدير Excel تفصيلي ومنظم وملون (ExcelJS)
     // ============================================================
-    function exportToExcel() {
+    async function exportToExcel() {
       const dataToExport = getCurrentlyFilteredRequests();
       if (!dataToExport.length) {
         alert('لا توجد بيانات لتصديرها حسب الفلتر الحالي.');
         return;
       }
+      if (typeof ExcelJS === 'undefined') {
+        alert('تعذر تحميل مكتبة إنشاء Excel. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.');
+        return;
+      }
 
-      const summaryRows = dataToExport.map(r => ({
-        'رقم الطلب': r.id,
-        'رقم العملية': r.operation_id,
-        'مقدم الطلب': r.requested_by,
-        'دور مقدم الطلب': r.requester_role || 'غير محدد',
-        'تاريخ الطلب': new Date(r.created_at).toLocaleString('ar-EG'),
-        'الحالة': statusTextAr(r.status),
-        'ملاحظات مقدم الطلب': r.notes || '',
-        'تمت المراجعة بواسطة': r.approved_by || '',
-        'تاريخ المراجعة': r.approved_at ? new Date(r.approved_at).toLocaleString('ar-EG') : ''
-      }));
+      const statusColors = { Pending: 'FFF39C12', Approved: 'FF2ECC71', Rejected: 'FFE74C3C' };
+      const thinBorder = {
+        top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+      };
 
-      const detailRows = [];
-      dataToExport.forEach(r => {
-        const rows = getComparisonRows(r);
-        if (rows.length === 0) {
-          detailRows.push({
-            'رقم الطلب': r.id, 'رقم العملية': r.operation_id, 'مقدم الطلب': r.requested_by,
-            'تاريخ الطلب': new Date(r.created_at).toLocaleString('ar-EG'), 'الحالة': statusTextAr(r.status),
-            'الحقل': '—', 'القيمة قبل التعديل': '—', 'القيمة المطلوبة': '—'
-          });
-          return;
-        }
-        rows.forEach(row => {
-          detailRows.push({
-            'رقم الطلب': r.id,
-            'رقم العملية': r.operation_id,
-            'مقدم الطلب': r.requested_by,
-            'تاريخ الطلب': new Date(r.created_at).toLocaleString('ar-EG'),
-            'الحالة': statusTextAr(r.status),
-            'الحقل': row.field,
-            'القيمة قبل التعديل': row.oldVal,
-            'القيمة المطلوبة': row.newVal
-          });
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'نظام إدارة التمويل - كاريتاس مصر';
+      wb.created = new Date();
+
+      // ===== شيت 1: ملخص الطلبات =====
+      const summarySheet = wb.addWorksheet('ملخص الطلبات', { views: [{ rightToLeft: true }] });
+      summarySheet.columns = [
+        { header: 'رقم الطلب', key: 'id', width: 12 },
+        { header: 'رقم العملية', key: 'operation_id', width: 14 },
+        { header: 'مقدم الطلب', key: 'requested_by', width: 20 },
+        { header: 'دور مقدم الطلب', key: 'requester_role', width: 16 },
+        { header: 'تاريخ الطلب', key: 'created_at', width: 20 },
+        { header: 'الحالة', key: 'status', width: 14 },
+        { header: 'ملاحظات مقدم الطلب', key: 'notes', width: 32 },
+        { header: 'تمت المراجعة بواسطة', key: 'approved_by', width: 18 },
+        { header: 'تاريخ المراجعة', key: 'approved_at', width: 20 }
+      ];
+      summarySheet.getRow(1).eachCell(cell => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C3F66' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = thinBorder;
+      });
+      summarySheet.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
+      summarySheet.autoFilter = { from: 'A1', to: 'I1' };
+
+      dataToExport.forEach((r, idx) => {
+        const row = summarySheet.addRow({
+          id: r.id,
+          operation_id: r.operation_id,
+          requested_by: r.requested_by,
+          requester_role: r.requester_role || 'غير محدد',
+          created_at: new Date(r.created_at).toLocaleString('ar-EG'),
+          status: statusTextAr(r.status),
+          notes: r.notes || '',
+          approved_by: r.approved_by || '',
+          approved_at: r.approved_at ? new Date(r.approved_at).toLocaleString('ar-EG') : ''
         });
+        row.eachCell(cell => {
+          cell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+          cell.border = thinBorder;
+        });
+        if (idx % 2 === 1) {
+          ['id', 'operation_id', 'requested_by', 'requester_role', 'created_at', 'notes', 'approved_by', 'approved_at']
+            .forEach(key => { row.getCell(key).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F9FC' } }; });
+        }
+        const statusCell = row.getCell('status');
+        statusCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: statusColors[r.status] || 'FF95A5A6' } };
+        statusCell.alignment = { horizontal: 'center', vertical: 'middle' };
       });
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'ملخص الطلبات');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailRows), 'تفاصيل التغييرات');
+      // ===== شيت 2: تفاصيل التغييرات =====
+      const detailSheet = wb.addWorksheet('تفاصيل التغييرات', { views: [{ rightToLeft: true }] });
+      detailSheet.columns = [
+        { header: 'رقم الطلب', key: 'id', width: 10 },
+        { header: 'رقم العملية', key: 'operation_id', width: 12 },
+        { header: 'مقدم الطلب', key: 'requested_by', width: 18 },
+        { header: 'تاريخ الطلب', key: 'created_at', width: 18 },
+        { header: 'الحالة', key: 'status', width: 12 },
+        { header: 'الحقل', key: 'field', width: 26 },
+        { header: 'القيمة قبل التعديل', key: 'oldVal', width: 28 },
+        { header: 'القيمة المطلوبة', key: 'newVal', width: 28 }
+      ];
+      detailSheet.getRow(1).eachCell(cell => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB3463A' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = thinBorder;
+      });
+      detailSheet.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
+      detailSheet.autoFilter = { from: 'A1', to: 'H1' };
 
-      const stamp = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, `طلبات_التعديل_${stamp}.xlsx`);
+      let groupShaded = false;
+      dataToExport.forEach(r => {
+        const rows = getComparisonRows(r);
+        const list = rows.length ? rows : [{ field: 'لا توجد حقول متغيرة', oldVal: '—', newVal: '—' }];
+        groupShaded = !groupShaded;
+        const startRowNum = detailSheet.rowCount + 1;
+
+        list.forEach((item, i) => {
+          const row = detailSheet.addRow({
+            id: i === 0 ? r.id : '',
+            operation_id: i === 0 ? r.operation_id : '',
+            requested_by: i === 0 ? r.requested_by : '',
+            created_at: i === 0 ? new Date(r.created_at).toLocaleString('ar-EG') : '',
+            status: i === 0 ? statusTextAr(r.status) : '',
+            field: item.field,
+            oldVal: item.oldVal,
+            newVal: item.newVal
+          });
+          row.eachCell(cell => {
+            cell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: true };
+            cell.border = thinBorder;
+          });
+          if (groupShaded) {
+            ['id', 'operation_id', 'requested_by', 'created_at', 'status', 'field']
+              .forEach(key => { row.getCell(key).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAFAFA' } }; });
+          }
+          row.getCell('oldVal').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBECEC' } };
+          row.getCell('newVal').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F8F5' } };
+          const statusCellD = row.getCell('status');
+          if (i === 0) {
+            statusCellD.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            statusCellD.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: statusColors[r.status] || 'FF95A5A6' } };
+            statusCellD.alignment = { horizontal: 'center', vertical: 'middle' };
+          }
+        });
+
+        // دمج خلايا بيانات الطلب الأساسية عبر كل صفوف التغييرات بتاعته
+        if (list.length > 1) {
+          const endRowNum = detailSheet.rowCount;
+          ['A', 'B', 'C', 'D', 'E'].forEach(col => {
+            detailSheet.mergeCells(`${col}${startRowNum}:${col}${endRowNum}`);
+            detailSheet.getCell(`${col}${startRowNum}`).alignment = { vertical: 'middle', horizontal: 'right', wrapText: true };
+          });
+        }
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `طلبات_التعديل_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     // ============================================================
-    // 🖨️ تصدير PDF (بيرسم تقرير HTML بالعربي وياخد صورة منه بـ html2canvas
-    //    عشان الخط العربي يظهر صح، وبعدين يحطها جوه PDF متعدد الصفحات)
+    // 🖨️ تصدير PDF — كل طلب في صفحة مستقلة (+ صفحة ملخص أولى)
+    //    بيرسم كل صفحة كـ HTML بالعربي وياخد صورة منها بـ html2canvas
+    //    عشان الخط العربي يظهر صح، وبعدين يحطها في صفحة PDF لوحدها.
     // ============================================================
-    function buildPrintableReport(dataToExport) {
+    function buildSummaryPage(dataToExport) {
       const wrapper = document.createElement('div');
       wrapper.style.cssText = 'position:fixed; top:0; left:-99999px; width:900px; background:#fff; padding:30px; font-family:Tajawal, Arial, sans-serif; direction:rtl; color:#142433;';
 
-      let html = `
+      let rowsHtml = dataToExport.map(req => `
+        <tr>
+          <td style="border:1px solid #ddd; padding:8px;">${req.id}</td>
+          <td style="border:1px solid #ddd; padding:8px;">${req.operation_id}</td>
+          <td style="border:1px solid #ddd; padding:8px;">${req.requested_by || '—'}</td>
+          <td style="border:1px solid #ddd; padding:8px;">${req.requester_role || 'غير محدد'}</td>
+          <td style="border:1px solid #ddd; padding:8px;">${new Date(req.created_at).toLocaleDateString('ar-EG')}</td>
+          <td style="border:1px solid #ddd; padding:8px; font-weight:700;">${statusTextAr(req.status)}</td>
+        </tr>
+      `).join('');
+
+      wrapper.innerHTML = `
         <h2 style="text-align:center;color:#b3463a;margin-top:0;">تقرير طلبات التعديل</h2>
         <p style="text-align:center;color:#666;font-size:13px;">
           تاريخ الإصدار: ${new Date().toLocaleString('ar-EG')} — عدد الطلبات: ${dataToExport.length}
         </p>
+        <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:15px;">
+          <thead>
+            <tr>
+              <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">رقم الطلب</th>
+              <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">رقم العملية</th>
+              <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">مقدم الطلب</th>
+              <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">الدور</th>
+              <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">التاريخ</th>
+              <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">الحالة</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
       `;
-
-      dataToExport.forEach(req => {
-        const rows = getComparisonRows(req);
-        html += `
-          <div style="margin-bottom:22px; border:1px solid #ddd; border-radius:8px; padding:14px; page-break-inside:avoid;">
-            <div style="font-weight:800; color:#1c3f66; margin-bottom:6px; font-size:14px;">
-              طلب رقم ${req.id} — عملية رقم ${req.operation_id} — ${statusTextAr(req.status)}
-            </div>
-            <div style="font-size:12px; color:#555; margin-bottom:10px;">
-              مقدم الطلب: ${req.requested_by || '—'} (${req.requester_role || 'غير محدد'}) &nbsp;|&nbsp;
-              تاريخ الطلب: ${new Date(req.created_at).toLocaleString('ar-EG')}
-              ${req.notes ? '<br>ملاحظات: ' + req.notes : ''}
-            </div>
-            <table style="width:100%; border-collapse:collapse; font-size:12px;">
-              <thead>
-                <tr>
-                  <th style="border:1px solid #ddd; padding:6px; background:#f2f2f2;">الحقل</th>
-                  <th style="border:1px solid #ddd; padding:6px; background:#fbecec;">القيمة قبل التعديل</th>
-                  <th style="border:1px solid #ddd; padding:6px; background:#e8f8f5;">القيمة المطلوبة</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows.map(r => `
-                  <tr>
-                    <td style="border:1px solid #ddd; padding:6px; font-weight:700;">${r.field}</td>
-                    <td style="border:1px solid #ddd; padding:6px;">${r.oldVal}</td>
-                    <td style="border:1px solid #ddd; padding:6px;">${r.newVal}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `;
-      });
-
-      wrapper.innerHTML = html;
       return wrapper;
+    }
+
+    function buildRequestPage(req) {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:fixed; top:0; left:-99999px; width:900px; background:#fff; padding:30px; font-family:Tajawal, Arial, sans-serif; direction:rtl; color:#142433;';
+
+      const rows = getComparisonRows(req);
+      const rowsHtml = rows.map(r => `
+        <tr>
+          <td style="border:1px solid #ddd; padding:8px; font-weight:700;">${r.field}</td>
+          <td style="border:1px solid #ddd; padding:8px; background:#fbecec;">${r.oldVal}</td>
+          <td style="border:1px solid #ddd; padding:8px; background:#e8f8f5;">${r.newVal}</td>
+        </tr>
+      `).join('');
+
+      wrapper.innerHTML = `
+        <div style="border:2px solid #1c3f66; border-radius:10px; padding:20px;">
+          <h2 style="text-align:center;color:#b3463a;margin-top:0;">طلب تعديل رقم ${req.id}</h2>
+          <div style="font-size:14px; margin-bottom:14px; line-height:1.9;">
+            <strong>رقم العملية:</strong> ${req.operation_id} &nbsp;|&nbsp;
+            <strong>الحالة:</strong> ${statusTextAr(req.status)}<br>
+            <strong>مقدم الطلب:</strong> ${req.requested_by || '—'} (${req.requester_role || 'غير محدد'})<br>
+            <strong>تاريخ الطلب:</strong> ${new Date(req.created_at).toLocaleString('ar-EG')}
+            ${req.approved_by ? '<br><strong>تمت المراجعة بواسطة:</strong> ' + req.approved_by : ''}
+            ${req.approved_at ? '<br><strong>تاريخ المراجعة:</strong> ' + new Date(req.approved_at).toLocaleString('ar-EG') : ''}
+          </div>
+          ${req.notes ? `<div style="background:#f0f0f0; border-radius:6px; padding:10px; margin-bottom:16px; font-size:13px;"><strong>ملاحظات مقدم الطلب:</strong> ${req.notes}</div>` : ''}
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+              <tr>
+                <th style="border:1px solid #ddd; padding:8px; background:#f2f2f2;">الحقل</th>
+                <th style="border:1px solid #ddd; padding:8px; background:#fbecec;">القيمة قبل التعديل</th>
+                <th style="border:1px solid #ddd; padding:8px; background:#e8f8f5;">القيمة المطلوبة</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml || '<tr><td colspan="3" style="border:1px solid #ddd; padding:8px; text-align:center;">لا توجد حقول متغيرة</td></tr>'}</tbody>
+          </table>
+        </div>
+      `;
+      return wrapper;
+    }
+
+    // بيرسم عنصر HTML لصورة، ويحطها في صفحة PDF واحدة (يصغّرها لو أطول من الصفحة عشان متتقطعش)
+    async function addElementAsPdfPage(pdf, element, isFirstPage) {
+      document.body.appendChild(element);
+      try {
+        const canvas = await html2canvas(element, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 8;
+        const usableWidth = pageWidth - margin * 2;
+        const usableHeight = pageHeight - margin * 2;
+
+        let imgWidth = usableWidth;
+        let imgHeight = (canvas.height * imgWidth) / canvas.width;
+        if (imgHeight > usableHeight) {
+          imgHeight = usableHeight;
+          imgWidth = (canvas.width * imgHeight) / canvas.height;
+        }
+        const x = margin + (usableWidth - imgWidth) / 2;
+        const y = margin;
+
+        if (!isFirstPage) pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, imgWidth, imgHeight);
+      } finally {
+        document.body.removeChild(element);
+      }
     }
 
     async function exportToPDF() {
@@ -526,37 +678,19 @@
         alert('لا توجد بيانات لتصديرها حسب الفلتر الحالي.');
         return;
       }
-
       if (typeof html2canvas === 'undefined' || !window.jspdf) {
         alert('تعذر تحميل مكتبات إنشاء PDF. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.');
         return;
       }
 
-      const reportEl = buildPrintableReport(dataToExport);
-      document.body.appendChild(reportEl);
-
       try {
-        const canvas = await html2canvas(reportEl, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
-
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = pageWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        const imgData = canvas.toDataURL('image/png');
 
-        let heightLeft = imgHeight;
-        let position = 0;
+        await addElementAsPdfPage(pdf, buildSummaryPage(dataToExport), true);
 
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
+        for (const req of dataToExport) {
+          await addElementAsPdfPage(pdf, buildRequestPage(req), false);
         }
 
         const stamp = new Date().toISOString().slice(0, 10);
@@ -564,8 +698,6 @@
       } catch (e) {
         console.error('خطأ في إنشاء PDF:', e);
         alert('حدث خطأ أثناء إنشاء ملف PDF: ' + e.message);
-      } finally {
-        document.body.removeChild(reportEl);
       }
     }
 

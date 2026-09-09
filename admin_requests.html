@@ -69,7 +69,10 @@
     .export-excel-btn { background: #217346; }
     .export-pdf-btn { background: #c0392b; }
     .export-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    select, .search-input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    .search-input { min-width: 220px; font-family: 'Tajawal', sans-serif; }
+    .approved-cell { background-color: #e6ffe6; color: #008000; font-weight: bold; }
+    .rejected-cell { background-color: #ffe6e6; color: #cc0000; font-weight: bold; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ddd; padding: 12px; text-align: right; font-size: 14px; }
     th { background-color: #f2f2f2; }
@@ -155,6 +158,7 @@
         <option value="Approved">الطلبات المقبولة</option>
         <option value="Rejected">الطلبات المرفوضة</option>
       </select>
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 بحث بالاسم أو كود العميل..." oninput="applyFilter()">
       <button class="export-btn export-excel-btn" onclick="exportToExcel()">📊 تصدير Excel (تفصيلي)</button>
       <button class="export-btn export-pdf-btn" onclick="exportToPDF()">🖨️ تصدير PDF</button>
     </div>
@@ -263,8 +267,39 @@
       }
 
       allRequests = data;
+      await attachOperationDetails(allRequests);
       renderNotifBanner();
       applyFilter();
+    }
+
+    // ✅ بيجيب اسم/كود العميل + الأربع حالات موافقة (المراجعة الداخلية / مسؤول المتابعة /
+    //    موافقة مسئول المشروع / الادارة) من operations_with_details لكل الطلبات دفعة واحدة
+    async function attachOperationDetails(requests) {
+      const operationIds = Array.from(new Set(requests.map(r => r.operation_id).filter(id => id !== null && id !== undefined)));
+      if (operationIds.length === 0) return;
+
+      const { data, error } = await db
+        .from('operations_with_details')
+        .select('id, "كود_العميل", "اسم_العميل", "اسم_العميل_من_التقييم", "المراجعة الداخلية", "مسؤول المتابعة", "موافقة مسئول المشروع", "الادارة"')
+        .in('id', operationIds);
+
+      if (error) {
+        console.error('تعذر جلب بيانات العملية المرتبطة بالطلبات:', error.message);
+        return;
+      }
+
+      const detailsMap = {};
+      (data || []).forEach(row => { detailsMap[row.id] = row; });
+
+      requests.forEach(r => {
+        const details = detailsMap[r.operation_id] || {};
+        r.client_code = details["كود_العميل"] || '';
+        r.client_name = details["اسم_العميل"] || details["اسم_العميل_من_التقييم"] || '';
+        r.review_status = details["المراجعة الداخلية"] || '';
+        r.followup_status = details["مسؤول المتابعة"] || '';
+        r.project_officer_status = details["موافقة مسئول المشروع"] || '';
+        r.admin_status = details["الادارة"] || '';
+      });
     }
 
     function renderNotifBanner() {
@@ -282,13 +317,15 @@
     }
 
     function applyFilter() {
-      const status = document.getElementById('statusFilter').value;
-      let filtered = allRequests;
+      renderTable(getCurrentlyFilteredRequests());
+    }
 
-      if (status) {
-        filtered = allRequests.filter(r => r.status === status);
-      }
-      renderTable(filtered);
+    function getApprovalCellClass(value) {
+      if (!value) return '';
+      const v = value.toLowerCase();
+      if (v.includes('مقبول')) return 'approved-cell';
+      if (v.includes('مرفوض') || v.includes('ملغي')) return 'rejected-cell';
+      return '';
     }
 
     function renderTable(data) {
@@ -303,9 +340,15 @@
             <tr>
               <th>رقم الطلب</th>
               <th>رقم العملية</th>
+              <th>كود العميل</th>
+              <th>اسم العميل</th>
               <th>مقدم الطلب</th>
               <th>دور مقدم الطلب</th>
               <th>تاريخ الطلب</th>
+              <th>المراجعة الداخلية</th>
+              <th>مسؤول المتابعة</th>
+              <th>موافقة مسئول المشروع</th>
+              <th>الادارة</th>
               <th>الحالة</th>
               <th>الإجراء</th>
             </tr>
@@ -322,9 +365,15 @@
           <tr>
             <td>${row.id}</td>
             <td>${row.operation_id}</td>
+            <td>${row.client_code || '—'}</td>
+            <td>${row.client_name || '—'}</td>
             <td>${row.requested_by}</td>
             <td>${row.requester_role || 'غير محدد'}</td>
             <td>${new Date(row.created_at).toLocaleDateString('ar-EG')}</td>
+            <td class="${getApprovalCellClass(row.review_status)}">${row.review_status || '—'}</td>
+            <td class="${getApprovalCellClass(row.followup_status)}">${row.followup_status || '—'}</td>
+            <td class="${getApprovalCellClass(row.project_officer_status)}">${row.project_officer_status || '—'}</td>
+            <td class="${getApprovalCellClass(row.admin_status)}">${row.admin_status || '—'}</td>
             <td><span class="action-btn status-${row.status}">${statusText}</span></td>
             <td>
               <button class="action-btn view-btn" onclick="openComparisonModal(${row.id})">مقارنة</button>
@@ -409,7 +458,19 @@
 
     function getCurrentlyFilteredRequests() {
       const status = document.getElementById('statusFilter').value;
-      return status ? allRequests.filter(r => r.status === status) : allRequests;
+      const searchTerm = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+
+      let filtered = status ? allRequests.filter(r => r.status === status) : allRequests;
+
+      if (searchTerm) {
+        filtered = filtered.filter(r => {
+          const code = (r.client_code || '').toLowerCase();
+          const name = (r.client_name || '').toLowerCase();
+          return code.includes(searchTerm) || name.includes(searchTerm);
+        });
+      }
+
+      return filtered;
     }
 
     // ============================================================
@@ -443,9 +504,15 @@
       summarySheet.columns = [
         { header: 'رقم الطلب', key: 'id', width: 12 },
         { header: 'رقم العملية', key: 'operation_id', width: 14 },
+        { header: 'كود العميل', key: 'client_code', width: 14 },
+        { header: 'اسم العميل', key: 'client_name', width: 22 },
         { header: 'مقدم الطلب', key: 'requested_by', width: 20 },
         { header: 'دور مقدم الطلب', key: 'requester_role', width: 16 },
         { header: 'تاريخ الطلب', key: 'created_at', width: 20 },
+        { header: 'المراجعة الداخلية', key: 'review_status', width: 20 },
+        { header: 'مسؤول المتابعة', key: 'followup_status', width: 20 },
+        { header: 'موافقة مسئول المشروع', key: 'project_officer_status', width: 20 },
+        { header: 'الادارة', key: 'admin_status', width: 20 },
         { header: 'الحالة', key: 'status', width: 14 },
         { header: 'ملاحظات مقدم الطلب', key: 'notes', width: 32 },
         { header: 'تمت المراجعة بواسطة', key: 'approved_by', width: 18 },
@@ -458,15 +525,23 @@
         cell.border = thinBorder;
       });
       summarySheet.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
-      summarySheet.autoFilter = { from: 'A1', to: 'I1' };
+      summarySheet.autoFilter = { from: 'A1', to: 'O1' };
+
+      const approvalColors = { 'approved-cell': 'FFE6FFE6', 'rejected-cell': 'FFFFE6E6' };
 
       dataToExport.forEach((r, idx) => {
         const row = summarySheet.addRow({
           id: r.id,
           operation_id: r.operation_id,
+          client_code: r.client_code || '',
+          client_name: r.client_name || '',
           requested_by: r.requested_by,
           requester_role: r.requester_role || 'غير محدد',
           created_at: new Date(r.created_at).toLocaleString('ar-EG'),
+          review_status: r.review_status || '',
+          followup_status: r.followup_status || '',
+          project_officer_status: r.project_officer_status || '',
+          admin_status: r.admin_status || '',
           status: statusTextAr(r.status),
           notes: r.notes || '',
           approved_by: r.approved_by || '',
@@ -477,9 +552,16 @@
           cell.border = thinBorder;
         });
         if (idx % 2 === 1) {
-          ['id', 'operation_id', 'requested_by', 'requester_role', 'created_at', 'notes', 'approved_by', 'approved_at']
+          ['id', 'operation_id', 'client_code', 'client_name', 'requested_by', 'requester_role', 'created_at', 'notes', 'approved_by', 'approved_at']
             .forEach(key => { row.getCell(key).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F9FC' } }; });
         }
+        ['review_status', 'followup_status', 'project_officer_status', 'admin_status'].forEach(key => {
+          const cls = getApprovalCellClass(r[key]);
+          if (cls) {
+            row.getCell(key).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: approvalColors[cls] } };
+            row.getCell(key).font = { bold: true, color: { argb: cls === 'approved-cell' ? 'FF008000' : 'FFCC0000' } };
+          }
+        });
         const statusCell = row.getCell('status');
         statusCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
         statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: statusColors[r.status] || 'FF95A5A6' } };
@@ -491,6 +573,8 @@
       detailSheet.columns = [
         { header: 'رقم الطلب', key: 'id', width: 10 },
         { header: 'رقم العملية', key: 'operation_id', width: 12 },
+        { header: 'كود العميل', key: 'client_code', width: 14 },
+        { header: 'اسم العميل', key: 'client_name', width: 20 },
         { header: 'مقدم الطلب', key: 'requested_by', width: 18 },
         { header: 'تاريخ الطلب', key: 'created_at', width: 18 },
         { header: 'الحالة', key: 'status', width: 12 },
@@ -505,7 +589,7 @@
         cell.border = thinBorder;
       });
       detailSheet.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
-      detailSheet.autoFilter = { from: 'A1', to: 'H1' };
+      detailSheet.autoFilter = { from: 'A1', to: 'J1' };
 
       let groupShaded = false;
       dataToExport.forEach(r => {
@@ -518,6 +602,8 @@
           const row = detailSheet.addRow({
             id: i === 0 ? r.id : '',
             operation_id: i === 0 ? r.operation_id : '',
+            client_code: i === 0 ? (r.client_code || '') : '',
+            client_name: i === 0 ? (r.client_name || '') : '',
             requested_by: i === 0 ? r.requested_by : '',
             created_at: i === 0 ? new Date(r.created_at).toLocaleString('ar-EG') : '',
             status: i === 0 ? statusTextAr(r.status) : '',
@@ -530,7 +616,7 @@
             cell.border = thinBorder;
           });
           if (groupShaded) {
-            ['id', 'operation_id', 'requested_by', 'created_at', 'status', 'field']
+            ['id', 'operation_id', 'client_code', 'client_name', 'requested_by', 'created_at', 'status', 'field']
               .forEach(key => { row.getCell(key).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAFAFA' } }; });
           }
           row.getCell('oldVal').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBECEC' } };
@@ -546,7 +632,7 @@
         // دمج خلايا بيانات الطلب الأساسية عبر كل صفوف التغييرات بتاعته
         if (list.length > 1) {
           const endRowNum = detailSheet.rowCount;
-          ['A', 'B', 'C', 'D', 'E'].forEach(col => {
+          ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach(col => {
             detailSheet.mergeCells(`${col}${startRowNum}:${col}${endRowNum}`);
             detailSheet.getCell(`${col}${startRowNum}`).alignment = { vertical: 'middle', horizontal: 'right', wrapText: true };
           });
@@ -576,8 +662,9 @@
         <tr>
           <td style="border:1px solid #ddd; padding:8px;">${req.id}</td>
           <td style="border:1px solid #ddd; padding:8px;">${req.operation_id}</td>
+          <td style="border:1px solid #ddd; padding:8px;">${req.client_code || '—'}</td>
+          <td style="border:1px solid #ddd; padding:8px;">${req.client_name || '—'}</td>
           <td style="border:1px solid #ddd; padding:8px;">${req.requested_by || '—'}</td>
-          <td style="border:1px solid #ddd; padding:8px;">${req.requester_role || 'غير محدد'}</td>
           <td style="border:1px solid #ddd; padding:8px;">${new Date(req.created_at).toLocaleDateString('ar-EG')}</td>
           <td style="border:1px solid #ddd; padding:8px; font-weight:700;">${statusTextAr(req.status)}</td>
         </tr>
@@ -593,8 +680,9 @@
             <tr>
               <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">رقم الطلب</th>
               <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">رقم العملية</th>
+              <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">كود العميل</th>
+              <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">اسم العميل</th>
               <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">مقدم الطلب</th>
-              <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">الدور</th>
               <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">التاريخ</th>
               <th style="border:1px solid #ddd; padding:8px; background:#1c3f66; color:#fff;">الحالة</th>
             </tr>
@@ -624,11 +712,31 @@
           <div style="font-size:14px; margin-bottom:14px; line-height:1.9;">
             <strong>رقم العملية:</strong> ${req.operation_id} &nbsp;|&nbsp;
             <strong>الحالة:</strong> ${statusTextAr(req.status)}<br>
+            <strong>كود العميل:</strong> ${req.client_code || '—'} &nbsp;|&nbsp;
+            <strong>اسم العميل:</strong> ${req.client_name || '—'}<br>
             <strong>مقدم الطلب:</strong> ${req.requested_by || '—'} (${req.requester_role || 'غير محدد'})<br>
             <strong>تاريخ الطلب:</strong> ${new Date(req.created_at).toLocaleString('ar-EG')}
             ${req.approved_by ? '<br><strong>تمت المراجعة بواسطة:</strong> ' + req.approved_by : ''}
             ${req.approved_at ? '<br><strong>تاريخ المراجعة:</strong> ' + new Date(req.approved_at).toLocaleString('ar-EG') : ''}
           </div>
+          <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:16px;">
+            <thead>
+              <tr>
+                <th style="border:1px solid #ddd; padding:6px; background:#f2f2f2;">المراجعة الداخلية</th>
+                <th style="border:1px solid #ddd; padding:6px; background:#f2f2f2;">مسؤول المتابعة</th>
+                <th style="border:1px solid #ddd; padding:6px; background:#f2f2f2;">موافقة مسئول المشروع</th>
+                <th style="border:1px solid #ddd; padding:6px; background:#f2f2f2;">الادارة</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border:1px solid #ddd; padding:6px; text-align:center;">${req.review_status || '—'}</td>
+                <td style="border:1px solid #ddd; padding:6px; text-align:center;">${req.followup_status || '—'}</td>
+                <td style="border:1px solid #ddd; padding:6px; text-align:center;">${req.project_officer_status || '—'}</td>
+                <td style="border:1px solid #ddd; padding:6px; text-align:center;">${req.admin_status || '—'}</td>
+              </tr>
+            </tbody>
+          </table>
           ${req.notes ? `<div style="background:#f0f0f0; border-radius:6px; padding:10px; margin-bottom:16px; font-size:13px;"><strong>ملاحظات مقدم الطلب:</strong> ${req.notes}</div>` : ''}
           <table style="width:100%; border-collapse:collapse; font-size:13px;">
             <thead>

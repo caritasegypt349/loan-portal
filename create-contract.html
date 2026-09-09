@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>إنشاء عقد تمويل</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Tajawal', 'Segoe UI', Tahoma, sans-serif;
+      background:
+        radial-gradient(60% 50% at 10% 5%, rgba(46, 92, 138, 0.18), transparent 60%),
+        radial-gradient(55% 45% at 95% 95%, rgba(15, 40, 70, 0.16), transparent 60%),
+        linear-gradient(160deg, #eef4fa 0%, #d9e6f4 100%);
+      background-attachment: fixed;
+      margin: 0; padding: 20px; min-height: 100vh; color: #142433;
+    }
+    .top-header {
+      max-width: 1100px; margin: 0 auto 18px;
+      background: linear-gradient(135deg, #a3813f 0%, #1c3f66 100%);
+      border-radius: 14px; padding: 14px 22px; display: flex; align-items: center;
+      justify-content: space-between; box-shadow: 0 10px 30px -10px rgba(15, 40, 70, 0.4);
+    }
+    .top-header .brand { display: flex; align-items: center; gap: 10px; }
+    .top-header .brand img { height: 34px; filter: drop-shadow(0 2px 6px rgba(15, 40, 70, 0.25)); }
+    .top-header .brand span { color: white; font-weight: 800; font-size: 14px; }
+    .top-header .nav-actions { display: flex; gap: 10px; }
+    .top-header .nav-actions a, .top-header .nav-actions button {
+      background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.35);
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none;
+      cursor: pointer; font-family: 'Tajawal', sans-serif;
+    }
+    .top-header .nav-actions a:hover, .top-header .nav-actions button:hover { background: rgba(255,255,255,0.28); }
+
+    .container {
+      max-width: 1100px; margin: 0 auto 20px; background: white; padding: 25px;
+      border-radius: 12px; box-shadow: 0 10px 40px rgba(15, 40, 70, 0.18); position: relative; overflow: hidden;
+    }
+    .container::before {
+      content: ""; position: absolute; top: 0; right: 0; left: 0; height: 4px;
+      background: linear-gradient(90deg, #a3813f 0%, #1c3f66 50%, #a3813f 100%);
+    }
+    h2 { color: #a3813f; font-weight: 800; margin-top: 0; text-align: center; }
+    h3 { color: #1c3f66; font-weight: 800; font-size: 15px; margin: 22px 0 10px; border-bottom: 2px solid #eef4fa; padding-bottom: 6px; }
+
+    .denied-box { text-align: center; padding: 60px 20px; color: #b3463a; font-weight: 700; font-size: 16px; }
+    .loading, .empty-state { text-align: center; padding: 30px; color: #64768a; }
+
+    .search-bar { display: flex; gap: 10px; margin-bottom: 15px; }
+    .search-bar input { flex: 1; padding: 12px 14px; border: 1.5px solid #dde5ee; border-radius: 10px; font-size: 14px; font-family: 'Tajawal', sans-serif; }
+    .filter-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; font-size: 13px; color: #64768a; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #eee; padding: 8px 10px; text-align: right; }
+    th { background: #f2f2f2; }
+    tr:hover { background: #fafcfb; }
+    .pick-btn { background: #a3813f; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; }
+    .has-contract { color: #16a085; font-weight: 700; font-size: 11px; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.span2 { grid-column: span 2; }
+    .form-group.span3 { grid-column: span 3; }
+    label { font-size: 13px; font-weight: 700; color: #34495e; }
+    input, select, textarea {
+      padding: 10px 12px; border: 1.5px solid #dde5ee; border-radius: 8px; font-size: 14px;
+      font-family: 'Tajawal', sans-serif; background: #fbfcfe; box-sizing: border-box;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #a3813f; box-shadow: 0 0 0 3px rgba(163,129,63,0.15); }
+    input[readonly] { background: #f0f4f8; color: #5b6b7a; }
+
+    .guarantor-card { border: 1px solid #e4ebf3; border-radius: 10px; padding: 14px; margin-bottom: 12px; background: #fbfcfe; position: relative; }
+    .guarantor-card .remove-g { position: absolute; top: 10px; left: 10px; background: #e74c3c; color: white; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+    .add-guarantor-btn { background: #2e5c8a; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px; margin-top: 5px; }
+
+    .summary-box { background: #f8f4ea; border: 1px solid #e8dcc0; border-radius: 10px; padding: 15px; margin-top: 15px; font-size: 13.5px; line-height: 2; }
+    .summary-box b { color: #a3813f; }
+
+    .actions-bar { display: flex; justify-content: center; gap: 12px; margin-top: 25px; padding-top: 20px; border-top: 2px solid #eee; }
+    .actions-bar button { padding: 12px 26px; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: 'Tajawal', sans-serif; }
+    .btn-save { background: linear-gradient(135deg, #a3813f 0%, #1c3f66 100%); color: white; }
+    .btn-print { background: #2e5c8a; color: white; }
+    .btn-back { background: #eee; color: #333; }
+
+    .status-msg { text-align: center; margin-top: 12px; font-weight: 700; font-size: 13px; }
+    .status-ok { color: #16a085; }
+    .status-err { color: #e74c3c; }
+
+    #printArea { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { display: block; position: absolute; top: 0; right: 0; left: 0; padding: 20px; }
+    }
+    .print-page { font-size: 12.5px; line-height: 1.9; page-break-after: always; }
+    .print-page h1 { text-align: center; font-size: 16px; margin: 4px 0 14px; }
+    .print-page .signrow { display: flex; justify-content: space-between; margin-top: 30px; font-weight: bold; }
+
+    @media (max-width: 800px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.span2, .form-group.span3 { grid-column: span 1; }
+      .top-header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .top-header .brand { justify-content: center; }
+      .top-header .nav-actions { justify-content: center; }
+      body { padding: 12px; } .container { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-header">
+    <div class="brand"><img src="logo.png" alt="Caritas Egypt" /><span>نظام إدارة التمويل</span></div>
+    <div class="nav-actions"><a href="index.html">🏠 الرئيسية</a><button onclick="pageLogout()">تسجيل خروج</button></div>
+  </div>
+
+  <div id="accessDenied" class="container" style="display:none;"><div class="denied-box">🚫 ليس لديك صلاحية الوصول لهذه الصفحة.</div></div>
+
+  <!-- خطوة 1: اختيار العميل -->
+  <div id="pickStep" class="container" style="display:none;">
+    <h2>📝 إنشاء عقد تمويل جديد</h2>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="ابحث بالاسم أو الكود أو رقم البطاقة..." oninput="renderPickList()">
+    </div>
+    <label class="filter-toggle">
+      <input type="checkbox" id="filterApproved" onchange="renderPickList()" checked style="width:auto;">
+      إظهار العمليات المقبولة فقط (يمكن إلغاء التحديد لإظهار الكل)
+    </label>
+    <div id="pickListContainer"><div class="loading">جارٍ تحميل العمليات...</div></div>
+  </div>
+
+  <!-- خطوة 2: فورم العقد -->
+  <div id="formStep" class="container" style="display:none;">
+    <h2>📝 بيانات العقد</h2>
+    <button class="btn-back" onclick="backToList()" style="margin-bottom:15px;">→ رجوع لاختيار عميل تاني</button>
+
+    <h3>بيانات العميل (من النظام)</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>الاسم</label><input type="text" id="c_name" readonly></div>
+      <div class="form-group"><label>الرقم القومي</label><input type="text" id="c_nid" readonly></div>
+      <div class="form-group"><label>الفرع</label><input type="text" id="c_branch" readonly></div>
+      <div class="form-group"><label>صادرة من</label><input type="text" id="c_issuedBy"></div>
+      <div class="form-group"><label>تاريخ الإصدار</label><input type="text" id="c_issueDate" placeholder="مثال: 3 / 2025"></div>
+      <div class="form-group"><label>رقم التليفون</label><input type="text" id="c_phone"></div>
+      <div class="form-group span2"><label>العنوان</label><input type="text" id="c_address"></div>
+      <div class="form-group"><label>عنوان العمل</label><input type="text" id="c_workAddress"></div>
+    </div>
+
+    <h3>بيانات التمويل</h3>
+    <div class="form-grid">
+      <div class="form-group span2">
+        <label>المشروع (التمويل) <span style="color:#e74c3c;">*</span></label>
+        <select id="c_project" onchange="onProjectChange()"><option value="">اختر مشروعًا...</option></select>
+      </div>
+      <div class="form-group">
+        <label>مبلغ التمويل <span style="color:#e74c3c;">*</span></label>
+        <input type="number" id="c_amount" oninput="recalculate()">
+      </div>
+      <div class="form-group">
+        <label>عدد الأقساط <span style="color:#e74c3c;">*</span></label>
+        <input type="number" id="c_installments" value="18" oninput="recalculate()">
+      </div>
+      <div class="form-group">
+        <label>تاريخ العقد <span style="color:#e74c3c;">*</span></label>
+        <input type="date" id="c_date" onchange="recalculate()">
+      </div>
+      <div class="form-group">
+        <label>تاريخ أول قسط <span style="color:#e74c3c;">*</span></label>
+        <input type="date" id="c_firstInstallment">
+      </div>
+      <div class="form-group span3">
+        <label>الغرض من التمويل</label>
+        <input type="text" id="c_purpose" placeholder="مثال: زيادة حجم المشروع نشاط زراعي">
+      </div>
+      <div class="form-group span2">
+        <label>ممثل الجمعية (طرف أول)</label>
+        <input type="text" id="c_representative" placeholder="اسم من يوقع نيابة عن الجمعية">
+      </div>
+    </div>
+
+    <div id="calcSummary" class="summary-box" style="display:none;"></div>
+
+    <h3>الضامنون</h3>
+    <div id="guarantorsContainer"></div>
+    <button class="add-guarantor-btn" onclick="addGuarantorRow()">➕ إضافة ضامن</button>
+
+    <div class="actions-bar">
+      <button class="btn-save" onclick="saveContract()">💾 حفظ العقد</button>
+      <button class="btn-print" onclick="saveThenPrint()">🖨️ حفظ وطباعة العقد</button>
+    </div>
+    <div id="statusMsg" class="status-msg"></div>
+
+    <div id="extraDocsBar" style="display:none; margin-top:20px; padding-top:20px; border-top:2px dashed #eee;">
+      <h3 style="border:none; margin-bottom:12px;">📑 باقي مستندات العميل (بعد حفظ العقد)</h3>
+      <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
+        <button class="btn-print" onclick="printConsentForm()">🖨️ التعهد</button>
+        <button class="btn-print" onclick="printPromissoryNotes()">🖨️ سند لأمر</button>
+        <button class="btn-print" onclick="printCommitmentStatement(true)">🖨️ بيان التزام (داخل المكتب)</button>
+        <button class="btn-print" onclick="printCommitmentStatement(false)">🖨️ بيان التزام (العميل)</button>
+        <button class="btn-print" onclick="printDisclosureForm()">🖨️ مرفق 1 - نموذج الإفصاح</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- منطقة الطباعة -->
+  <div id="printArea"></div>
+
+  <script>
+    function pageLogout() {
+      if (confirm("هل تريد تسجيل الخروج من النظام؟")) { localStorage.clear(); sessionStorage.clear(); window.location.href = "index.html"; }
+    }
+
+    let db;
+    try {
+      db = window.supabase.createClient(
+        'https://akjyrmmqsnxdbkslxmvb.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFranlybW1xc254ZGJrc2x4bXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODUxODcsImV4cCI6MjA4MDQ2MTE4N30.EuTd_i9fEecFGJG89PhRa3z68k5x6nflOW6fvqvMQJM'
+      );
+    } catch (e) { console.error('فشل تهيئة قاعدة البيانات:', e); }
+
+    let allOps = [];
+    let contractedOperationIds = new Set();
+    let selectedOp = null;
+    let projects = [];
+    let directives = [];
+    let guarantorRowCount = 0;
+    let savedContractId = null;
+    let savedContractNumber = null;
+    let calcResult = null;
+
+    async function init() {
+      const userId = localStorage.getItem('loggedInUserId');
+      if (!userId) { alert('الرجاء تسجيل الدخول أولًا!'); window.location.href = 'index.html'; return; }
+      const role = localStorage.getItem('userRole');
+      if (role !== 'admin' && role !== 'data_entry') {
+        document.getElementById('accessDenied').style.display = 'block';
+        return;
+      }
+      document.getElementById('pickStep').style.display = 'block';
+      await loadOperations();
+      await loadProjectsAndDirectives();
+    }
+
+    async function loadOperations() {
+      try {
+        let branches = [];
+        try { branches = JSON.parse(localStorage.getItem('userBranches') || '[]'); } catch (e) {}
+        let query = db.from('operations_with_details').select('*');
+        if (localStorage.getItem('userRole') !== 'admin' && branches.length > 0) {
+          query = query.in('الفرع', branches);
+        }
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (error) throw error;
+        allOps = data || [];
+
+        const { data: contractsData } = await db.from('contracts').select('operation_id');
+        contractedOperationIds = new Set((contractsData || []).map(c => c.operation_id));
+
+        renderPickList();
+      } catch (e) {
+        console.error(e);
+        document.getElementById('pickListContainer').innerHTML = `<div class="empty-state">❌ خطأ: ${e.message || e}</div>`;
+      }
+    }
+
+    async function loadProjectsAndDirectives() {
+      try {
+        const [projRes, dirRes] = await Promise.all([
+          db.from('projects').select('*').eq('is_active', true).order('name'),
+          db.from('project_accounting_directives').select('*')
+        ]);
+        projects = projRes.data || [];
+        directives = dirRes.data || [];
+      } catch (e) {
+        console.error('تعذر تحميل المشاريع:', e);
+      }
+    }
+
+    function renderPickList() {
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+      const onlyApproved = document.getElementById('filterApproved').checked;
+
+      let filtered = allOps.filter(op => !contractedOperationIds.has(op.id));
+      if (onlyApproved) {
+        filtered = filtered.filter(op => op["المراجعة الداخلية"] === 'تمت المراجعة مقبول');
+      }
+      if (search) {
+        filtered = filtered.filter(op => {
+          const hay = `${op["اسم_العميل"] || ''} ${op["كود_العميل"] || ''} ${op["رقم البطاقة العميل"] || ''}`.toLowerCase();
+          return hay.includes(search);
+        });
+      }
+
+      const el = document.getElementById('pickListContainer');
+      if (filtered.length === 0) {
+        el.innerHTML = '<div class="empty-state">لا توجد عمليات مطابقة (وكل العمليات ليها عقد بالفعل، أو جرّب تشيل فلتر "مقبولة فقط").</div>';
+        return;
+      }
+
+      let html = `<table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرع</th><th>المشروع</th><th>المبلغ</th><th>حالة المراجعة</th><th></th></tr></thead><tbody>`;
+      filtered.slice(0, 100).forEach(op => {
+        html += `<tr>
+          <td>${op["كود_العميل"] || '—'}</td>
+          <td>${op["اسم_العميل"] || '—'}</td>
+          <td>${op["الفرع"] || '—'}</td>
+          <td>${op["المشروع"] || '—'}</td>
+          <td>${op["المبلغ المطلوب"] || '—'}</td>
+          <td>${op["المراجعة الداخلية"] || '—'}</td>
+          <td><button class="pick-btn" onclick="pickOperation(${op.id})">اختيار</button></td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+      if (filtered.length > 100) html += `<div class="empty-state">وفيه ${filtered.length - 100} نتيجة تانية، ضيّق البحث عشان تشوفهم.</div>`;
+      el.innerHTML = html;
+    }
+
+    async function pickOperation(opId) {
+      selectedOp = allOps.find(o => o.id === opId);
+      if (!selectedOp) return;
+
+      document.getElementById('pickStep').style.display = 'none';
+      document.getElementById('formStep').style.display = 'block';
+
+      document.getElementById('c_name').value = selectedOp["اسم_العميل"] || '';
+      document.getElementById('c_nid').value = selectedOp["رقم البطاقة العميل"] || '';
+      document.getElementById('c_branch').value = selectedOp["الفرع"] || '';
+      document.getElementById('c_amount').value = selectedOp["المبلغ المطلوب"] || '';
+      document.getElementById('c_purpose').value = selectedOp["المشروع"] || '';
+      document.getElementById('c_issuedBy').value = '';
+      document.getElementById('c_issueDate').value = '';
+      document.getElementById('c_phone').value = '';
+      document.getElementById('c_address').value = '';
+      document.getElementById('c_workAddress').value = '';
+
+      // محاولة جلب بيانات إضافية من تقرير اعرف عميلك (KYC) لو موجود، لتفادي تكرار الكتابة
+      try {
+        const { data: kyc } = await db.from('kyc_reports').select('*').eq('operation_id', opId).limit(1);
+        if (kyc && kyc.length > 0) {
+          const k = kyc[0];
+          document.getElementById('c_issuedBy').value = k["issuedBy"] || '';
+          document.getElementById('c_issueDate').value = k["issueDate"] || '';
+          document.getElementById('c_phone').value = k.phone || '';
+          document.getElementById('c_address').value = k.address || '';
+          document.getElementById('c_workAddress').value = k["workAddress"] || '';
+        }
+      } catch (e) { console.error('تعذر جلب بيانات KYC:', e); }
+
+      // ملء اختيار المشروع بالمشاريع المتاحة لفرع العميل ده بس
+      const branchDirectives = directives.filter(d => {
+        const proj = projects.find(p => p.id === d.project_id);
+        return proj && isBranchMatch(d, selectedOp["الفرع"]);
+      });
+      const availableProjectIds = new Set(directives.filter(d => isBranchMatch(d, selectedOp["الفرع"])).map(d => d.project_id));
+      const select = document.getElementById('c_project');
+      select.innerHTML = '<option value="">اختر مشروعًا...</option>';
+      projects.filter(p => availableProjectIds.has(p.id)).forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${p.admin_fee_percent}% مصاريف)`;
+        select.appendChild(opt);
+      });
+
+      if (availableProjectIds.size === 0) {
+        select.innerHTML = '<option value="">لا يوجد أي مشروع متاح لفرع العميل ده - راجع إعدادات الفروع والمشاريع</option>';
+      }
+
+      document.getElementById('c_date').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('guarantorsContainer').innerHTML = '';
+      guarantorRowCount = 0;
+      addGuarantorRow();
+      document.getElementById('statusMsg').textContent = '';
+      document.getElementById('calcSummary').style.display = 'none';
+      document.getElementById('extraDocsBar').style.display = 'none';
+      savedContractId = null;
+      savedContractNumber = null;
+      calcResult = null;
+    }
+
+    // ملاحظة: عمود branch_id مش موجود فعليًا في project_accounting_directives - بنخزّن اسم الفرع مباشرة عن طريق جدول الفروع
+    // هنجيب اسم الفرع بمطابقة branch_id -> اسم من جدول الفروع المحمّل مسبقًا لو موجود
+    let branchesCache = [];
+    async function loadBranchesCache() {
+      const { data } = await db.from('branches').select('*');
+      branchesCache = data || [];
+    }
+
+    function isBranchMatch(directive, branchName) {
+      const b = branchesCache.find(x => x.id === directive.branch_id);
+      return b && b.name === branchName;
+    }
+
+    function backToList() {
+      document.getElementById('formStep').style.display = 'none';
+      document.getElementById('pickStep').style.display = 'block';
+      renderPickList();
+    }
+
+    function onProjectChange() {
+      recalculate();
+    }
+
+    function recalculate() {
+      const projectId = parseInt(document.getElementById('c_project').value);
+      const amount = parseFloat(document.getElementById('c_amount').value);
+      const months = parseInt(document.getElementById('c_installments').value);
+      const project = projects.find(p => p.id === projectId);
+
+      const summaryEl = document.getElementById('calcSummary');
+
+      if (!project || !amount || !months) {
+        summaryEl.style.display = 'none';
+        calcResult = null;
+        return;
+      }
+
+      if (project.min_amount && amount < project.min_amount) {
+        summaryEl.style.display = 'block';
+        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أقل من الحد الأدنى المسموح للمشروع ده (${project.min_amount.toLocaleString('ar-EG')} ج.م)</span>`;
+        calcResult = null;
+        return;
+      }
+      if (project.max_amount && amount > project.max_amount) {
+        summaryEl.style.display = 'block';
+        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أكبر من الحد الأقصى المسموح للمشروع ده (${project.max_amount.toLocaleString('ar-EG')} ج.م)</span>`;
+        calcResult = null;
+        return;
+      }
+
+      const interestRate = project.interest_rate / 100;
+      const totalInterest = amount * interestRate * (months / 12);
+      const totalDue = amount + totalInterest;
+      const installmentAmount = Math.ceil(totalDue / months);
+      const adminFeeAmount = amount * (project.admin_fee_percent / 100);
+      const netDisbursed = amount - adminFeeAmount;
+
+      calcResult = {
+        interestRate: project.interest_rate,
+        adminFeePercent: project.admin_fee_percent,
+        adminFeeAmount, totalDue, installmentAmount, netDisbursed
+      };
+
+      summaryEl.style.display = 'block';
+      summaryEl.innerHTML = `
+        <div><b>إجمالي الفائدة:</b> ${Math.round(totalInterest).toLocaleString('ar-EG')} ج.م</div>
+        <div><b>إجمالي المبلغ المطلوب سداده:</b> ${Math.round(totalDue).toLocaleString('ar-EG')} ج.م</div>
+        <div><b>قيمة القسط الشهري:</b> ${installmentAmount.toLocaleString('ar-EG')} ج.م × ${months} قسط</div>
+        <div><b>المصاريف الإدارية (${project.admin_fee_percent}%):</b> ${Math.round(adminFeeAmount).toLocaleString('ar-EG')} ج.م</div>
+        <div><b>صافي المبلغ المحول للعميل:</b> ${Math.round(netDisbursed).toLocaleString('ar-EG')} ج.م</div>
+      `;
+    }
+
+    function addGuarantorRow() {
+      guarantorRowCount++;
+      const id = guarantorRowCount;
+      const div = document.createElement('div');
+      div.className = 'guarantor-card';
+      div.id = `guarantor-${id}`;
+      div.innerHTML = `
+        <button type="button" class="remove-g" onclick="removeGuarantorRow(${id})">✕ حذف</button>
+        <div class="form-grid">
+          <div class="form-group span2"><label>اسم الضامن</label><input type="text" id="g_name_${id}"></div>
+          <div class="form-group"><label>الرقم القومي</label><input type="text" id="g_nid_${id}" maxlength="14" oninput="lookupGuarantorKyc(${id})"></div>
+          <div class="form-group"><label>صادرة من</label><input type="text" id="g_issuedBy_${id}"></div>
+          <div class="form-group"><label>تاريخ الإصدار</label><input type="text" id="g_issueDate_${id}" placeholder="مثال: 3 / 2025"></div>
+          <div class="form-group"><label>رقم التليفون</label><input type="text" id="g_phone_${id}"></div>
+          <div class="form-group span2"><label>العنوان</label><input type="text" id="g_address_${id}"></div>
+          <div class="form-group"><label>عنوان العمل</label><input type="text" id="g_workAddress_${id}"></div>
+        </div>
+      `;
+      document.getElementById('guarantorsContainer').appendChild(div);
+    }
+
+    function removeGuarantorRow(id) {
+      const el = document.getElementById(`guarantor-${id}`);
+      if (el) el.remove();
+    }
+
+    async function lookupGuarantorKyc(id) {
+      const nid = document.getElementById(`g_nid_${id}`).value.trim();
+      if (nid.length !== 14) return;
+      try {
+        const { data } = await db.from('kyc_reports').select('*').eq('national_id', nid).limit(1);
+        if (data && data.length > 0) {
+          const k = data[0];
+          if (!document.getElementById(`g_name_${id}`).value) document.getElementById(`g_name_${id}`).value = k.name || '';
+          document.getElementById(`g_issuedBy_${id}`).value = k["issuedBy"] || '';
+          document.getElementById(`g_issueDate_${id}`).value = k["issueDate"] || '';
+          document.getElementById(`g_phone_${id}`).value = k.phone || '';
+          document.getElementById(`g_address_${id}`).value = k.address || '';
+          document.getElementById(`g_workAddress_${id}`).value = k["workAddress"] || '';
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    function collectGuarantors() {
+      const cards = document.querySelectorAll('.guarantor-card');
+      const list = [];
+      cards.forEach(card => {
+        const id = card.id.replace('guarantor-', '');
+        const name = document.getElementById(`g_name_${id}`).value.trim();
+        const nid = document.getElementById(`g_nid_${id}`).value.trim();
+        if (!name && !nid) return;
+        list.push({
+          guarantor_name: name,
+          guarantor_national_id: nid,
+          issued_by: document.getElementById(`g_issuedBy_${id}`).value.trim() || null,
+          issue_date: document.getElementById(`g_issueDate_${id}`).value.trim() || null,
+          phone: document.getElementById(`g_phone_${id}`).value.trim() || null,
+          address: document.getElementById(`g_address_${id}`).value.trim() || null,
+          work_address: document.getElementById(`g_workAddress_${id}`).value.trim() || null
+        });
+      });
+      return list;
+    }
+
+    function setStatus(msg, ok) {
+      const el = document.getElementById('statusMsg');
+      el.textContent = msg;
+      el.className = 'status-msg ' + (ok ? 'status-ok' : 'status-err');
+    }
+
+    async function saveContract() {
+      return await doSaveContract(true);
+    }
+
+    async function saveThenPrint() {
+      const ok = await doSaveContract(false);
+      if (ok) printContract();
+    }
+
+    async function doSaveContract(showAlert) {
+      const projectId = parseInt(document.getElementById('c_project').value);
+      const amount = parseFloat(document.getElementById('c_amount').value);
+      const months = parseInt(document.getElementById('c_installments').value);
+      const contractDate = document.getElementById('c_date').value;
+      const firstInstallmentDate = document.getElementById('c_firstInstallment').value;
+      const branch = document.getElementById('c_branch').value;
+      const nid = document.getElementById('c_nid').value.trim();
+
+      if (!projectId || !amount || !months || !contractDate || !firstInstallmentDate) {
+        setStatus('لازم تختار المشروع وتكتب المبلغ وعدد الأقساط وتاريخ العقد وتاريخ أول قسط.', false);
+        return false;
+      }
+      if (!calcResult) {
+        setStatus('راجع بيانات المبلغ والمشروع - يبدو إن فيه قيمة خارج الحدود المسموحة.', false);
+        return false;
+      }
+
+      const guarantors = collectGuarantors();
+      for (const g of guarantors) {
+        if (!g.guarantor_name || !g.guarantor_national_id) {
+          setStatus('كل ضامن لازم يكون له اسم ورقم قومي.', false);
+          return false;
+        }
+        if (g.guarantor_national_id === nid) {
+          setStatus('❌ الضامن مينفعش يكون بنفس الرقم القومي بتاع العميل نفسه!', false);
+          return false;
+        }
+      }
+
+      try {
+        if (savedContractId) {
+          // تحديث عقد موجود بالفعل (تعديل بسيط بعد أول حفظ)
+          const { error } = await db.from('contracts').update({
+            project_id: projectId, loan_amount: amount, interest_rate: calcResult.interestRate,
+            admin_fee_percent: calcResult.adminFeePercent, admin_fee_amount: calcResult.adminFeeAmount,
+            total_due: calcResult.totalDue, installment_count: months, installment_amount: calcResult.installmentAmount,
+            contract_date: contractDate, first_installment_date: firstInstallmentDate,
+            association_representative: document.getElementById('c_representative').value.trim() || null,
+            financing_purpose: document.getElementById('c_purpose').value.trim() || null,
+            updated_at: new Date().toISOString()
+          }).eq('id', savedContractId);
+          if (error) throw error;
+
+          await db.from('contract_guarantors').delete().eq('contract_id', savedContractId);
+          if (guarantors.length > 0) {
+            await db.from('contract_guarantors').insert(guarantors.map((g, i) => ({ ...g, contract_id: savedContractId, guarantor_order: i + 1 })));
+          }
+
+          setStatus('✅ تم تحديث العقد بنجاح.', true);
+          if (showAlert) alert('✅ تم حفظ العقد بنجاح.');
+          document.getElementById('extraDocsBar').style.display = 'block';
+          return true;
+        }
+
+        // ========== منطق لجنة اليوم: لو فيه لجنة بنفس التاريخ والفرع، استخدمها، وإلا اعمل واحدة جديدة ==========
+        let committeeId;
+        const { data: existingCommittee } = await db.from('committees').select('id').eq('branch', branch).eq('committee_date', contractDate).limit(1);
+        if (existingCommittee && existingCommittee.length > 0) {
+          committeeId = existingCommittee[0].id;
+        } else {
+          const { data: newCommittee, error: cErr } = await db.from('committees').insert([{ branch, committee_date: contractDate }]).select();
+          if (cErr) throw cErr;
+          committeeId = newCommittee[0].id;
+        }
+
+        // ========== رقم العقد التلقائي المتسلسل لكل فرع ==========
+        const { data: maxRow } = await db.from('contracts').select('branch_contract_number').eq('branch', branch).order('branch_contract_number', { ascending: false }).limit(1);
+        const nextNumber = (maxRow && maxRow.length > 0) ? maxRow[0].branch_contract_number + 1 : 1;
+
+        const contractPayload = {
+          operation_id: selectedOp.id, branch, branch_contract_number: nextNumber,
+          contract_date: contractDate, committee_id: committeeId, project_id: projectId,
+          association_representative: document.getElementById('c_representative').value.trim() || null,
+          financing_purpose: document.getElementById('c_purpose').value.trim() || null,
+          loan_amount: amount, interest_rate: calcResult.interestRate, admin_fee_percent: calcResult.adminFeePercent,
+          admin_fee_amount: calcResult.adminFeeAmount, total_due: calcResult.totalDue,
+          installment_count: months, installment_amount: calcResult.installmentAmount,
+          first_installment_date: firstInstallmentDate, created_by: localStorage.getItem('loggedInUser') || null
+        };
+
+        const { data: inserted, error } = await db.from('contracts').insert([contractPayload]).select();
+        if (error) throw error;
+        savedContractId = inserted[0].id;
+        savedContractNumber = nextNumber;
+
+        if (guarantors.length > 0) {
+          await db.from('contract_guarantors').insert(guarantors.map((g, i) => ({ ...g, contract_id: savedContractId, guarantor_order: i + 1 })));
+        }
+
+        setStatus(`✅ تم إنشاء العقد بنجاح - رقم العقد: ${nextNumber}`, true);
+        if (showAlert) alert(`✅ تم إنشاء العقد بنجاح.\nرقم العقد: ${nextNumber}`);
+        document.getElementById('extraDocsBar').style.display = 'block';
+        return true;
+
+      } catch (e) {
+        console.error('خطأ في حفظ العقد:', e);
+        setStatus('❌ حدث خطأ أثناء الحفظ: ' + (e.message || e), false);
+        return false;
+      }
+    }
+
+    function arabicMonthName(dateStr) {
+      const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+      const d = new Date(dateStr);
+      return months[d.getMonth()];
+    }
+    function formatDateDMY(dateStr) {
+      const d = new Date(dateStr);
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }
+    function numToArabicWords(n) {
+      // تبسيط: بنعرض الرقم بالأرقام العادية بدل التحويل الكامل لحروف، مع فاصلة الآلاف
+      return Math.round(n).toLocaleString('ar-EG');
+    }
+
+    // ========== توليد جدول الأقساط (نفس منطق حاسبة التمويل بالفائدة الثابتة) ==========
+    function generateInstallmentSchedule() {
+      const months = parseInt(document.getElementById('c_installments').value);
+      const firstDate = document.getElementById('c_firstInstallment').value;
+      if (!calcResult || !months || !firstDate) return [];
+
+      const schedule = [];
+      const baseDate = new Date(firstDate);
+      for (let i = 0; i < months; i++) {
+        const d = new Date(baseDate);
+        d.setMonth(d.getMonth() + i);
+        schedule.push({ number: i + 1, amount: calcResult.installmentAmount, date: formatDateDMY(d.toISOString().slice(0, 10)) });
+      }
+      return schedule;
+    }
+
+    function commonPrintHeader(branch) {
+      return `
+        <p style="text-align:center; font-size:11px;">جمعية كاريتاس – مصر المشهرة برقم 1150 لسنة 1967<br>
+        ترخيص رقم 1373 من الهيئة الرقابة المالية بموجب القانون رقم 141 لسنة 2014<br>
+        مكتب: ${branch}</p>
+      `;
+    }
+
+    // ========== 1) التعهد (الموافقة على الدفع الإلكتروني) ==========
+    function printConsentForm() {
+      if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
+      const branch = document.getElementById('c_branch').value;
+      const name = document.getElementById('c_name').value;
+      const nid = document.getElementById('c_nid').value;
+      const phone = document.getElementById('c_phone').value;
+
+      const html = `
+        <div class="print-page">
+          ${commonPrintHeader(branch)}
+          <h1>الموافقة على استخدام خدمات الدفع الإلكتروني<br>في مجال نشاط التمويل متناهي الصغر</h1>
+          <p>أوافق أنا الموقع أدناه السيد(ة) / ${name}</p>
+          <p>على استخدام خدمات الدفع عليه طرف منافذ (جهة الدفع الإلكتروني) فوري لأغراض:</p>
+          <p>☑ صرف التمويل &nbsp;&nbsp; ☑ سداد أقساط التمويل &nbsp;&nbsp; ☑ سداد أي مستحقات لجهة التمويل وصرف أي مستحقات للعميل</p>
+          <p>والناشئة عن حصولي على تمويل متناهي الصغر من جمعية/ كاريتاس مصر، والتي قامت بإرشادي على كيفية استخدام هذه الخدمات.</p>
+          <p>ويُعد الإيصال المطبوع الذي يتم استلامه عند إجراء عمليات السداد أو الصرف لدى منافذ جهة الدفع الإلكتروني تأكيدًا لإتمام المعاملة المالية المطلوبة.</p>
+          <p>هذا، ويُعد توقيعي على هذا الطلب تأكيدًا على قبولي استخدام الخدمة وبالحقوق والالتزامات الناشئة عنها وطريقة تقديم الشكوى بشأنها (إن وجدت).</p>
+          <p>كما ألتزم بإخطار جهة التمويل عاليه في حالة فقدان الهاتف المحمول الخاص بي أو تغيير الرقم الخاص بي في حينه.</p>
+          <p style="margin-top:30px;">توقيع العميل: ....................................</p>
+          <p>الرقم القومي: ${nid}</p>
+          <p>رقم الهاتف المحمول للعميل الخاص بخدمة تلقي رسائل الخدمة: ${phone || '....................................'}</p>
+          <p style="margin-top:20px; font-size:11px; border-top:1px solid #ccc; padding-top:10px;">
+            <b>تنبيه هام:</b><br>
+            1- ضرورة عدم الإفصاح عن بياناتكم الشخصية أو المالية أو اسم المستخدم أو كلمة المرور لأي شخص طبيعي أو اعتباري.<br>
+            2- ضرورة إخطارنا بأي طلبات تردكم بأي طريقة كانت لمشاركة بياناتكم سالفة الذكر.
+          </p>
+        </div>
+      `;
+      document.getElementById('printArea').innerHTML = html;
+      window.print();
+    }
+
+    // ========== 2) سند لأمر (نسخة لكل شخص: العميل + كل ضامن) ==========
+    function printPromissoryNotes() {
+      if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
+      const branch = document.getElementById('c_branch').value;
+      const contractDate = document.getElementById('c_date').value;
+      const amount = parseFloat(document.getElementById('c_amount').value);
+      const totalDue = calcResult ? calcResult.totalDue : amount;
+
+      const people = [
+        { name: document.getElementById('c_name').value, nid: document.getElementById('c_nid').value }
+      ];
+      collectGuarantors().forEach(g => people.push({ name: g.guarantor_name, nid: g.guarantor_national_id }));
+
+      let notesHtml = '';
+      people.forEach(p => {
+        notesHtml += `
+          <div style="border:2px solid #333; padding:20px; margin-bottom:20px;">
+            <h1 style="margin-top:0;">سند لأمر</h1>
+            <p style="text-align:left; font-weight:bold;">التاريخ: ${formatDateDMY(contractDate)}</p>
+            <p style="text-align:center;">مكان التحرير: ${branch}</p>
+            <p>أتعهد أنا: ${p.name} &nbsp;&nbsp; أحمل بطاقة رقم قومي: ${p.nid}</p>
+            <p>و المقيم في: ....................................</p>
+            <p>بأن أدفع بموجب هذا السند لأمر إلى السيد / .................................. بصفته رئيس مجلس إدارة جمعية كاريتاس مصر</p>
+            <p style="text-align:center; font-weight:bold;">مبلغ: (${numToArabicWords(totalDue)}) جنيه فقط لاغير</p>
+            <p>بتاريخ ٢٠ / &nbsp;&nbsp; / &nbsp;&nbsp; وأنا أتخلى بموجب هذا السند عن أي شكوى أو تحفظ أو طلب أو احتجاج أو إشعار برفض الدفع فيما يخصه، وسوف أقوم بتحمل المصاريف التي يتكبدها في سبيل تحصيله أو تنفيذه.</p>
+            <p style="margin-top:20px;">المستلم: .................................... &nbsp;&nbsp;&nbsp; التوقيع: ....................................</p>
+          </div>
+        `;
+      });
+
+      document.getElementById('printArea').innerHTML = `<div class="print-page">${commonPrintHeader(branch)}${notesHtml}</div>`;
+      window.print();
+    }
+
+    // ========== 3) بيان التزام (نسخة المكتب / نسخة العميل) ==========
+    function printCommitmentStatement(isOfficeCopy) {
+      if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
+      const branch = document.getElementById('c_branch').value;
+      const name = document.getElementById('c_name').value;
+      const purpose = document.getElementById('c_purpose').value;
+      const amount = parseFloat(document.getElementById('c_amount').value);
+      const schedule = generateInstallmentSchedule();
+      const totalDue = calcResult ? calcResult.totalDue : 0;
+
+      let rows = '';
+      schedule.forEach(s => {
+        rows += `<tr><td>${s.number}</td><td>${s.amount.toLocaleString('ar-EG')} ج.م.</td><td>${s.date}</td><td></td></tr>`;
+      });
+
+      const title = isOfficeCopy ? 'بيان التزام (داخل المكتب)' : 'بيان التزام';
+      const officeExtra = isOfficeCopy ? '' : `<p>كود الجمعية للدفع الإلكتروني عن طريق ماكينات فوري هو: ....................................</p>`;
+      const signLine = isOfficeCopy ? `<p style="margin-top:30px;">استلمت الصورة<br>التوقيع: ....................................</p>` : '';
+
+      const html = `
+        <div class="print-page">
+          <h1>${title}</h1>
+          <p>كود العميل: ${document.getElementById('c_nid').value.slice(-6)} &nbsp;&nbsp; اسم العميل: ${name}</p>
+          <p>مشروع العميل: ${purpose || '—'} &nbsp;&nbsp; قيمة القرض: ${amount.toLocaleString('ar-EG')}</p>
+          ${officeExtra}
+          <table style="width:100%; border-collapse:collapse; margin-top:15px;">
+            <thead><tr style="background:#f2f2f2;">
+              <th style="border:1px solid #999; padding:6px;">عدد الأقساط</th>
+              <th style="border:1px solid #999; padding:6px;">قيمة القسط</th>
+              <th style="border:1px solid #999; padding:6px;">تاريخ القسط</th>
+              <th style="border:1px solid #999; padding:6px;">ملاحظات</th>
+            </tr></thead>
+            <tbody style="font-size:11px;">${rows.replace(/<td>/g, '<td style="border:1px solid #999; padding:5px; text-align:center;">')}</tbody>
+          </table>
+          <p style="text-align:left; font-weight:bold; margin-top:10px;">إجمالي: ${totalDue.toLocaleString('ar-EG')} ج.م.</p>
+
+          <p style="font-size:11px; margin-top:15px;">
+            1- غرامات التأخير: يتم احتساب غرامة تأخير على المبالغ المتأخرة عن السداد بواقع 1% من قيمة هذه المتأخرات عن كل يوم، تُحسب من تاريخ استحقاق القسط حتى تمام السداد.<br>
+            2- السداد المعجل: في حالة السداد المعجل تُخصم تكلفة التمويل للشهر الذي تم فيه السداد المعجل، مع التزامكم بسداد عمولة سداد بنسبة 5% من باقي المبلغ المستحق المراد تعجيله.<br>
+            3- لاستقبال الشكاوى يرجى الاتصال على رقم: 0222012599 &nbsp; أو موبايل/واتساب: 01272150997 &nbsp; أو إرسال إيميل على: micro-credit@caritas-egypt.org
+          </p>
+          ${signLine}
+        </div>
+      `;
+      document.getElementById('printArea').innerHTML = html;
+      window.print();
+    }
+
+    // ========== 4) مرفق 1 - نموذج الإفصاح الرسمي عن هيكل التسعير ==========
+    function printDisclosureForm() {
+      if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
+      const branch = document.getElementById('c_branch').value;
+      const name = document.getElementById('c_name').value;
+      const contractDate = document.getElementById('c_date').value;
+      const amount = parseFloat(document.getElementById('c_amount').value);
+      if (!calcResult) { alert('لازم تحسب بيانات التمويل الأول.'); return; }
+
+      const totalCost = amount + (amount * calcResult.interestRate / 100 * (parseInt(document.getElementById('c_installments').value) / 12));
+      const maxLateFeeMonthly = Math.round(calcResult.installmentAmount * 0.3); // تقريبي: أقصى غرامة شهرية لا تتجاوز تكلفة التمويل الشهرية
+
+      const html = `
+        <div class="print-page">
+          ${commonPrintHeader(branch)}
+          <h1>مرفق رقم (1)<br>نموذج الإفصاح الرسمي عن هيكل التسعير المسؤول</h1>
+          <p>اسم العميل: ${name}</p>
+          <p>إسم جهة التمويل: كاريتاس مصر ${branch} &nbsp;&nbsp; رقم ترخيص الهيئة العامة للرقابة المالية: 1373</p>
+          <p>قيمة القرض: ${amount.toLocaleString('ar-EG')} جنيه &nbsp;&nbsp; إجمالي نسبة معدل تكلفة التمويل: ${calcResult.interestRate}%</p>
+          <p>قيمة تكلفة التمويل: ${Math.round(totalCost - amount).toLocaleString('ar-EG')} جنيه</p>
+
+          <h3 style="border:none; margin-top:20px;">ثانيًا: نسبة المصاريف الإدارية (مرة واحدة عند تقديم التمويل) - ${calcResult.adminFeePercent}%</h3>
+          <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <tr><td style="border:1px solid #999; padding:6px;">مصاريف تقديم طلب (إصدار) التمويل</td><td style="border:1px solid #999; padding:6px;">${Math.round(calcResult.adminFeeAmount).toLocaleString('ar-EG')} جنيه</td></tr>
+            <tr><td style="border:1px solid #999; padding:6px;">مصاريف تجديد التمويل</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
+            <tr><td style="border:1px solid #999; padding:6px;">مصاريف الاستعلام</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
+            <tr><td style="border:1px solid #999; padding:6px;">مصاريف إصدار مخالصة</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
+            <tr><td style="border:1px solid #999; padding:6px;">مصاريف صرف التمويل</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
+            <tr><td style="border:1px solid #999; padding:6px;">مصاريف تحصيل القسط</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
+            <tr><td style="border:1px solid #999; padding:6px;">مصاريف قسط التأمين</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
+            <tr><td style="border:1px solid #999; padding:6px;">مصاريف التأمين الاختياري</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
+            <tr><td style="border:1px solid #999; padding:6px;">مصاريف أخرى</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
+            <tr><td style="border:1px solid #999; padding:6px;">صافي المبلغ المحول إلى العميل</td><td style="border:1px solid #999; padding:6px; font-weight:bold;">${Math.round(calcResult.netDisbursed).toLocaleString('ar-EG')} جنيه</td></tr>
+          </table>
+
+          <p style="margin-top:15px; font-size:12px;">قيمة غرامة التأخير للقسط (إن حدث): 1% من قيمة المبلغ المتأخر عن كل يوم تأخير بعد موعد استحقاق القسط، على ألا تتجاوز الغرامة تكلفة التمويل الشهرية، ليكون أقصى مبلغ شهريًا تقريبًا: ${maxLateFeeMonthly.toLocaleString('ar-EG')} جنيه.</p>
+
+          <p style="margin-top:30px;">التاريخ: ${formatDateDMY(contractDate)}</p>
+          <p>مسؤول التمويل: .................................... &nbsp;&nbsp;&nbsp; توقيع مسؤول التمويل: ....................................</p>
+          <p>توقيع العميل: ....................................</p>
+        </div>
+      `;
+      document.getElementById('printArea').innerHTML = html;
+      window.print();
+    }
+
+    function printContract() {
+      const branch = document.getElementById('c_branch').value;
+      const name = document.getElementById('c_name').value;
+      const nid = document.getElementById('c_nid').value;
+      const issuedBy = document.getElementById('c_issuedBy').value || branch;
+      const issueDate = document.getElementById('c_issueDate').value;
+      const address = document.getElementById('c_address').value;
+      const workAddress = document.getElementById('c_workAddress').value;
+      const representative = document.getElementById('c_representative').value;
+      const purpose = document.getElementById('c_purpose').value;
+      const contractDate = document.getElementById('c_date').value;
+      const firstInstallmentDate = document.getElementById('c_firstInstallment').value;
+      const months = document.getElementById('c_installments').value;
+      const amount = parseFloat(document.getElementById('c_amount').value);
+      const projectName = projects.find(p => p.id == document.getElementById('c_project').value)?.name || '';
+
+      const guarantors = collectGuarantors();
+
+      let guarantorBlocksIntro = '';
+      let guarantorSignBlocks = '';
+      guarantors.forEach((g, i) => {
+        const num = i + 3;
+        guarantorBlocksIntro += `<p>${num}- السيد / ${g.guarantor_name} بطاقة رقم: ${g.guarantor_national_id}<br>
+          صادرة من: ${g.issued_by || '—'} &nbsp;&nbsp; بتاريخ: ${g.issue_date || '—'}<br>
+          والمقيم في: ${g.address || '—'} ويشار إليه فيما يلي بالضامن${guarantors.length > 1 ? ' رقم ' + (i+1) : ''} طرف ${i === 0 ? 'ثالث' : (i+3)}</p>`;
+        guarantorSignBlocks += `<div>طرف ${i === 0 ? 'ثالث' : (i+3)} (الضامن)<br>...............................</div>`;
+      });
+
+      const html = `
+        <div class="print-page">
+          <table style="width:100%; margin-bottom:10px;"><tr>
+            <td style="text-align:right; font-weight:bold;">مكتب: ${branch}</td>
+            <td style="text-align:left; font-weight:bold;">رقم العقد: ${savedContractNumber || ''}</td>
+          </tr></table>
+          <p style="text-align:center; font-size:11px;">جمعية كاريتاس – مصر المشهرة برقم 1150 لسنة 1967<br>
+          ترخيص رقم 1373 من الهيئة الرقابة المالية بموجب القانون رقم 141 لسنة 2014</p>
+          <h1>عقد تمويل متناهى الصغر</h1>
+
+          <p>أنه في يوم ${formatDateDMY(contractDate)} تم إبرام عقد بين كل من:</p>
+          <p>1- جمعية كاريتاس مصر ترخيص مزاولة نشاط التمويل متناهي الصغر رقم 1373 ومقرها الرئيسي 1 شارع محمود صدقي – خلوصي<br>
+          وعنوان المكتب: ${branch}<br>
+          ويمثلها السيد / رئيس مجلس الإدارة أو من يمثله أو يفوضه في هذا العقد السيد: ${representative || '—'} ويشار إليها فيما يلي بالجمعية طرف أول</p>
+
+          <p>2- السيد / ${name} بطاقة رقم: ${nid}<br>
+          صادرة من: ${issuedBy} &nbsp;&nbsp; بتاريخ: ${issueDate}<br>
+          والمقيم في: ${address} ويشار إليه فيما يلي بالمستفيد طرف ثان</p>
+
+          ${guarantorBlocksIntro}
+
+          <p>أتعهد بأنني، كضامن للعميل، أتحمل كافة الالتزامات والواجبات التي تقع على العميل. ويحق للجمعية مطالبة الضامن بكامل المديونية المستحقة على العميل في حال عدم التزام العميل بالسداد لأي سبب من الأسباب وفي المواعيد المتفق عليها.</p>
+
+          <h3>تمهيد</h3>
+          <p>تعمل كاريتاس مصر على مدار 57 عامًا في مجال العمل الأهلي والتنموي والاجتماعي بجمهورية مصر العربية، باعتبارها إحدى أكبر جمعيات العمل الأهلي في مصر. تمتد مشروعاتها من أسوان إلى الإسكندرية، مستهدفة تحسين المستوى الاجتماعي والاقتصادي ورفع الوعي المجتمعي لمختلف فئات المجتمع، وخاصة الأسر والأشخاص في حالات الفقر والتهميش.</p>
+
+          <p>1- يعتبر التمهيد السابق والقواعد التي تحكم التمويل متناهي الصغر الفردي والموضحة باللائحة الداخلية للجمعية جزءًا لا يتجزأ من هذا العقد. البند الثاني: يقدم الطرف الأول للطرف الثاني مبلغ (${numToArabicWords(amount)}) جنيه فقط بتكلفة تمويل قدرها ${calcResult ? calcResult.interestRate : ''}% سنويًا، بنسبة مصروفات إدارية ${calcResult ? calcResult.adminFeePercent : ''}% بقيمة (${calcResult ? numToArabicWords(calcResult.adminFeeAmount) : ''}) جنيه فقط يتم خصمه من مبلغ التمويل، ويكون إجمالي المبلغ المطلوب سداده (${calcResult ? numToArabicWords(calcResult.totalDue) : ''}) جنيه فقط لاغير، ويكون القسط (${calcResult ? calcResult.installmentAmount.toLocaleString('ar-EG') : ''}) جنيه فقط، على أن يكون السداد للجمعية بإحدى الطرق الإلكترونية.</p>
+
+          <p>2- يوافق المستفيد على سداد مبلغ التمويل السابق ذكره مضافًا إليه تكلفة التمويل الخاصة به للجمعية على أقساط شهرية بعدد ${months} قسط، ويستحق أول قسط دفعه في يوم ${formatDateDMY(firstInstallmentDate)} حتى نهاية المدة المحددة لتسديد الأقساط.</p>
+
+          <p>3- يتعهد المستفيد باستخدام قيمة التمويل المقدم له كاملًا في تمويل مشروع ${purpose || '—'} الخاص به والمقدم بشأنه طلب التمويل والمستندات الدالة على النشاط، ويعتبر توقيعه على هذا العقد تعهدًا منه باستخدام التمويل كاملًا داخل المشروع وفي الغرض المطلوب من أجله.</p>
+
+          <p>4- بموجب هذا العقد يصبح للطرف الأول (المقرض) حق الامتياز العام على جميع أموال الطرف الثاني (المقترض).</p>
+
+          <div class="signrow">
+            <div>طرف أول (الجمعية)<br>...............................</div>
+            <div>طرف ثان (المستفيد)<br>...............................</div>
+            ${guarantorSignBlocks}
+          </div>
+        </div>
+
+        <div class="print-page">
+          <table style="width:100%; margin-bottom:10px;"><tr>
+            <td style="text-align:right; font-weight:bold;">مكتب: ${branch}</td>
+          </tr></table>
+          <h1>عقد تمويل متناهى الصغر (تابع)</h1>
+
+          <p>5- في حالة تأخر الطرف الثاني عن سداد أي قسط أو جزء منه، يلتزم بسداد غرامة تأخير بمقدار 1% من قيمة المبلغ المتأخر عن كل يوم تأخير بعد موعد استحقاق القسط، على ألا تتجاوز الغرامة تكلفة التمويل الشهرية. وفي حالة امتناع الطرف الثاني نهائيًا عن السداد، يحق للطرف الأول الرجوع على الطرف الثاني وعلى الطرف الثالث (الضامن).</p>
+          <p>6- في حالة إخلال الطرف الثاني بأي من الالتزامات المترتبة عليه بموجب هذا العقد، فإن كافة الأقساط المستحقة عليه للطرف الأول تصبح حالة وواجبة الأداء فورًا.</p>
+          <p>7- للجمعية الحق في استرداد باقي التمويل والمصروفات الإدارية التي لم تُسدد، وأي غرامات تأخير أو مصروفات إدارية أخرى مقررة وفقًا للوائح ونظم الجمعية.</p>
+          <p>8- تلتزم الجمعية بقبول طلبات عملائها بالسداد المعجل، ويحق للجمعية خصم تكلفة التمويل للشهر الذي تم فيه السداد، ويتم تحصيل عمولة سداد معجل بمقدار 5% من باقي المبلغ المستحق المراد تعجيل الوفاء به.</p>
+          <p>9- يتعهد الشخص الضامن بالتزامه أمام الطرف الأول بكافة المسؤوليات والواجبات والالتزامات التي تقع على عاتق الطرف الثاني، وبأنه ملتزم أمام الطرف الأول بأنه في حالة إخلال الطرف الثاني بشرط أو بند من هذا العقد، يكون هو مسؤولًا مسؤولية كاملة أمام الطرف الأول بتنفيذ الالتزامات.</p>
+          <p>10- يقر الطرف الثاني بأنه لم تصدر ضده أي أحكام قضائية تمس وضعه المالي أو العملي، ولم تُتخذ ضده أي إجراءات تنفيذ أو حجز على ممتلكاته.</p>
+          <p>11- يوافق الطرفان على أنه في حالة ظهور أي نزاع، يتم اللجوء إلى المحاكم التي تحددها الجمعية.</p>
+          <p>12- يتم تسليم العميل بيان التزام كامل بشروط التمويل، وتسليم العميل نموذج الإفصاح الخاص بالتسعير المسؤول.</p>
+          <p>13- طبقًا لأحكام القانون، تلتزم الجمعية بالتأمين الإجباري على جميع عملاء التمويل متناهي الصغر ضد مخاطر حالات الوفاة والعجز الكلي، على أن تتحمل الجمعية كافة المصروفات والرسوم نيابة عن عملائها.</p>
+          <p>14- يخضع هذا العقد لأحكام القانون رقم 141 لسنة 2014 وتعديلاته والمعدل بالقانون رقم 155 لسنة 2022 بتنظيم مزاولة نشاط تمويل المشروعات المتوسطة والصغيرة ومتناهية الصغر.</p>
+          <p>15- توقيع الطرف الثاني على هذا العقد يمثل استلام مبلغ التمويل وإقرارًا منه بتنفيذ جميع البنود التي وردت به.</p>
+
+          <div class="signrow">
+            <div>طرف أول (الجمعية)<br>...............................</div>
+            <div>طرف ثان (المستفيد)<br>...............................</div>
+            ${guarantorSignBlocks}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('printArea').innerHTML = html;
+      window.print();
+    }
+
+    (async function boot() {
+      await loadBranchesCache();
+      init();
+    })();
+  </script>
+</body>
+</html>

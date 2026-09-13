@@ -71,19 +71,33 @@
       height: 4px;
       background: linear-gradient(90deg, #b3463a 0%, #1c3f66 50%, #b3463a 100%);
     }
-    h2 { text-align: center; color: #b3463a; font-weight: 800; margin-top: 0; }
-    p.desc { text-align: center; color: #64768a; font-size: 13.5px; margin-top: -6px; margin-bottom: 22px; }
+    .page-head { text-align: center; margin-bottom: 22px; }
+    .page-head h2 { color: #b3463a; font-weight: 800; margin: 0 0 6px; font-size: 20px; }
+    .page-head p { color: #64768a; font-size: 13.5px; margin: 0; }
 
     .search-bar {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 8px;
       flex-wrap: wrap;
     }
-    .search-bar input {
+    .search-bar .input-wrap {
+      position: relative;
       flex: 1;
       min-width: 260px;
-      padding: 13px 16px;
+    }
+    .search-bar .input-wrap span {
+      position: absolute;
+      top: 50%; right: 14px;
+      transform: translateY(-50%);
+      color: #9aa8b8;
+      font-size: 15px;
+      pointer-events: none;
+    }
+    .search-bar input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 13px 42px 13px 16px;
       border: 1.5px solid #dde5ee;
       border-radius: 10px;
       font-size: 15px;
@@ -103,34 +117,70 @@
       cursor: pointer;
       font-family: 'Tajawal', sans-serif;
       white-space: nowrap;
+      transition: filter 0.15s ease;
     }
+    .search-bar button:hover { filter: brightness(0.95); }
     .btn-search { background: linear-gradient(135deg, #b3463a 0%, #1c3f66 100%); color: white; }
     .btn-export { background: #16a085; color: white; }
 
-    .hint { font-size: 12.5px; color: #64768a; margin-bottom: 10px; }
+    .hint { font-size: 12.5px; color: #64768a; margin-bottom: 18px; }
 
-    .result-count { font-size: 14px; font-weight: 700; color: #1c3f66; margin: 15px 0 10px; }
+    .result-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 4px 0 12px;
+    }
+    .result-count { font-size: 14px; font-weight: 700; color: #1c3f66; }
+    .role-legend { display: flex; gap: 10px; font-size: 11.5px; color: #64768a; }
+    .role-legend .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-inline-start: 4px; vertical-align: middle; }
 
     .table-wrapper {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       max-width: 100%;
-      border-radius: 8px;
-    }
-    table { width: 100%; border-collapse: collapse; min-width: 900px; }
-    th, td { border: 1px solid #eee; padding: 9px 11px; text-align: right; font-size: 12.5px; }
-    th { background: #f2f2f2; }
-    tr:hover { background: #fafcfb; }
-    .match-badge {
-      display: inline-block;
-      padding: 2px 8px;
+      border: 1px solid #eef1f5;
       border-radius: 10px;
-      font-size: 10px;
-      font-weight: 700;
-      background: #fef9e7;
-      color: #7d6608;
-      margin-left: 4px;
     }
+    table { width: 100%; border-collapse: collapse; min-width: 980px; }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #1c3f66;
+      color: #fff;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 11px 12px;
+      text-align: right;
+      white-space: nowrap;
+    }
+    tbody td {
+      border-bottom: 1px solid #eef1f5;
+      padding: 10px 12px;
+      text-align: right;
+      font-size: 12.5px;
+      vertical-align: middle;
+    }
+    tbody tr.main-row:nth-child(4n+1) { background: #fbfcfe; }
+    tbody tr.main-row:hover { background: #f3f7fb; }
+    .ltr-cell { direction: ltr; text-align: left; }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 10px;
+      font-size: 10.5px;
+      font-weight: 700;
+      margin-inline-end: 4px;
+      white-space: nowrap;
+    }
+    .role-client { background: #eaf2fb; color: #1c3f66; border: 1px solid #cfe0f2; }
+    .role-guarantor { background: #fdf3e7; color: #a3813f; border: 1px solid #f0dfc0; }
+
     .month-badge {
       display: inline-block;
       padding: 3px 10px;
@@ -139,18 +189,61 @@
       font-weight: 700;
       background: #eef4fa;
       color: #1c3f66;
+      white-space: nowrap;
     }
+
     .expand-btn {
-      background: #b3463a;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 4px;
+      background: #fff;
+      color: #b3463a;
+      border: 1.5px solid #f0c9c3;
+      padding: 5px 12px;
+      border-radius: 7px;
       cursor: pointer;
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 700;
+      white-space: nowrap;
+      transition: background 0.15s ease;
     }
-    .detail-row td { background: #fbfcfe; padding: 15px; font-size: 12.5px; line-height: 1.9; }
+    .expand-btn:hover { background: #fdf2f0; }
+    .expand-btn.is-open { background: #b3463a; color: #fff; border-color: #b3463a; }
+
+    .detail-row td {
+      background: #fbfaf6;
+      padding: 0;
+    }
+    .detail-inner { padding: 14px 18px 18px; }
+    .detail-sections {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .detail-section {
+      background: #fff;
+      border: 1px solid #eef1f5;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .detail-section .sec-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #a3813f;
+      background: #fbfaf6;
+      padding: 7px 12px;
+      border-bottom: 1px solid #f1ede1;
+    }
+    .detail-section .sec-body { padding: 4px 12px; }
+    .kv-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px dashed #eee;
+    }
+    .kv-row:last-child { border-bottom: none; }
+    .kv-row .k { color: #64768a; font-weight: 600; white-space: nowrap; }
+    .kv-row .v { color: #142433; text-align: left; word-break: break-word; }
+    .kv-row .v.empty { color: #b7c0cb; }
 
     .loading, .no-data, .empty-state { text-align: center; padding: 45px 20px; color: #64768a; }
     .error-box { text-align: center; padding: 30px; color: #e74c3c; font-weight: bold; }
@@ -163,6 +256,7 @@
       .top-header .brand { justify-content: center; }
       .top-header .nav-actions { justify-content: center; }
       .search-bar { flex-direction: column; }
+      .result-bar { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
@@ -183,13 +277,18 @@
   </div>
 
   <div id="mainContainer" class="container" style="display:none;">
-    <h2>🔎 البحث في اللجان القديمة</h2>
-    <p class="desc">دور بجزء من الاسم، رقم البطاقة، أو كود العميل — البحث بيشمل اسم العميل واسم الضامن مع بعض</p>
+    <div class="page-head">
+      <h2>🔎 البحث في اللجان القديمة</h2>
+      <p>دور بجزء من الاسم، رقم البطاقة، أو كود العميل — البحث بيشمل بيانات العميل والضامن مع بعض</p>
+    </div>
 
     <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="مثال: محمد أحمد، أو 2965، أو كود العميل..." />
-      <button class="btn-search" onclick="runSearch()">🔎 بحث</button>
-      <button class="btn-export" onclick="exportResults()">📊 تصدير النتائج Excel</button>
+      <div class="input-wrap">
+        <input type="text" id="searchInput" placeholder="مثال: محمد أحمد، أو 2965، أو كود العميل..." />
+        <span>🔎</span>
+      </div>
+      <button class="btn-search" onclick="runSearch()">بحث</button>
+      <button class="btn-export" onclick="exportResults()">📊 تصدير Excel</button>
     </div>
     <div class="hint">اكتب 3 حروف أو أرقام على الأقل عشان النتائج تكون دقيقة.</div>
 
@@ -216,6 +315,35 @@
     }
 
     let lastResults = [];
+    let lastTerm = '';
+
+    // نفس تقسيم الحقول المستخدم في صفحة السجل التاريخي، عشان شكل التفاصيل يبقى موحّد بين الصفحتين
+    const FIELD_SECTIONS = [
+      {
+        title: "بيانات الطلب",
+        fields: ["كود العميل", "المشروع", "رقم اللجنة", "تاريخ القرض", "عدد الأقساط", "عدد أيام التأخير"]
+      },
+      {
+        title: "البيانات المالية",
+        fields: ["المبلغ المطلوب", "المبلغ المحول", "قيمة التمويل", "نظام التمويل", "المصاريف الإدارية"]
+      },
+      {
+        title: "بيانات الضامن",
+        fields: ["رقم بطاقة الضامن", "اسم الضامن", "اسم الضامن من I-Score", "نتيجة تقييم الضامن", "تقييم رقمي الضامن", "تاريخ استعلام الضامن", "تعليق استعلام الضامن"]
+      },
+      {
+        title: "تقييم العميل (آي سكور)",
+        fields: ["اسم العميل من التقييم", "نتيجة التقييم", "التقييم الرقمي", "تاريخ استعلام العميل", "تعليق استعلام العميل"]
+      },
+      {
+        title: "المتابعة والمراجعة",
+        fields: ["الأخصائي", "تم التحويل", "المراجعة الداخلية", "ملاحظات المراجعة الداخلية", "مسؤول المتابعة", "تعليق مسؤول المتابعة", "الإدارة", "ملاحظات الإدارة", "موافقة مسئول المشروع", "ملاحظات مسئول المشروع"]
+      },
+      {
+        title: "بيانات إدارية",
+        fields: ["المنطقة", "الفرع", "القائم بالزيارة", "القائم بالإدخال", "تاريخ الإدخال", "أخصائي القرض", "النشاط الثاني", "فرع العميل"]
+      }
+    ];
 
     function init() {
       const userId = localStorage.getItem('loggedInUserId');
@@ -262,23 +390,30 @@
         if (error) throw error;
 
         lastResults = data || [];
+        lastTerm = term;
         renderResults(lastResults, term);
 
       } catch (err) {
         console.error('خطأ في البحث:', err);
-        resultsArea.innerHTML = `<div class="error-box">❌ حدث خطأ أثناء البحث: ${err.message || err}</div>`;
+        resultsArea.innerHTML = `<div class="error-box">❌ حدث خطأ أثناء البحث: ${escapeHtml(err.message || err)}</div>`;
       }
     }
 
-    function matchReason(row, term) {
-      const t = term.toLowerCase();
-      const reasons = [];
-      if ((row["اسم العميل"] || '').toLowerCase().includes(t)) reasons.push('اسم العميل');
-      if ((row["اسم الضامن"] || '').toLowerCase().includes(t)) reasons.push('اسم الضامن');
-      if ((row["رقم بطاقة العميل"] || '').includes(term)) reasons.push('رقم بطاقة العميل');
-      if ((row["رقم بطاقة الضامن"] || '').includes(term)) reasons.push('رقم بطاقة الضامن');
-      if ((row["كود العميل"] || '').includes(term)) reasons.push('كود العميل');
-      return reasons;
+    // بيحدد هل الكلمة اتطابقت لأنها بيانات عميل، ولا بيانات ضامن، ولا الاتنين مع بعض
+    function matchRoles(row, term) {
+      const t = term;
+      const tl = term.toLowerCase();
+      const clientHits = [];
+      const guarantorHits = [];
+
+      if (String(row["اسم العميل"] || '').toLowerCase().includes(tl)) clientHits.push('الاسم');
+      if (String(row["رقم بطاقة العميل"] || '').includes(t)) clientHits.push('رقم البطاقة');
+      if (String(row["كود العميل"] || '').includes(t)) clientHits.push('كود العميل');
+
+      if (String(row["اسم الضامن"] || '').toLowerCase().includes(tl)) guarantorHits.push('الاسم');
+      if (String(row["رقم بطاقة الضامن"] || '').includes(t)) guarantorHits.push('رقم البطاقة');
+
+      return { clientHits, guarantorHits };
     }
 
     function renderResults(data, term) {
@@ -289,7 +424,14 @@
         return;
       }
 
-      let html = `<div class="result-count">تم العثور على ${data.length.toLocaleString('ar-EG')} نتيجة</div>`;
+      let html = `<div class="result-bar">
+        <div class="result-count">تم العثور على ${data.length.toLocaleString('ar-EG')} نتيجة</div>
+        <div class="role-legend">
+          <span><span class="swatch" style="background:#1c3f66;"></span>تطابق باسم/بيانات العميل</span>
+          <span><span class="swatch" style="background:#a3813f;"></span>تطابق باسم/بيانات الضامن</span>
+        </div>
+      </div>`;
+
       html += `<div class="table-wrapper"><table><thead><tr>
         <th>الشهر</th>
         <th>اسم العميل</th>
@@ -300,44 +442,53 @@
         <th>الفرع</th>
         <th>المبلغ المطلوب</th>
         <th>رقم اللجنة</th>
-        <th>مطابقة بسبب</th>
+        <th>نوع المطابقة</th>
         <th></th>
       </tr></thead><tbody>`;
 
       data.forEach((row, idx) => {
-        const reasons = matchReason(row, term);
-        const reasonsHtml = reasons.map(r => `<span class="match-badge">${r}</span>`).join('');
+        const { clientHits, guarantorHits } = matchRoles(row, term);
+        let roleBadges = '';
+        if (clientHits.length) {
+          roleBadges += `<span class="role-badge role-client" title="تطابق في: ${escapeHtml(clientHits.join('، '))}">🧑 عميل</span>`;
+        }
+        if (guarantorHits.length) {
+          roleBadges += `<span class="role-badge role-guarantor" title="تطابق في: ${escapeHtml(guarantorHits.join('، '))}">🤝 ضامن</span>`;
+        }
+        if (!roleBadges) roleBadges = '—';
 
         html += `
-          <tr>
-            <td><span class="month-badge">${row["الشهر"] || '—'}</span></td>
-            <td>${row["اسم العميل"] || '—'}</td>
-            <td>${row["اسم الضامن"] || '—'}</td>
-            <td style="direction:ltr; text-align:left;">${row["رقم بطاقة العميل"] || '—'}</td>
-            <td style="direction:ltr; text-align:left;">${row["رقم بطاقة الضامن"] || '—'}</td>
-            <td>${row["كود العميل"] || '—'}</td>
-            <td>${row["الفرع"] || '—'}</td>
-            <td>${row["المبلغ المطلوب"] || '—'}</td>
-            <td>${row["رقم اللجنة"] || '—'}</td>
-            <td>${reasonsHtml}</td>
-            <td><button class="expand-btn" onclick="toggleDetail(${idx})">تفاصيل</button></td>
+          <tr class="main-row">
+            <td><span class="month-badge">${escapeHtml(row["الشهر"] || '—')}</span></td>
+            <td>${escapeHtml(row["اسم العميل"] || '—')}</td>
+            <td>${escapeHtml(row["اسم الضامن"] || '—')}</td>
+            <td class="ltr-cell">${escapeHtml(row["رقم بطاقة العميل"] || '—')}</td>
+            <td class="ltr-cell">${escapeHtml(row["رقم بطاقة الضامن"] || '—')}</td>
+            <td>${escapeHtml(row["كود العميل"] || '—')}</td>
+            <td>${escapeHtml(row["الفرع"] || '—')}</td>
+            <td>${escapeHtml(row["المبلغ المطلوب"] || '—')}</td>
+            <td>${escapeHtml(row["رقم اللجنة"] || '—')}</td>
+            <td>${roleBadges}</td>
+            <td><button class="expand-btn" id="search-btn-${idx}" onclick="toggleDetail(${idx})">تفاصيل ▾</button></td>
           </tr>
           <tr class="detail-row" id="search-detail-${idx}" style="display:none;">
             <td colspan="11">
-              المشروع: ${row["المشروع"] || '—'} |
-              نظام التمويل: ${row["نظام التمويل"] || '—'} |
-              المصاريف الإدارية: ${row["المصاريف الإدارية"] || '—'} |
-              الأخصائي: ${row["الأخصائي"] || '—'} |
-              تم التحويل: ${row["تم التحويل"] || '—'}<br>
-              المراجعة الداخلية: ${row["المراجعة الداخلية"] || '—'} |
-              مسؤول المتابعة: ${row["مسؤول المتابعة"] || '—'} |
-              الإدارة: ${row["الإدارة"] || '—'}<br>
-              عدد أيام التأخير: ${row["عدد أيام التأخير"] || '—'} |
-              عدد الأقساط: ${row["عدد الأقساط"] || '—'} |
-              المنطقة: ${row["المنطقة"] || '—'}<br>
-              القائم بالزيارة: ${row["القائم بالزيارة"] || '—'} |
-              القائم بالإدخال: ${row["القائم بالإدخال"] || '—'} |
-              تاريخ الإدخال: ${row["تاريخ الإدخال"] || '—'}
+              <div class="detail-inner">
+                <div class="detail-sections">
+                  ${FIELD_SECTIONS.map(section => `
+                    <div class="detail-section">
+                      <div class="sec-title">${escapeHtml(section.title)}</div>
+                      <div class="sec-body">
+                        ${section.fields.map(field => {
+                          const val = row[field];
+                          const hasValue = val !== null && val !== undefined && String(val).trim() !== '';
+                          return `<div class="kv-row"><span class="k">${escapeHtml(field)}</span><span class="v${hasValue ? '' : ' empty'}">${hasValue ? escapeHtml(val) : '—'}</span></div>`;
+                        }).join('')}
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
             </td>
           </tr>
         `;
@@ -349,7 +500,20 @@
 
     function toggleDetail(idx) {
       const row = document.getElementById('search-detail-' + idx);
-      if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+      const btn = document.getElementById('search-btn-' + idx);
+      if (!row) return;
+      const isOpen = row.style.display !== 'none';
+      row.style.display = isOpen ? 'none' : 'table-row';
+      if (btn) {
+        btn.classList.toggle('is-open', !isOpen);
+        btn.textContent = isOpen ? 'تفاصيل ▾' : 'إخفاء ▴';
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
     }
 
     function exportResults() {
@@ -359,24 +523,38 @@
       }
 
       try {
-        const exportData = lastResults.map((r, idx) => ({
-          'م': idx + 1,
-          'الشهر': r["الشهر"] || '',
-          'اسم العميل': r["اسم العميل"] || '',
-          'اسم الضامن': r["اسم الضامن"] || '',
-          'رقم بطاقة العميل': r["رقم بطاقة العميل"] || '',
-          'رقم بطاقة الضامن': r["رقم بطاقة الضامن"] || '',
-          'كود العميل': r["كود العميل"] || '',
-          'الفرع': r["الفرع"] || '',
-          'المشروع': r["المشروع"] || '',
-          'المبلغ المطلوب': r["المبلغ المطلوب"] || '',
-          'رقم اللجنة': r["رقم اللجنة"] || '',
-          'الأخصائي': r["الأخصائي"] || '',
-          'تم التحويل': r["تم التحويل"] || '',
-          'المراجعة الداخلية': r["المراجعة الداخلية"] || '',
-          'مسؤول المتابعة': r["مسؤول المتابعة"] || '',
-          'الإدارة': r["الإدارة"] || ''
-        }));
+        const exportData = lastResults.map((r, idx) => {
+          const { clientHits, guarantorHits } = matchRoles(r, lastTerm);
+          const roleLabel = [
+            clientHits.length ? 'عميل' : null,
+            guarantorHits.length ? 'ضامن' : null
+          ].filter(Boolean).join(' + ') || '—';
+
+          return {
+            'م': idx + 1,
+            'نوع المطابقة': roleLabel,
+            'الشهر': r["الشهر"] || '',
+            'اسم العميل': r["اسم العميل"] || '',
+            'اسم الضامن': r["اسم الضامن"] || '',
+            'رقم بطاقة العميل': r["رقم بطاقة العميل"] || '',
+            'رقم بطاقة الضامن': r["رقم بطاقة الضامن"] || '',
+            'كود العميل': r["كود العميل"] || '',
+            'الفرع': r["الفرع"] || '',
+            'المشروع': r["المشروع"] || '',
+            'المبلغ المطلوب': r["المبلغ المطلوب"] || '',
+            'المبلغ المحول': r["المبلغ المحول"] || '',
+            'قيمة التمويل': r["قيمة التمويل"] || '',
+            'نظام التمويل': r["نظام التمويل"] || '',
+            'رقم اللجنة': r["رقم اللجنة"] || '',
+            'الأخصائي': r["الأخصائي"] || '',
+            'تم التحويل': r["تم التحويل"] || '',
+            'المراجعة الداخلية': r["المراجعة الداخلية"] || '',
+            'مسؤول المتابعة': r["مسؤول المتابعة"] || '',
+            'الإدارة': r["الإدارة"] || '',
+            'موافقة مسئول المشروع': r["موافقة مسئول المشروع"] || '',
+            'ملاحظات مسئول المشروع': r["ملاحظات مسئول المشروع"] || ''
+          };
+        });
 
         const worksheet = XLSX.utils.json_to_sheet(exportData);
         worksheet['!cols'] = Object.keys(exportData[0] || {}).map(k => ({ wch: Math.max(14, k.length + 4) }));

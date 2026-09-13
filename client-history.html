@@ -140,15 +140,17 @@
     .request-card {
       border: 1px solid #e4ebf3;
       border-radius: 10px;
-      padding: 18px 20px;
+      padding: 0;
       margin-bottom: 18px;
-      background: #fbfcfe;
+      background: #fff;
+      overflow: hidden;
     }
     .request-card .request-title {
       font-weight: 800;
       font-size: 15px;
-      color: #a3813f;
-      margin-bottom: 12px;
+      color: #fff;
+      background: linear-gradient(135deg, #1c3f66 0%, #2e5c8a 100%);
+      padding: 12px 18px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -156,29 +158,53 @@
       gap: 8px;
     }
     .month-badge {
-      background: #fef9e7;
-      color: #7d6608;
-      border: 1px solid #f9e79f;
+      background: rgba(255,255,255,0.18);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.4);
       padding: 4px 12px;
       border-radius: 14px;
       font-size: 12px;
       font-weight: 700;
     }
-    .detail-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 10px 20px;
+
+    .section-block {
+      border-bottom: 1px solid #eef1f5;
     }
-    .detail-item {
+    .section-block:last-child { border-bottom: none; }
+    .section-block .section-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #a3813f;
+      background: #fbfaf6;
+      padding: 8px 18px;
+      border-bottom: 1px solid #f1ede1;
+    }
+    .section-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .section-table tr:not(:last-child) td {
+      border-bottom: 1px solid #f0f2f5;
+    }
+    .section-table td {
+      padding: 8px 18px;
       font-size: 13px;
-      padding: 6px 0;
-      border-bottom: 1px dashed #eee;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
+      vertical-align: top;
     }
-    .detail-item .k { color: #64768a; font-weight: 600; white-space: nowrap; }
-    .detail-item .v { color: #142433; text-align: left; word-break: break-word; }
+    .section-table td.k {
+      color: #64768a;
+      font-weight: 600;
+      width: 38%;
+      white-space: nowrap;
+    }
+    .section-table td.v {
+      color: #142433;
+      word-break: break-word;
+    }
+    .section-table td.v.empty {
+      color: #b7c0cb;
+    }
+    .section-table tr:nth-child(even) { background: #fbfcfe; }
 
     .divider {
       text-align: center;
@@ -205,6 +231,7 @@
       .top-header, .toolbar { display: none !important; }
       body { background: white; padding: 0; }
       .container { box-shadow: none; }
+      .request-card { break-inside: avoid; page-break-inside: avoid; }
     }
   </style>
 </head>
@@ -262,20 +289,34 @@
       console.error('فشل في تهيئة قاعدة البيانات:', err);
     }
 
-    // الحقول اللي هتتعرض في كل كارت طلب (بالترتيب)، وبتستبعد الحقول اللي ظاهرة أصلاً فوق (الاسم/الرقم القومي) والحقول الداخلية
-    const DISPLAY_FIELDS = [
-      "كود العميل", "المشروع", "رقم بطاقة الضامن", "اسم الضامن",
-      "المبلغ المطلوب", "المبلغ المحول", "قيمة التمويل", "نظام التمويل", "المصاريف الإدارية",
-      "الأخصائي", "تم التحويل", "المراجعة الداخلية", "ملاحظات المراجعة الداخلية",
-      "مسؤول المتابعة", "تعليق مسؤول المتابعة", "الإدارة", "ملاحظات الإدارة",
-      "رقم اللجنة", "عدد أيام التأخير", "عدد الأقساط", "المنطقة", "الفرع",
-      "القائم بالزيارة", "القائم بالإدخال", "تاريخ الإدخال", "تاريخ القرض",
-      "أخصائي القرض", "النشاط الثاني", "فرع العميل",
-      "اسم العميل من التقييم", "نتيجة التقييم", "التقييم الرقمي",
-      "تاريخ استعلام العميل", "تعليق استعلام العميل",
-      "اسم الضامن من I-Score", "نتيجة تقييم الضامن", "تقييم رقمي الضامن",
-      "تاريخ استعلام الضامن", "تعليق استعلام الضامن",
-      "موافقة مسئول المشروع", "ملاحظات مسئول المشروع"
+    // الحقول مقسّمة على أقسام منطقية، كل قسم بيتعرض في جدول منفصل داخل كارت الطلب.
+    // بتستبعد الحقول اللي ظاهرة أصلاً فوق (الاسم/الرقم القومي) والحقول الداخلية.
+    // كل حقل هيتعرض حتى لو قيمته فاضية (هيظهر "—" بدل ما يتخفى).
+    const FIELD_SECTIONS = [
+      {
+        title: "بيانات الطلب",
+        fields: ["كود العميل", "المشروع", "رقم اللجنة", "تاريخ القرض", "عدد الأقساط", "عدد أيام التأخير"]
+      },
+      {
+        title: "البيانات المالية",
+        fields: ["المبلغ المطلوب", "المبلغ المحول", "قيمة التمويل", "نظام التمويل", "المصاريف الإدارية"]
+      },
+      {
+        title: "بيانات الضامن",
+        fields: ["رقم بطاقة الضامن", "اسم الضامن", "اسم الضامن من I-Score", "نتيجة تقييم الضامن", "تقييم رقمي الضامن", "تاريخ استعلام الضامن", "تعليق استعلام الضامن"]
+      },
+      {
+        title: "تقييم العميل (آي سكور)",
+        fields: ["اسم العميل من التقييم", "نتيجة التقييم", "التقييم الرقمي", "تاريخ استعلام العميل", "تعليق استعلام العميل"]
+      },
+      {
+        title: "المتابعة والمراجعة",
+        fields: ["الأخصائي", "تم التحويل", "المراجعة الداخلية", "ملاحظات المراجعة الداخلية", "مسؤول المتابعة", "تعليق مسؤول المتابعة", "الإدارة", "ملاحظات الإدارة", "موافقة مسئول المشروع", "ملاحظات مسئول المشروع"]
+      },
+      {
+        title: "بيانات إدارية",
+        fields: ["المنطقة", "الفرع", "القائم بالزيارة", "القائم بالإدخال", "تاريخ الإدخال", "أخصائي القرض", "النشاط الثاني", "فرع العميل"]
+      }
     ];
 
     function getQueryParam(name) {
@@ -341,16 +382,26 @@
           <div class="request-title">
             <span>طلب رقم ${idx + 1}${row["رقم اللجنة"] ? ' — لجنة: ' + escapeHtml(row["رقم اللجنة"]) : ''}</span>
             <span class="month-badge">${escapeHtml(row["الشهر"] || '—')}</span>
-          </div>
-          <div class="detail-grid">`;
+          </div>`;
 
-        DISPLAY_FIELDS.forEach(field => {
-          const val = row[field];
-          if (val === null || val === undefined || val === '') return;
-          html += `<div class="detail-item"><span class="k">${escapeHtml(field)}</span><span class="v">${escapeHtml(val)}</span></div>`;
+        FIELD_SECTIONS.forEach(section => {
+          html += `<div class="section-block">
+            <div class="section-title">${escapeHtml(section.title)}</div>
+            <table class="section-table"><tbody>`;
+
+          section.fields.forEach(field => {
+            const val = row[field];
+            const hasValue = val !== null && val !== undefined && String(val).trim() !== '';
+            html += `<tr>
+              <td class="k">${escapeHtml(field)}</td>
+              <td class="v${hasValue ? '' : ' empty'}">${hasValue ? escapeHtml(val) : '—'}</td>
+            </tr>`;
+          });
+
+          html += `</tbody></table></div>`;
         });
 
-        html += `</div></div>`;
+        html += `</div>`;
       });
 
       listEl.innerHTML = html;

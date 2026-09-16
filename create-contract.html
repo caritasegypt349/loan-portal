@@ -220,7 +220,7 @@
     } catch (e) { console.error('فشل تهيئة قاعدة البيانات:', e); }
 
     let allOps = [];
-    let contractedOperationIds = new Set();
+    let contractedOperationIds = new Map();
     let selectedOp = null;
     let projects = [];
     let directives = [];
@@ -233,11 +233,27 @@
       const userId = localStorage.getItem('loggedInUserId');
       if (!userId) { alert('الرجاء تسجيل الدخول أولًا!'); window.location.href = 'index.html'; return; }
       const role = localStorage.getItem('userRole');
-      if (role !== 'admin' && role !== 'data_entry') {
-        document.getElementById('accessDenied').style.display = 'block';
-        return;
+
+      if (role === 'admin') {
+        document.getElementById('pickStep').style.display = 'block';
+      } else {
+        // ✅ الصلاحية دلوقتي عن طريق فلاج مخصص من جدول users، مش بس دور data_entry تلقائيًا
+        try {
+          const { data: user, error } = await db.from('users').select('can_create_contracts').eq('id', userId).single();
+          if (error) throw error;
+          if (user && user.can_create_contracts === true) {
+            document.getElementById('pickStep').style.display = 'block';
+          } else {
+            document.getElementById('accessDenied').style.display = 'block';
+            return;
+          }
+        } catch (e) {
+          console.error('تعذر التحقق من الصلاحية:', e);
+          document.getElementById('accessDenied').style.display = 'block';
+          return;
+        }
       }
-      document.getElementById('pickStep').style.display = 'block';
+
       await loadOperations();
       await loadProjectsAndDirectives();
     }
@@ -254,8 +270,8 @@
         if (error) throw error;
         allOps = data || [];
 
-        const { data: contractsData } = await db.from('contracts').select('operation_id');
-        contractedOperationIds = new Set((contractsData || []).map(c => c.operation_id));
+        const { data: contractsData } = await db.from('contracts').select('id, operation_id, branch_contract_number');
+        contractedOperationIds = new Map((contractsData || []).map(c => [c.operation_id, { id: c.id, number: c.branch_contract_number }]));
 
         renderPickList();
       } catch (e) {
@@ -281,9 +297,9 @@
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
       const onlyApproved = document.getElementById('filterApproved').checked;
 
-      let filtered = allOps.filter(op => !contractedOperationIds.has(op.id));
+      let filtered = allOps;
       if (onlyApproved) {
-        filtered = filtered.filter(op => op["المراجعة الداخلية"] === 'تمت المراجعة مقبول');
+        filtered = filtered.filter(op => op["المراجعة الداخلية"] === 'تمت المراجعة مقبول' || contractedOperationIds.has(op.id));
       }
       if (search) {
         filtered = filtered.filter(op => {
@@ -294,12 +310,22 @@
 
       const el = document.getElementById('pickListContainer');
       if (filtered.length === 0) {
-        el.innerHTML = '<div class="empty-state">لا توجد عمليات مطابقة (وكل العمليات ليها عقد بالفعل، أو جرّب تشيل فلتر "مقبولة فقط").</div>';
+        el.innerHTML = '<div class="empty-state">لا توجد عمليات مطابقة. جرّب تشيل فلتر "مقبولة فقط" أو غيّر البحث.</div>';
         return;
       }
 
-      let html = `<table><thead><tr><th>الكود</th><th>الاسم</th><th>الفرع</th><th>المشروع</th><th>المبلغ</th><th>حالة المراجعة</th><th></th></tr></thead><tbody>`;
+      let html = `<table><thead><tr>
+        <th>الكود</th><th>الاسم</th><th>الفرع</th><th>المشروع</th><th>المبلغ</th>
+        <th>المراجعة</th><th>المتابعة</th><th>مسئول المشروع</th><th>الإدارة</th>
+        <th></th>
+      </tr></thead><tbody>`;
+
       filtered.slice(0, 100).forEach(op => {
+        const existing = contractedOperationIds.get(op.id);
+        const actionCell = existing
+          ? `<button class="pick-btn" style="background:#16a085;" onclick="loadExistingContract(${existing.id})">📂 فتح العقد رقم ${existing.number}</button>`
+          : `<button class="pick-btn" onclick="pickOperation(${op.id})">➕ إنشاء عقد</button>`;
+
         html += `<tr>
           <td>${op["كود_العميل"] || '—'}</td>
           <td>${op["اسم_العميل"] || '—'}</td>
@@ -307,7 +333,10 @@
           <td>${op["المشروع"] || '—'}</td>
           <td>${op["المبلغ المطلوب"] || '—'}</td>
           <td>${op["المراجعة الداخلية"] || '—'}</td>
-          <td><button class="pick-btn" onclick="pickOperation(${op.id})">اختيار</button></td>
+          <td>${op["مسؤول المتابعة"] || '—'}</td>
+          <td>${op["موافقة مسئول المشروع"] || '—'}</td>
+          <td>${op["الادارة"] || '—'}</td>
+          <td>${actionCell}</td>
         </tr>`;
       });
       html += `</tbody></table>`;
@@ -316,6 +345,10 @@
     }
 
     async function pickOperation(opId) {
+      if (contractedOperationIds.has(opId)) {
+        loadExistingContract(contractedOperationIds.get(opId).id);
+        return;
+      }
       selectedOp = allOps.find(o => o.id === opId);
       if (!selectedOp) return;
 
@@ -390,10 +423,96 @@
       return b && b.name === branchName;
     }
 
-    function backToList() {
+    // ========== فتح عقد موجود بالفعل (لإعادة الطباعة أو التعديل) ==========
+    async function loadExistingContract(contractId) {
+      try {
+        const { data: contract, error } = await db.from('contracts').select('*').eq('id', contractId).single();
+        if (error) throw error;
+
+        selectedOp = allOps.find(o => o.id === contract.operation_id);
+        if (!selectedOp) {
+          const { data: opData } = await db.from('operations_with_details').select('*').eq('id', contract.operation_id).single();
+          selectedOp = opData;
+        }
+        if (!selectedOp) { alert('تعذر العثور على بيانات العميل المرتبطة بالعقد ده.'); return; }
+
+        const { data: guarantors } = await db.from('contract_guarantors').select('*').eq('contract_id', contractId).order('guarantor_order');
+
+        document.getElementById('pickStep').style.display = 'none';
+        document.getElementById('formStep').style.display = 'block';
+
+        document.getElementById('c_name').value = selectedOp["اسم_العميل"] || '';
+        document.getElementById('c_nid').value = selectedOp["رقم البطاقة العميل"] || '';
+        document.getElementById('c_branch').value = contract.branch || selectedOp["الفرع"] || '';
+        document.getElementById('c_issuedBy').value = '';
+        document.getElementById('c_issueDate').value = '';
+        document.getElementById('c_phone').value = '';
+        document.getElementById('c_address').value = '';
+        document.getElementById('c_workAddress').value = '';
+
+        try {
+          const { data: kyc } = await db.from('kyc_reports').select('*').eq('operation_id', contract.operation_id).limit(1);
+          if (kyc && kyc.length > 0) {
+            const k = kyc[0];
+            document.getElementById('c_issuedBy').value = k["issuedBy"] || '';
+            document.getElementById('c_issueDate').value = k["issueDate"] || '';
+            document.getElementById('c_phone').value = k.phone || '';
+            document.getElementById('c_address').value = k.address || '';
+            document.getElementById('c_workAddress').value = k["workAddress"] || '';
+          }
+        } catch (e) { console.error('تعذر جلب بيانات KYC:', e); }
+
+        // ملء قائمة المشاريع المتاحة لفرع العميل، ثم اختيار مشروع العقد المحفوظ
+        const availableProjectIds = new Set(directives.filter(d => isBranchMatch(d, selectedOp["الفرع"])).map(d => d.project_id));
+        availableProjectIds.add(contract.project_id); // نضمن ظهوره حتى لو اتغيرت الإعدادات بعدين
+        const select = document.getElementById('c_project');
+        select.innerHTML = '<option value="">اختر مشروعًا...</option>';
+        projects.filter(p => availableProjectIds.has(p.id)).forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${p.admin_fee_percent}% مصاريف)`;
+          select.appendChild(opt);
+        });
+        select.value = contract.project_id;
+
+        document.getElementById('c_amount').value = contract.loan_amount;
+        document.getElementById('c_installments').value = contract.installment_count;
+        document.getElementById('c_date').value = contract.contract_date;
+        document.getElementById('c_firstInstallment').value = contract.first_installment_date;
+        document.getElementById('c_representative').value = contract.association_representative || '';
+        document.getElementById('c_purpose').value = contract.financing_purpose || '';
+
+        document.getElementById('guarantorsContainer').innerHTML = '';
+        guarantorRowCount = 0;
+        (guarantors || []).forEach(g => {
+          addGuarantorRow();
+          const id = guarantorRowCount;
+          document.getElementById(`g_name_${id}`).value = g.guarantor_name || '';
+          document.getElementById(`g_nid_${id}`).value = g.guarantor_national_id || '';
+          document.getElementById(`g_issuedBy_${id}`).value = g.issued_by || '';
+          document.getElementById(`g_issueDate_${id}`).value = g.issue_date || '';
+          document.getElementById(`g_phone_${id}`).value = g.phone || '';
+          document.getElementById(`g_address_${id}`).value = g.address || '';
+          document.getElementById(`g_workAddress_${id}`).value = g.work_address || '';
+        });
+        if (!guarantors || guarantors.length === 0) addGuarantorRow();
+
+        savedContractId = contract.id;
+        savedContractNumber = contract.branch_contract_number;
+        document.getElementById('statusMsg').textContent = '';
+        recalculate();
+        document.getElementById('extraDocsBar').style.display = 'block';
+
+      } catch (e) {
+        console.error('خطأ في تحميل العقد:', e);
+        alert('❌ حدث خطأ أثناء تحميل العقد: ' + (e.message || e));
+      }
+    }
+
+    async function backToList() {
       document.getElementById('formStep').style.display = 'none';
       document.getElementById('pickStep').style.display = 'block';
-      renderPickList();
+      await loadOperations();
     }
 
     function onProjectChange() {

@@ -388,7 +388,7 @@
 
         const { data, error } = await mySupabase
           .from('users')
-          .select('id, full_name, role, branches, is_project_officer')
+          .select('id, full_name, role, branches, is_project_officer, can_create_contracts')
           .eq('id', email)
           .eq('password_hash', password)
           .single();
@@ -404,6 +404,7 @@
         localStorage.setItem('userRole', data.role);
         localStorage.setItem('userBranches', JSON.stringify(data.branches || []));
         localStorage.setItem('isProjectOfficer', data.is_project_officer ? 'true' : 'false');
+        localStorage.setItem('canCreateContracts', data.can_create_contracts ? 'true' : 'false');
 
         const sessionId = 'fin_sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('sessionId', sessionId);
@@ -493,6 +494,12 @@
       const isProjectOfficer = localStorage.getItem('isProjectOfficer') === 'true';
       if (isProjectOfficer && role !== 'admin' && !pages.some(p => p.url === 'project-officer.html')) {
         pages.push({ label: "موافقات مسئول المشروع", icon: "🗂️", url: "project-officer.html", cls: "page-btn review", badgeKey: "projectOfficer" });
+      }
+
+      // ✅ صلاحية إضافية منفصلة لإنشاء العقود - بتتحدد شخص بشخص من جدول users (can_create_contracts)
+      const canCreateContracts = localStorage.getItem('canCreateContracts') === 'true';
+      if (canCreateContracts && role !== 'admin' && !pages.some(p => p.url === 'create-contract.html')) {
+        pages.push({ label: "إنشاء عقد", icon: "📝", url: "create-contract.html", cls: "page-btn" });
       }
 
       pages.forEach((page, i) => {

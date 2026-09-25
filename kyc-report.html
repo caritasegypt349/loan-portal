@@ -21,6 +21,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{border:1px solid 
 .report-head h1{font-size:20px;margin:0}.report-head h2{font-size:14px;margin:3px}.report-section{font-weight:700;background:#eee;padding:4px;margin-top:6px;font-size:11px}
 .report-meta{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin:4px 0}.meta{border:1px solid #aaa;padding:3px;font-size:9px;line-height:1.12;overflow-wrap:anywhere;word-break:break-word}.meta.long{grid-column:1/-1}
 .report-table{page-break-inside:avoid}.report-table tr{page-break-inside:avoid}.report-table td,.report-table th{padding:3px;font-size:9px}.sign{display:grid;grid-template-columns:1fr 1fr;gap:25px;text-align:center;font-size:9px;margin-top:7px}.sign div{border-top:1px solid #555;padding-top:3px}
+.data-check{font-size:11px;background:#f0f8f8;padding:8px;margin:8px 0;border-radius:6px;border-left:3px solid #16a085}
+.data-check b{color:#0d5a47}
 @media(max-width:750px){.grid,.grid2{grid-template-columns:1fr}.card{padding:13px}}
 @media print{
 @page{size:A4 portrait;margin:4mm}
@@ -102,6 +104,12 @@ html,body{background:#fff!important;margin:0!important;padding:0!important}
 <div><label>GPS / إحداثيات الموقع</label><input id="gps" placeholder="28.076167, 30.796932"></div></div>
 <div style="margin-top:8px"><label>ملاحظات</label><textarea id="notes"></textarea></div>
 
+<!-- ✅ إضافة منطقة لعرض البيانات المحفوظة للتحقق -->
+<div id="savedDataCheck" class="data-check" style="display:none">
+  <b>✅ البيانات المحفوظة الأخيرة:</b><br>
+  <span id="savedCheckDetails"></span>
+</div>
+
 <div class="section-title">إقرار العميل</div>
 <div style="font-size:12px;line-height:1.5">أقر بصحة كافة البيانات المدونة أعلاه وأتحمل المسؤولية المدنية والجنائية في حالة عدم صحة أي من تلك البيانات، كما أتعهد بعدم التعامل بأي أموال مشبوهة وأخطر الجمعية بتحديث البيانات عند حدوث أي تغيير.</div>
 
@@ -111,6 +119,7 @@ html,body{background:#fff!important;margin:0!important;padding:0!important}
 <div class="actions">
 <button class="save" id="dbSaveBtn" onclick="saveToDatabase(true)" style="background:#16a085;">💾 حفظ في قاعدة البيانات</button>
 <button class="print" onclick="saveThenPrint()">🖨️ حفظ وطباعة التقرير</button>
+<button class="save" onclick="verifySavedData()">🔍 التحقق من البيانات المحفوظة</button>
 <button class="save" onclick="saveTemplate()">📁 Save Template (محلي)</button>
 <button class="load" onclick="fileInput.click()">📂 استدعاء Template</button>
 <button class="clear" onclick="clearForm()">مسح النموذج</button>
@@ -170,7 +179,7 @@ box.style.zoom="1";
 box.style.transform="none";
 box.style.width="100%";
 
-const maxHeight=1040; // تقريباً المساحة المتاحة داخل A4 بعد الهوامش
+const maxHeight=1040;
 const actualHeight=box.scrollHeight;
 
 if(actualHeight>maxHeight){
@@ -210,7 +219,7 @@ function buildDbPayload() {
   const f = d.fields;
   const percent = items.length ? Math.round(d.checks.filter(x => x === "تم").length / items.length * 100) : 0;
 
-  return {
+  const payload = {
     operation_id: currentOperationId,
     name: f.name || null,
     national_id: f.nid || null,
@@ -238,13 +247,25 @@ function buildDbPayload() {
     "emergencyRelation": f.emergencyRelation || null,
     "emergencyPhone": f.emergencyPhone || null,
     risk: f.risk || null,
-    gps: f.gps || null,
+    gps: f.gps || null,  // ⚠️ حقل GPS محرج بشكل واضح للتأكد من حفظه
     notes: f.notes || null,
     "workNature": d.workNature || null,
     checks: d.checks,
     completion_percent: percent,
     updated_at: new Date().toISOString()
   };
+
+  // تسجيل البيانات للتحقق (console log)
+  console.log('📋 بيانات الحفظ الكاملة:', {
+    name: payload.name,
+    gps: payload.gps,
+    phone: payload.phone,
+    address: payload.address,
+    risk: payload.risk,
+    updatedAt: payload.updated_at
+  });
+
+  return payload;
 }
 
 // تحويل صف من قاعدة البيانات إلى شكل setData() المتوقع من النموذج الأصلي
@@ -277,7 +298,7 @@ function dbRecordToSetData(rec) {
       emergencyRelation: rec["emergencyRelation"] || '',
       emergencyPhone: rec["emergencyPhone"] || '',
       risk: rec.risk || '',
-      gps: rec.gps || '',
+      gps: rec.gps || '',  // ⚠️ تحميل GPS بشكل صريح من قاعدة البيانات
       notes: rec.notes || ''
     },
     workNature: rec["workNature"] || '',
@@ -295,36 +316,70 @@ function setDbStatus(text, ok) {
 async function saveToDatabase(showAlert) {
   const nameVal = document.getElementById('name').value.trim();
   const nidVal = document.getElementById('nid').value.trim();
+  const gpsVal = document.getElementById('gps').value.trim();
+
   if (!nameVal || !nidVal) {
     if (showAlert) alert('لازم تكتب اسم العميل والرقم القومي على الأقل قبل الحفظ.');
     return false;
+  }
+
+  // ⚠️ تحقق من GPS - إما منع أو تحذير
+  if (!gpsVal) {
+    if (showAlert) {
+      const proceed = confirm('⚠️ تنبيه: لم تقم بإدخال GPS / إحداثيات الموقع!\n\nهل تريد المتابعة بدونها؟\n\n(اضغط "موافق" للمتابعة، "إلغاء" للإرجاع)');
+      if (!proceed) {
+        setDbStatus('⏸️ تم إيقاف الحفظ - لازم تدخل GPS', false);
+        return false;
+      }
+    } else {
+      // لو كان showAlert = false (من saveThenPrint)
+      return false;
+    }
   }
 
   const payload = buildDbPayload();
 
   try {
     if (currentRecordId) {
+      // ✅ تحديث السجل الموجود - استخدم update مباشر (ليس merge)
+      console.log('🔄 جاري تحديث السجل رقم:', currentRecordId);
+
       const { error } = await db.from('kyc_reports').update(payload).eq('id', currentRecordId);
       if (error) throw error;
+
+      // ✅ تحقق من أن البيانات تم حفظها بالفعل بقراءة السجل من جديد
+      const { data: verified, error: verifyErr } = await db.from('kyc_reports').select('*').eq('id', currentRecordId).single();
+      if (verifyErr) throw new Error('خطأ في التحقق من البيانات: ' + verifyErr.message);
+
+      console.log('✅ تم التحديث والتحقق. البيانات الجديدة:', {
+        name: verified.name,
+        gps: verified.gps,
+        updated_at: verified.updated_at
+      });
     } else {
+      // ✅ إنشاء سجل جديد
       payload.created_by = localStorage.getItem('loggedInUser') || null;
+
       const { data, error } = await db.from('kyc_reports').insert([payload]).select();
       if (error) throw error;
+
       currentRecordId = data[0].id;
       const url = new URL(window.location.href);
       url.searchParams.set('id', currentRecordId);
       window.history.replaceState({}, '', url);
+
+      console.log('✅ تم إنشاء سجل جديد برقم:', currentRecordId);
     }
 
     kycDirty = false;
     setDbStatus('✅ تم الحفظ في قاعدة البيانات بنجاح', true);
-    if (showAlert) alert('✅ تم حفظ كل بيانات التقرير في قاعدة البيانات بنجاح.');
+    if (showAlert) alert('✅ تم حفظ كل بيانات التقرير (بما فيها GPS) في قاعدة البيانات بنجاح.');
     return true;
 
   } catch (err) {
-    console.error('خطأ في الحفظ:', err);
+    console.error('❌ خطأ في الحفظ:', err);
     setDbStatus('❌ حدث خطأ أثناء الحفظ - لم يتم الحفظ', false);
-    alert('❌ حدث خطأ أثناء الحفظ في قاعدة البيانات: ' + (err.message || err) + '\n\nلن تتمكن من الطباعة قبل نجاح الحفظ.');
+    alert('❌ حدث خطأ أثناء الحفظ في قاعدة البيانات:\n' + (err.message || err) + '\n\nلن تتمكن من الطباعة قبل نجاح الحفظ.');
     return false;
   }
 }
@@ -334,7 +389,6 @@ async function saveThenPrint() {
   if (ok) {
     prepareReport();
   }
-  // لو الحفظ فشل، ما بيحصلش طباعة خالص - رسالة الخطأ ظهرت بالفعل من saveToDatabase
 }
 
 async function loadExistingRecord(id) {
@@ -347,12 +401,64 @@ async function loadExistingRecord(id) {
     }
     currentRecordId = data.id;
     currentOperationId = data.operation_id || null;
+
+    console.log('📂 تم تحميل السجل:', {
+      id: data.id,
+      name: data.name,
+      gps: data.gps,
+      updated_at: data.updated_at
+    });
+
     setData(dbRecordToSetData(data));
     kycDirty = false;
     setDbStatus('✅ تم تحميل بيانات محفوظة مسبقًا لهذا العميل', true);
   } catch (e) {
     console.error('تعذر تحميل السجل:', e);
     setDbStatus('❌ تعذر تحميل السجل المطلوب', false);
+  }
+}
+
+// ✅ دالة جديدة: التحقق من البيانات المحفوظة
+async function verifySavedData() {
+  if (!currentRecordId) {
+    alert('لا يوجد سجل محفوظ حتى الآن. قم بالحفظ أولاً.');
+    return;
+  }
+
+  try {
+    const { data, error } = await db.from('kyc_reports').select('*').eq('id', currentRecordId).single();
+    if (error) throw error;
+    if (!data) {
+      alert('⚠️ لم يتم العثور على السجل في قاعدة البيانات.');
+      return;
+    }
+
+    // عرض البيانات المحفوظة
+    const checkBox = document.getElementById('savedDataCheck');
+    const checkDetails = document.getElementById('savedCheckDetails');
+
+    const fields = [
+      ['الاسم', data.name],
+      ['الرقم القومي', data.national_id],
+      ['رقم المحمول', data.phone],
+      ['العنوان', data.address],
+      ['GPS', data.gps || '❌ غير محفوظ'],
+      ['مستوى المخاطر', data.risk],
+      ['نسبة الاستكمال', data.completion_percent + '%'],
+      ['آخر تحديث', new Date(data.updated_at).toLocaleString('ar-EG')]
+    ];
+
+    checkDetails.innerHTML = fields.map(([key, val]) => {
+      const highlight = key === 'GPS' && !val ? 'style="color: red; font-weight: bold;"' : '';
+      return `<div ${highlight}>• ${key}: <b>${val || '—'}</b></div>`;
+    }).join('');
+
+    checkBox.style.display = 'block';
+    alert('✅ تم عرض البيانات المحفوظة أدناه. تحقق من أن GPS موجود.');
+
+  } catch (err) {
+    console.error('خطأ في التحقق:', err);
+    alert('❌ حدث خطأ أثناء التحقق من البيانات.');
   }
 }
 
@@ -367,7 +473,6 @@ async function loadExistingRecord(id) {
     return;
   }
 
-  // مسار احتياطي قديم: فتح مباشر بدون id (نادر الاستخدام بعد الربط بالنظام)
   try {
     const raw = localStorage.getItem('kyc_prefill_data');
     if (raw) {

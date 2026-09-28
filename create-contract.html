@@ -91,55 +91,27 @@
 
     #printArea { display: none; }
     @media print {
-      @page {
-        size: A4;
-        margin: 12mm 12mm 12mm 12mm;
-      }
-      html, body {
-        background: #fff !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        height: auto !important;
-        overflow: visible !important;
-      }
-      /* إخفاء كل حاجة في الصفحة ما عدا منطقة الطباعة — يمنع الصفحات الفاضية */
+      @page { size: A4; margin: 8mm; }
+      html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; height: auto !important; }
       body > *:not(#printArea) { display: none !important; }
       #printArea {
-        display: block !important;
-        position: static !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #fff !important;
-        color: #000 !important;
+        display: block !important; position: static !important;
+        width: 100% !important; margin: 0 !important; padding: 0 !important;
+        background: #fff !important; color: #000 !important;
       }
-      #printArea * { visibility: visible !important; }
       .print-page {
-        font-size: 12.5px;
-        line-height: 1.75;
-        margin: 0;
-        padding: 0;
-        page-break-after: always;
-        break-after: page;
-        page-break-inside: avoid;
+        font-size: 11.5px; line-height: 1.45; margin: 0; padding: 0;
+        page-break-after: always; break-after: page;
       }
-      /* آخر صفحة: ممنوع page-break بعدها عشان مفيش ورقة فاضية */
-      .print-page:last-child {
-        page-break-after: auto !important;
-        break-after: auto !important;
-      }
-      .print-page h1 { text-align: center; font-size: 15px; margin: 2px 0 10px; }
-      .print-page .signrow {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 22px;
-        font-weight: bold;
-        page-break-inside: avoid;
-      }
-      .print-page table { page-break-inside: avoid; }
-      .print-page p { margin: 4px 0; }
+      .print-page:last-child { page-break-after: auto !important; break-after: auto !important; }
+      .print-page h1 { text-align: center; font-size: 13px; margin: 2px 0 6px; }
+      .print-page .signrow { display: flex; justify-content: space-between; margin-top: 14px; font-weight: bold; }
+      .print-page p { margin: 2px 0; }
+      .print-page table { border-collapse: collapse; width: 100%; }
+      .print-page td, .print-page th { border: 1px solid #333; padding: 3px 5px; vertical-align: middle; }
+      .m1-table td { font-size: 11px; }
+      .m1-header { font-weight: bold; text-align: center; background: #f5f5f5; }
     }
-    /* شاشة عادية */
     .print-page { font-size: 12.5px; line-height: 1.9; }
     .print-page h1 { text-align: center; font-size: 16px; margin: 4px 0 14px; }
     .print-page .signrow { display: flex; justify-content: space-between; margin-top: 30px; font-weight: bold; }
@@ -435,7 +407,7 @@
       projects.filter(p => availableProjectIds.has(p.id)).forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id;
-        opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${p.admin_fee_percent}% مصاريف)`;
+        opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${getProjectAdminFeePercent(p)}% مصاريف)`;
         select.appendChild(opt);
       });
 
@@ -515,7 +487,7 @@
         projects.filter(p => availableProjectIds.has(p.id)).forEach(p => {
           const opt = document.createElement('option');
           opt.value = p.id;
-          opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${p.admin_fee_percent}% مصاريف)`;
+          opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${getProjectAdminFeePercent(p)}% مصاريف)`;
           select.appendChild(opt);
         });
         select.value = contract.project_id;
@@ -564,6 +536,27 @@
       recalculate();
     }
 
+    function getProjectAdminFeePercent(project) {
+      if (project.admin_fee_percent != null && project.admin_fee_percent !== '') return Number(project.admin_fee_percent);
+      if (project.administrative_cost != null && project.administrative_cost !== '') return Number(project.administrative_cost);
+      return 0;
+    }
+
+    // مصاريف تحصيل القسط حسب شريحة قيمة القسط (نفس جدول الأكسس Text379)
+    function collectionFeeForInstallment(installment) {
+      const v = Number(installment) || 0;
+      if (v < 201) return 3;
+      if (v < 501) return 6;
+      if (v < 1001) return 8;
+      if (v < 1501) return 10;
+      if (v < 2001) return 20;
+      if (v < 3001) return 25;
+      if (v < 4001) return 35;
+      if (v < 5001) return 45;
+      if (v < 7501) return 75;
+      return 100;
+    }
+
     function recalculate() {
       const projectId = parseInt(document.getElementById('c_project').value);
       const amount = parseFloat(document.getElementById('c_amount').value);
@@ -572,45 +565,71 @@
 
       const summaryEl = document.getElementById('calcSummary');
 
-      if (!project || !amount || !months) {
+      if (!project || !amount || !months || months < 1) {
         summaryEl.style.display = 'none';
         calcResult = null;
         return;
       }
 
-      if (project.min_amount && amount < project.min_amount) {
+      const minAmt = project.min_amount ?? project.min_loan;
+      const maxAmt = project.max_amount ?? project.max_loan;
+      if (minAmt && amount < minAmt) {
         summaryEl.style.display = 'block';
-        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أقل من الحد الأدنى المسموح للمشروع ده (${project.min_amount.toLocaleString('ar-EG')} ج.م)</span>`;
+        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أقل من الحد الأدنى المسموح للمشروع ده (${Number(minAmt).toLocaleString('ar-EG')} ج.م)</span>`;
         calcResult = null;
         return;
       }
-      if (project.max_amount && amount > project.max_amount) {
+      if (maxAmt && amount > maxAmt) {
         summaryEl.style.display = 'block';
-        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أكبر من الحد الأقصى المسموح للمشروع ده (${project.max_amount.toLocaleString('ar-EG')} ج.م)</span>`;
+        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أكبر من الحد الأقصى المسموح للمشروع ده (${Number(maxAmt).toLocaleString('ar-EG')} ج.م)</span>`;
         calcResult = null;
         return;
       }
 
-      const interestRate = project.interest_rate / 100;
-      const totalInterest = amount * interestRate * (months / 12);
-      const totalDue = amount + totalInterest;
-      const installmentAmount = Math.ceil(totalDue / months);
-      const adminFeeAmount = amount * (project.admin_fee_percent / 100);
+      const interestRatePct = Number(project.interest_rate) || 0;
+      const adminFeePct = getProjectAdminFeePercent(project);
+
+      // أقساط متساوية + تقريب لأقرب جنيه؛ فرق التقريب في الإجمالي
+      const theoreticalTotal = Math.round(amount + amount * (interestRatePct / 100) * (months / 12));
+      const installmentAmount = Math.round(theoreticalTotal / months);
+      const totalDue = installmentAmount * months;
+      const totalInterest = totalDue - amount;
+
+      let adminFeeAmount = amount * (adminFeePct / 100);
+      if (adminFeeAmount > 2000) adminFeeAmount = 2000;
+      adminFeeAmount = Math.round(adminFeeAmount);
       const netDisbursed = amount - adminFeeAmount;
 
+      const collectionFee = collectionFeeForInstallment(installmentAmount);
+      // أقصى غرامة شهرية ≈ تكلفة التمويل الشهرية = مبلغ × فائدة% / 12
+      const maxLateFeeMonthly = Math.round(amount * (interestRatePct / 100) / 12);
+
       calcResult = {
-        interestRate: project.interest_rate,
-        adminFeePercent: project.admin_fee_percent,
-        adminFeeAmount, totalDue, installmentAmount, netDisbursed
+        interestRate: interestRatePct,
+        adminFeePercent: adminFeePct,
+        adminFeeAmount,
+        totalDue,
+        theoreticalTotal,
+        totalInterest,
+        installmentAmount,
+        netDisbursed,
+        collectionFee,
+        maxLateFeeMonthly
       };
+
+      const roundDiffNote = (totalDue !== theoreticalTotal)
+        ? `<div style="color:#64768a; font-size:12px;">فرق التقريب عن النظري (${theoreticalTotal.toLocaleString('ar-EG')}): ${(totalDue - theoreticalTotal) >= 0 ? '+' : ''}${(totalDue - theoreticalTotal).toLocaleString('ar-EG')} ج.م</div>`
+        : '';
 
       summaryEl.style.display = 'block';
       summaryEl.innerHTML = `
-        <div><b>إجمالي الفائدة:</b> ${Math.round(totalInterest).toLocaleString('ar-EG')} ج.م</div>
-        <div><b>إجمالي المبلغ المطلوب سداده:</b> ${Math.round(totalDue).toLocaleString('ar-EG')} ج.م</div>
-        <div><b>قيمة القسط الشهري:</b> ${installmentAmount.toLocaleString('ar-EG')} ج.م × ${months} قسط</div>
-        <div><b>المصاريف الإدارية (${project.admin_fee_percent}%):</b> ${Math.round(adminFeeAmount).toLocaleString('ar-EG')} ج.م</div>
-        <div><b>صافي المبلغ المحول للعميل:</b> ${Math.round(netDisbursed).toLocaleString('ar-EG')} ج.م</div>
+        <div><b>قيمة القسط الشهري (متساوي):</b> ${installmentAmount.toLocaleString('ar-EG')} ج.م × ${months} قسط</div>
+        <div><b>إجمالي المبلغ المطلوب سداده:</b> ${totalDue.toLocaleString('ar-EG')} ج.م</div>
+        <div><b>إجمالي الفائدة:</b> ${totalInterest.toLocaleString('ar-EG')} ج.م</div>
+        ${roundDiffNote}
+        <div><b>المصاريف الإدارية (${adminFeePct}%${(amount * adminFeePct / 100) > 2000 ? ' — بحد أقصى 2000' : ''}):</b> ${adminFeeAmount.toLocaleString('ar-EG')} ج.م</div>
+        <div><b>مصاريف تحصيل القسط:</b> ${collectionFee.toLocaleString('ar-EG')} ج.م</div>
+        <div><b>صافي المبلغ المحول للعميل:</b> ${netDisbursed.toLocaleString('ar-EG')} ج.م</div>
       `;
     }
 
@@ -816,13 +835,30 @@
       if (!calcResult || !months || !firstDate) return [];
 
       const schedule = [];
-      const baseDate = new Date(firstDate);
+      const baseDate = new Date(firstDate + 'T12:00:00');
       for (let i = 0; i < months; i++) {
         const d = new Date(baseDate);
         d.setMonth(d.getMonth() + i);
-        schedule.push({ number: i + 1, amount: calcResult.installmentAmount, date: formatDateDMY(d.toISOString().slice(0, 10)) });
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        schedule.push({ number: i + 1, amount: calcResult.installmentAmount, date: formatDateDMY(`${yyyy}-${mm}-${dd}`) });
       }
       return schedule;
+    }
+
+    function doPrint(html) {
+      const area = document.getElementById('printArea');
+      area.innerHTML = html;
+      window.print();
+      setTimeout(() => { area.innerHTML = ''; }, 500);
+    }
+
+    function arabicWeekday(dateStr) {
+      if (!dateStr) return '';
+      const names = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+      const d = new Date(dateStr + 'T12:00:00');
+      return names[d.getDay()] || '';
     }
 
     function commonPrintHeader(branch) {
@@ -862,8 +898,7 @@
           </p>
         </div>
       `;
-      document.getElementById('printArea').innerHTML = html;
-      window.print();
+      doPrint(html);
     }
 
     // ========== 2) سند لأمر (نسخة لكل شخص: العميل + كل ضامن) ==========
@@ -896,8 +931,7 @@
         `;
       });
 
-      document.getElementById('printArea').innerHTML = `<div class="print-page">${commonPrintHeader(branch)}${notesHtml}</div>`;
-      window.print();
+      doPrint(`<div class="print-page">${commonPrintHeader(branch)}${notesHtml}</div>`);
     }
 
     // ========== 3) بيان التزام (نسخة المكتب / نسخة العميل) ==========
@@ -944,54 +978,133 @@
           ${signLine}
         </div>
       `;
-      document.getElementById('printArea').innerHTML = html;
-      window.print();
+      doPrint(html);
     }
 
-    // ========== 4) مرفق 1 - نموذج الإفصاح الرسمي عن هيكل التسعير ==========
+    // ========== 4) مرفق 1 - مطابق لنموذج الأكسس ==========
     function printDisclosureForm() {
       if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
+      if (!calcResult) { alert('لازم تحسب بيانات التمويل الأول.'); return; }
+
       const branch = document.getElementById('c_branch').value;
       const name = document.getElementById('c_name').value;
       const contractDate = document.getElementById('c_date').value;
-      const amount = parseFloat(document.getElementById('c_amount').value);
-      if (!calcResult) { alert('لازم تحسب بيانات التمويل الأول.'); return; }
+      const amount = parseFloat(document.getElementById('c_amount').value) || 0;
+      const months = parseInt(document.getElementById('c_installments').value) || 0;
+      const officer = (document.getElementById('c_representative').value || '').trim() || '................................';
 
-      const totalCost = amount + (amount * calcResult.interestRate / 100 * (parseInt(document.getElementById('c_installments').value) / 12));
-      const maxLateFeeMonthly = Math.round(calcResult.installmentAmount * 0.3); // تقريبي: أقصى غرامة شهرية لا تتجاوز تكلفة التمويل الشهرية
+      const z = 'صفر جنية';
+      const fee = Math.round(calcResult.adminFeeAmount || 0);
+      const collect = calcResult.collectionFee != null ? calcResult.collectionFee : collectionFeeForInstallment(calcResult.installmentAmount);
+      const maxLate = calcResult.maxLateFeeMonthly != null
+        ? calcResult.maxLateFeeMonthly
+        : Math.round(amount * (calcResult.interestRate / 100) / 12);
+      const net = Math.round(calcResult.netDisbursed);
+      const dayName = arabicWeekday(contractDate);
+      const dateFmt = formatDateDMY(contractDate);
 
       const html = `
         <div class="print-page">
-          ${commonPrintHeader(branch)}
-          <h1>مرفق رقم (1)<br>نموذج الإفصاح الرسمي عن هيكل التسعير المسؤول</h1>
-          <p>اسم العميل: ${name}</p>
-          <p>إسم جهة التمويل: كاريتاس مصر ${branch} &nbsp;&nbsp; رقم ترخيص الهيئة العامة للرقابة المالية: 1373</p>
-          <p>قيمة القرض: ${amount.toLocaleString('ar-EG')} جنيه &nbsp;&nbsp; إجمالي نسبة معدل تكلفة التمويل: ${calcResult.interestRate}%</p>
-          <p>قيمة تكلفة التمويل: ${Math.round(totalCost - amount).toLocaleString('ar-EG')} جنيه</p>
+          <h1 style="font-size:14px; margin-bottom:4px;">مرفق رقم (1) نموذج الإفصاح الرسمى عن هيكل التسعير المسؤول*</h1>
+          <p style="text-align:center; font-size:11px; margin:0 0 8px;">
+            نموذج الإفصاح الرسمى عن هيكل التسعير المسؤول – منتج : فردى<br>
+            عن نشاط تمويل المشروعات المتوسطة والصغيرة أو تمويل المشروعات متناهية الصغر
+          </p>
 
-          <h3 style="border:none; margin-top:20px;">ثانيًا: نسبة المصاريف الإدارية (مرة واحدة عند تقديم التمويل) - ${calcResult.adminFeePercent}%</h3>
-          <table style="width:100%; border-collapse:collapse; font-size:12px;">
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف تقديم طلب (إصدار) التمويل</td><td style="border:1px solid #999; padding:6px;">${Math.round(calcResult.adminFeeAmount).toLocaleString('ar-EG')} جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف تجديد التمويل</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف الاستعلام</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف إصدار مخالصة</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف صرف التمويل</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف تحصيل القسط</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف قسط التأمين</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف التأمين الاختياري</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف أخرى</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">صافي المبلغ المحول إلى العميل</td><td style="border:1px solid #999; padding:6px; font-weight:bold;">${Math.round(calcResult.netDisbursed).toLocaleString('ar-EG')} جنيه</td></tr>
+          <table class="m1-table">
+            <tr>
+              <td style="width:35%;">إسم جهة التمويل: <b>كاريتاس مصر</b></td>
+              <td style="width:30%;">اسم الفرع: <b>${branch}</b></td>
+              <td style="width:35%;">رقم ترخيص الهيئة العامة للرقابة المالية: <b>1373</b> بتاريخ: <b>2015/11/12</b></td>
+            </tr>
+            <tr>
+              <td colspan="3">انه فى يوم <b>${dayName}</b> الموافق: <b>${dateFmt}</b></td>
+            </tr>
+            <tr>
+              <td colspan="2">إجمالى نسبة معدل تكلفة التمويل : <b>${calcResult.interestRate}%</b></td>
+              <td>شاملة ما يلى:</td>
+            </tr>
+            <tr>
+              <td colspan="2">إجمالى نسبة معدل المصاريف الادارية : <b>${calcResult.adminFeePercent}%</b></td>
+              <td>شاملة ما يلى:</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="m1-header">ثانياً: نسبة المصاريف الإدارية (مرة واحدة عند تقديم التمويل) شاملة ما يلى</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="m1-header">مصاريف الخدمات الأخرى</td>
+            </tr>
+            <tr>
+              <td colspan="2">- مصاريف تقديم طلب (إصدار) التمويل</td>
+              <td style="text-align:center;">${z}</td>
+            </tr>
+            <tr>
+              <td colspan="2">مصاريف تجديد التمويل:</td>
+              <td style="text-align:center;">${z}</td>
+            </tr>
+            <tr>
+              <td colspan="2">مصاريف الاستعلام:</td>
+              <td style="text-align:center;">${z}</td>
+            </tr>
+            <tr>
+              <td colspan="2">مصاريف إصدار مخالصة:</td>
+              <td style="text-align:center;">${z}</td>
+            </tr>
+            <tr>
+              <td colspan="2">مصاريف صرف التمويل:</td>
+              <td style="text-align:center;">${z}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="m1-header">إجمالى مصاريف خدمات أخرى تدفع مرة واحدة عند الحصول على التمويل</td>
+            </tr>
+            <tr>
+              <td colspan="2">مصاريف تحصيل القسط:</td>
+              <td style="text-align:center;"><b>${collect} جنية</b></td>
+            </tr>
+            <tr>
+              <td colspan="2">مصاريف قسط التأمين:</td>
+              <td style="text-align:center;">${z}</td>
+            </tr>
+            <tr>
+              <td colspan="2">مصاريف التامين الاختيارى:</td>
+              <td style="text-align:center;">${z}</td>
+            </tr>
+            <tr>
+              <td colspan="2">مصاريف اخرى:</td>
+              <td style="text-align:center;">${z}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="m1-header">إجمالى مصاريف خدمات أخرى تدفع كل شهر خلال فترة التمويل</td>
+            </tr>
+            <tr>
+              <td colspan="2">قيمة غرامة التأخير للقسط (إن حدث) 1 % من قيمة المبلغ المتأخر عن كل يوم تأخير بعد موعد استحقاق القسط على ألا تتجاوز الغرامة تكلفة التمويل الشهرية ليكون أقصى مبلغ شهريا :</td>
+              <td style="text-align:center;"><b>${maxLate.toLocaleString('ar-EG')} جنية</b></td>
+            </tr>
+            <tr>
+              <td colspan="2">قيمة القرض:</td>
+              <td style="text-align:center;"><b>${amount.toLocaleString('ar-EG')} جنية</b></td>
+            </tr>
+            <tr>
+              <td colspan="3" class="m1-header">- إجمالى المبالغ المستقطعة من مبلغ التمويل عند الاستلام (إن وجدت) وفق السياسة المعتمدة لجهة التمويل</td>
+            </tr>
+            <tr>
+              <td style="text-align:center;">قسط أول<br><b>${z}</b></td>
+              <td style="text-align:center;">قيمة تكلفة التمويل<br><b>${z}</b></td>
+              <td style="text-align:center;">مصاريف إدارية<br><b>${fee.toLocaleString('ar-EG')} جنية</b></td>
+            </tr>
+            <tr>
+              <td colspan="2"><b>- صافى المبلغ المحول الى العميل</b></td>
+              <td style="text-align:center;"><b>${net.toLocaleString('ar-EG')} جنية</b></td>
+            </tr>
           </table>
 
-          <p style="margin-top:15px; font-size:12px;">قيمة غرامة التأخير للقسط (إن حدث): 1% من قيمة المبلغ المتأخر عن كل يوم تأخير بعد موعد استحقاق القسط، على ألا تتجاوز الغرامة تكلفة التمويل الشهرية، ليكون أقصى مبلغ شهريًا تقريبًا: ${maxLateFeeMonthly.toLocaleString('ar-EG')} جنيه.</p>
-
-          <p style="margin-top:30px;">التاريخ: ${formatDateDMY(contractDate)}</p>
-          <p>مسؤول التمويل: .................................... &nbsp;&nbsp;&nbsp; توقيع مسؤول التمويل: ....................................</p>
-          <p>توقيع العميل: ....................................</p>
+          <div class="signrow" style="margin-top:20px;">
+            <div>اسم العميل : ${name}<br>توقيع العميل : ........................</div>
+            <div>مسئول التمويل : ${officer}<br>توقيع مسئول التمويل : ........................</div>
+          </div>
         </div>
       `;
-      document.getElementById('printArea').innerHTML = html;
-      window.print();
+      doPrint(html);
     }
 
     function printContract() {
@@ -1089,8 +1202,7 @@
         </div>
       `;
 
-      document.getElementById('printArea').innerHTML = html;
-      window.print();
+      doPrint(html);
     }
 
     (async function boot() {

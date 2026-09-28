@@ -353,12 +353,6 @@
         return;
       }
 
-      const userRole = localStorage.getItem('userRole');
-      if (userRole !== 'admin') {
-        document.getElementById('accessDenied').style.display = 'block';
-        return;
-      }
-
       document.getElementById('mainContainer').style.display = 'block';
 
       document.getElementById('searchInput').addEventListener('keypress', (e) => {

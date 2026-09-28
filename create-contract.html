@@ -190,9 +190,13 @@
         <label>الغرض من التمويل</label>
         <input type="text" id="c_purpose" placeholder="مثال: زيادة حجم المشروع نشاط زراعي">
       </div>
-      <div class="form-group span2">
+      <div class="form-group">
         <label>ممثل الجمعية (طرف أول)</label>
         <input type="text" id="c_representative" placeholder="اسم من يوقع نيابة عن الجمعية">
+      </div>
+      <div class="form-group">
+        <label>مسئول التمويل <span style="color:#e74c3c;">*</span></label>
+        <input type="text" id="c_financing_officer" placeholder="اسم مسئول التمويل (مطلوب)">
       </div>
     </div>
 
@@ -224,6 +228,16 @@
   <div id="printArea"></div>
 
   <script>
+    function caritasYears(asOfDate) {
+      const base = 1967;
+      let y = new Date().getFullYear();
+      if (asOfDate) {
+        const d = new Date(asOfDate + 'T12:00:00');
+        if (!isNaN(d.getTime())) y = d.getFullYear();
+      }
+      return Math.max(1, y - base);
+    }
+
     function pageLogout() {
       if (confirm("هل تريد تسجيل الخروج من النظام؟")) { localStorage.clear(); sessionStorage.clear(); window.location.href = "index.html"; }
     }
@@ -377,6 +391,7 @@
       document.getElementById('c_branch').value = selectedOp["الفرع"] || '';
       document.getElementById('c_amount').value = selectedOp["المبلغ المطلوب"] || '';
       document.getElementById('c_purpose').value = selectedOp["المشروع"] || '';
+      document.getElementById('c_financing_officer').value = '';
       document.getElementById('c_issuedBy').value = '';
       document.getElementById('c_issueDate').value = '';
       document.getElementById('c_phone').value = '';
@@ -497,6 +512,7 @@
         document.getElementById('c_date').value = contract.contract_date;
         document.getElementById('c_firstInstallment').value = contract.first_installment_date;
         document.getElementById('c_representative').value = contract.association_representative || '';
+        document.getElementById('c_financing_officer').value = contract.financing_officer || '';
         document.getElementById('c_purpose').value = contract.financing_purpose || '';
 
         document.getElementById('guarantorsContainer').innerHTML = '';
@@ -542,7 +558,6 @@
       return 0;
     }
 
-    // مصاريف تحصيل القسط حسب شريحة قيمة القسط (نفس جدول الأكسس Text379)
     function collectionFeeForInstallment(installment) {
       const v = Number(installment) || 0;
       if (v < 201) return 3;
@@ -562,74 +577,50 @@
       const amount = parseFloat(document.getElementById('c_amount').value);
       const months = parseInt(document.getElementById('c_installments').value);
       const project = projects.find(p => p.id === projectId);
-
       const summaryEl = document.getElementById('calcSummary');
 
       if (!project || !amount || !months || months < 1) {
-        summaryEl.style.display = 'none';
-        calcResult = null;
-        return;
+        summaryEl.style.display = 'none'; calcResult = null; return;
       }
-
       const minAmt = project.min_amount ?? project.min_loan;
       const maxAmt = project.max_amount ?? project.max_loan;
       if (minAmt && amount < minAmt) {
         summaryEl.style.display = 'block';
-        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أقل من الحد الأدنى المسموح للمشروع ده (${Number(minAmt).toLocaleString('ar-EG')} ج.م)</span>`;
-        calcResult = null;
-        return;
+        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أقل من الحد الأدنى (${Number(minAmt).toLocaleString('ar-EG')} ج.م)</span>`;
+        calcResult = null; return;
       }
       if (maxAmt && amount > maxAmt) {
         summaryEl.style.display = 'block';
-        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أكبر من الحد الأقصى المسموح للمشروع ده (${Number(maxAmt).toLocaleString('ar-EG')} ج.م)</span>`;
-        calcResult = null;
-        return;
+        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أكبر من الحد الأقصى (${Number(maxAmt).toLocaleString('ar-EG')} ج.م)</span>`;
+        calcResult = null; return;
       }
 
       const interestRatePct = Number(project.interest_rate) || 0;
       const adminFeePct = getProjectAdminFeePercent(project);
-
-      // أقساط متساوية + تقريب لأقرب جنيه؛ فرق التقريب في الإجمالي
       const theoreticalTotal = Math.round(amount + amount * (interestRatePct / 100) * (months / 12));
       const installmentAmount = Math.round(theoreticalTotal / months);
       const totalDue = installmentAmount * months;
       const totalInterest = totalDue - amount;
-
       let adminFeeAmount = amount * (adminFeePct / 100);
       if (adminFeeAmount > 2000) adminFeeAmount = 2000;
       adminFeeAmount = Math.round(adminFeeAmount);
       const netDisbursed = amount - adminFeeAmount;
-
       const collectionFee = collectionFeeForInstallment(installmentAmount);
-      // أقصى غرامة شهرية ≈ تكلفة التمويل الشهرية = مبلغ × فائدة% / 12
       const maxLateFeeMonthly = Math.round(amount * (interestRatePct / 100) / 12);
 
       calcResult = {
-        interestRate: interestRatePct,
-        adminFeePercent: adminFeePct,
-        adminFeeAmount,
-        totalDue,
-        theoreticalTotal,
-        totalInterest,
-        installmentAmount,
-        netDisbursed,
-        collectionFee,
-        maxLateFeeMonthly
+        interestRate: interestRatePct, adminFeePercent: adminFeePct, adminFeeAmount,
+        totalDue, theoreticalTotal, totalInterest, installmentAmount, netDisbursed,
+        collectionFee, maxLateFeeMonthly
       };
-
-      const roundDiffNote = (totalDue !== theoreticalTotal)
-        ? `<div style="color:#64768a; font-size:12px;">فرق التقريب عن النظري (${theoreticalTotal.toLocaleString('ar-EG')}): ${(totalDue - theoreticalTotal) >= 0 ? '+' : ''}${(totalDue - theoreticalTotal).toLocaleString('ar-EG')} ج.م</div>`
-        : '';
-
       summaryEl.style.display = 'block';
       summaryEl.innerHTML = `
         <div><b>قيمة القسط الشهري (متساوي):</b> ${installmentAmount.toLocaleString('ar-EG')} ج.م × ${months} قسط</div>
-        <div><b>إجمالي المبلغ المطلوب سداده:</b> ${totalDue.toLocaleString('ar-EG')} ج.م</div>
+        <div><b>إجمالي المطلوب سداده:</b> ${totalDue.toLocaleString('ar-EG')} ج.م</div>
         <div><b>إجمالي الفائدة:</b> ${totalInterest.toLocaleString('ar-EG')} ج.م</div>
-        ${roundDiffNote}
-        <div><b>المصاريف الإدارية (${adminFeePct}%${(amount * adminFeePct / 100) > 2000 ? ' — بحد أقصى 2000' : ''}):</b> ${adminFeeAmount.toLocaleString('ar-EG')} ج.م</div>
+        <div><b>المصاريف الإدارية (${adminFeePct}%):</b> ${adminFeeAmount.toLocaleString('ar-EG')} ج.م</div>
         <div><b>مصاريف تحصيل القسط:</b> ${collectionFee.toLocaleString('ar-EG')} ج.م</div>
-        <div><b>صافي المبلغ المحول للعميل:</b> ${netDisbursed.toLocaleString('ar-EG')} ج.م</div>
+        <div><b>صافي المحول للعميل:</b> ${netDisbursed.toLocaleString('ar-EG')} ج.م</div>
       `;
     }
 
@@ -729,6 +720,11 @@
         setStatus('راجع بيانات المبلغ والمشروع - يبدو إن فيه قيمة خارج الحدود المسموحة.', false);
         return false;
       }
+      if (!document.getElementById('c_financing_officer').value.trim()) {
+        setStatus('لازم تكتب اسم مسئول التمويل قبل حفظ العقد.', false);
+        document.getElementById('c_financing_officer').focus();
+        return false;
+      }
 
       const guarantors = collectGuarantors();
       for (const g of guarantors) {
@@ -751,6 +747,7 @@
             total_due: calcResult.totalDue, installment_count: months, installment_amount: calcResult.installmentAmount,
             contract_date: contractDate, first_installment_date: firstInstallmentDate,
             association_representative: document.getElementById('c_representative').value.trim() || null,
+            financing_officer: document.getElementById('c_financing_officer').value.trim() || null,
             financing_purpose: document.getElementById('c_purpose').value.trim() || null,
             updated_at: new Date().toISOString()
           }).eq('id', savedContractId);
@@ -786,6 +783,7 @@
           operation_id: selectedOp.id, branch, branch_contract_number: nextNumber,
           contract_date: contractDate, committee_id: committeeId, project_id: projectId,
           association_representative: document.getElementById('c_representative').value.trim() || null,
+          financing_officer: document.getElementById('c_financing_officer').value.trim() || null,
           financing_purpose: document.getElementById('c_purpose').value.trim() || null,
           loan_amount: amount, interest_rate: calcResult.interestRate, admin_fee_percent: calcResult.adminFeePercent,
           admin_fee_amount: calcResult.adminFeeAmount, total_due: calcResult.totalDue,
@@ -833,15 +831,12 @@
       const months = parseInt(document.getElementById('c_installments').value);
       const firstDate = document.getElementById('c_firstInstallment').value;
       if (!calcResult || !months || !firstDate) return [];
-
       const schedule = [];
       const baseDate = new Date(firstDate + 'T12:00:00');
       for (let i = 0; i < months; i++) {
         const d = new Date(baseDate);
         d.setMonth(d.getMonth() + i);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
+        const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
         schedule.push({ number: i + 1, amount: calcResult.installmentAmount, date: formatDateDMY(`${yyyy}-${mm}-${dd}`) });
       }
       return schedule;
@@ -857,8 +852,7 @@
     function arabicWeekday(dateStr) {
       if (!dateStr) return '';
       const names = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-      const d = new Date(dateStr + 'T12:00:00');
-      return names[d.getDay()] || '';
+      return names[new Date(dateStr + 'T12:00:00').getDay()] || '';
     }
 
     function commonPrintHeader(branch) {
@@ -978,31 +972,31 @@
           ${signLine}
         </div>
       `;
-      doPrint(html);
+      document.getElementById('printArea').innerHTML = html;
+      window.print();
     }
 
-    // ========== 4) مرفق 1 - مطابق لنموذج الأكسس ==========
+        // ========== 4) مرفق 1 ==========
     function printDisclosureForm() {
       if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
       if (!calcResult) { alert('لازم تحسب بيانات التمويل الأول.'); return; }
-
       const branch = document.getElementById('c_branch').value;
       const name = document.getElementById('c_name').value;
       const contractDate = document.getElementById('c_date').value;
       const amount = parseFloat(document.getElementById('c_amount').value) || 0;
-      const months = parseInt(document.getElementById('c_installments').value) || 0;
-      const officer = (document.getElementById('c_representative').value || '').trim() || '................................';
-
+      const officer = document.getElementById('c_financing_officer').value.trim();
+      if (!officer) {
+        alert('لازم تكتب اسم مسئول التمويل في الخانة المخصصة له.');
+        document.getElementById('c_financing_officer').focus();
+        return;
+      }
       const z = 'صفر جنية';
       const fee = Math.round(calcResult.adminFeeAmount || 0);
       const collect = calcResult.collectionFee != null ? calcResult.collectionFee : collectionFeeForInstallment(calcResult.installmentAmount);
-      const maxLate = calcResult.maxLateFeeMonthly != null
-        ? calcResult.maxLateFeeMonthly
-        : Math.round(amount * (calcResult.interestRate / 100) / 12);
+      const maxLate = calcResult.maxLateFeeMonthly != null ? calcResult.maxLateFeeMonthly : Math.round(amount * (calcResult.interestRate / 100) / 12);
       const net = Math.round(calcResult.netDisbursed);
       const dayName = arabicWeekday(contractDate);
       const dateFmt = formatDateDMY(contractDate);
-
       const html = `
         <div class="print-page">
           <h1 style="font-size:14px; margin-bottom:4px;">مرفق رقم (1) نموذج الإفصاح الرسمى عن هيكل التسعير المسؤول*</h1>
@@ -1010,16 +1004,13 @@
             نموذج الإفصاح الرسمى عن هيكل التسعير المسؤول – منتج : فردى<br>
             عن نشاط تمويل المشروعات المتوسطة والصغيرة أو تمويل المشروعات متناهية الصغر
           </p>
-
           <table class="m1-table">
             <tr>
-              <td style="width:35%;">إسم جهة التمويل: <b>كاريتاس مصر</b></td>
-              <td style="width:30%;">اسم الفرع: <b>${branch}</b></td>
-              <td style="width:35%;">رقم ترخيص الهيئة العامة للرقابة المالية: <b>1373</b> بتاريخ: <b>2015/11/12</b></td>
+              <td>إسم جهة التمويل: <b>كاريتاس مصر</b></td>
+              <td>اسم الفرع: <b>${branch}</b></td>
+              <td>رقم ترخيص الهيئة: <b>1373</b> بتاريخ: <b>2015/11/12</b></td>
             </tr>
-            <tr>
-              <td colspan="3">انه فى يوم <b>${dayName}</b> الموافق: <b>${dateFmt}</b></td>
-            </tr>
+            <tr><td colspan="3">انه فى يوم <b>${dayName}</b> الموافق: <b>${dateFmt}</b></td></tr>
             <tr>
               <td colspan="2">إجمالى نسبة معدل تكلفة التمويل : <b>${calcResult.interestRate}%</b></td>
               <td>شاملة ما يلى:</td>
@@ -1028,65 +1019,25 @@
               <td colspan="2">إجمالى نسبة معدل المصاريف الادارية : <b>${calcResult.adminFeePercent}%</b></td>
               <td>شاملة ما يلى:</td>
             </tr>
+            <tr><td colspan="3" class="m1-header">ثانياً: نسبة المصاريف الإدارية (مرة واحدة عند تقديم التمويل) شاملة ما يلى</td></tr>
+            <tr><td colspan="3" class="m1-header">مصاريف الخدمات الأخرى</td></tr>
+            <tr><td colspan="2">- مصاريف تقديم طلب (إصدار) التمويل</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف تجديد التمويل:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف الاستعلام:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف إصدار مخالصة:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف صرف التمويل:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="3" class="m1-header">إجمالى مصاريف خدمات أخرى تدفع مرة واحدة عند الحصول على التمويل</td></tr>
+            <tr><td colspan="2">مصاريف تحصيل القسط:</td><td style="text-align:center;"><b>${collect} جنية</b></td></tr>
+            <tr><td colspan="2">مصاريف قسط التأمين:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف التامين الاختيارى:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف اخرى:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="3" class="m1-header">إجمالى مصاريف خدمات أخرى تدفع كل شهر خلال فترة التمويل</td></tr>
             <tr>
-              <td colspan="3" class="m1-header">ثانياً: نسبة المصاريف الإدارية (مرة واحدة عند تقديم التمويل) شاملة ما يلى</td>
-            </tr>
-            <tr>
-              <td colspan="3" class="m1-header">مصاريف الخدمات الأخرى</td>
-            </tr>
-            <tr>
-              <td colspan="2">- مصاريف تقديم طلب (إصدار) التمويل</td>
-              <td style="text-align:center;">${z}</td>
-            </tr>
-            <tr>
-              <td colspan="2">مصاريف تجديد التمويل:</td>
-              <td style="text-align:center;">${z}</td>
-            </tr>
-            <tr>
-              <td colspan="2">مصاريف الاستعلام:</td>
-              <td style="text-align:center;">${z}</td>
-            </tr>
-            <tr>
-              <td colspan="2">مصاريف إصدار مخالصة:</td>
-              <td style="text-align:center;">${z}</td>
-            </tr>
-            <tr>
-              <td colspan="2">مصاريف صرف التمويل:</td>
-              <td style="text-align:center;">${z}</td>
-            </tr>
-            <tr>
-              <td colspan="3" class="m1-header">إجمالى مصاريف خدمات أخرى تدفع مرة واحدة عند الحصول على التمويل</td>
-            </tr>
-            <tr>
-              <td colspan="2">مصاريف تحصيل القسط:</td>
-              <td style="text-align:center;"><b>${collect} جنية</b></td>
-            </tr>
-            <tr>
-              <td colspan="2">مصاريف قسط التأمين:</td>
-              <td style="text-align:center;">${z}</td>
-            </tr>
-            <tr>
-              <td colspan="2">مصاريف التامين الاختيارى:</td>
-              <td style="text-align:center;">${z}</td>
-            </tr>
-            <tr>
-              <td colspan="2">مصاريف اخرى:</td>
-              <td style="text-align:center;">${z}</td>
-            </tr>
-            <tr>
-              <td colspan="3" class="m1-header">إجمالى مصاريف خدمات أخرى تدفع كل شهر خلال فترة التمويل</td>
-            </tr>
-            <tr>
-              <td colspan="2">قيمة غرامة التأخير للقسط (إن حدث) 1 % من قيمة المبلغ المتأخر عن كل يوم تأخير بعد موعد استحقاق القسط على ألا تتجاوز الغرامة تكلفة التمويل الشهرية ليكون أقصى مبلغ شهريا :</td>
+              <td colspan="2">قيمة غرامة التأخير للقسط (إن حدث) 1% من قيمة المبلغ المتأخر عن كل يوم تأخير بعد موعد استحقاق القسط على ألا تتجاوز الغرامة تكلفة التمويل الشهرية ليكون أقصى مبلغ شهريا :</td>
               <td style="text-align:center;"><b>${maxLate.toLocaleString('ar-EG')} جنية</b></td>
             </tr>
-            <tr>
-              <td colspan="2">قيمة القرض:</td>
-              <td style="text-align:center;"><b>${amount.toLocaleString('ar-EG')} جنية</b></td>
-            </tr>
-            <tr>
-              <td colspan="3" class="m1-header">- إجمالى المبالغ المستقطعة من مبلغ التمويل عند الاستلام (إن وجدت) وفق السياسة المعتمدة لجهة التمويل</td>
-            </tr>
+            <tr><td colspan="2">قيمة القرض:</td><td style="text-align:center;"><b>${amount.toLocaleString('ar-EG')} جنية</b></td></tr>
+            <tr><td colspan="3" class="m1-header">- إجمالى المبالغ المستقطعة من مبلغ التمويل عند الاستلام (إن وجدت) وفق السياسة المعتمدة لجهة التمويل</td></tr>
             <tr>
               <td style="text-align:center;">قسط أول<br><b>${z}</b></td>
               <td style="text-align:center;">قيمة تكلفة التمويل<br><b>${z}</b></td>
@@ -1097,13 +1048,11 @@
               <td style="text-align:center;"><b>${net.toLocaleString('ar-EG')} جنية</b></td>
             </tr>
           </table>
-
           <div class="signrow" style="margin-top:20px;">
             <div>اسم العميل : ${name}<br>توقيع العميل : ........................</div>
             <div>مسئول التمويل : ${officer}<br>توقيع مسئول التمويل : ........................</div>
           </div>
-        </div>
-      `;
+        </div>`;
       doPrint(html);
     }
 
@@ -1159,7 +1108,7 @@
           <p>أتعهد بأنني، كضامن للعميل، أتحمل كافة الالتزامات والواجبات التي تقع على العميل. ويحق للجمعية مطالبة الضامن بكامل المديونية المستحقة على العميل في حال عدم التزام العميل بالسداد لأي سبب من الأسباب وفي المواعيد المتفق عليها.</p>
 
           <h3>تمهيد</h3>
-          <p>تعمل كاريتاس مصر على مدار 57 عامًا في مجال العمل الأهلي والتنموي والاجتماعي بجمهورية مصر العربية، باعتبارها إحدى أكبر جمعيات العمل الأهلي في مصر. تمتد مشروعاتها من أسوان إلى الإسكندرية، مستهدفة تحسين المستوى الاجتماعي والاقتصادي ورفع الوعي المجتمعي لمختلف فئات المجتمع، وخاصة الأسر والأشخاص في حالات الفقر والتهميش.</p>
+          <p>تعمل كاريتاس مصر على مدار ${caritasYears(contractDate)} عامًا في مجال العمل الأهلي والتنموي والاجتماعي بجمهورية مصر العربية، باعتبارها إحدى أكبر جمعيات العمل الأهلي في مصر. تمتد مشروعاتها من أسوان إلى الإسكندرية، مستهدفة تحسين المستوى الاجتماعي والاقتصادي ورفع الوعي المجتمعي لمختلف فئات المجتمع، وخاصة الأسر والأشخاص في حالات الفقر والتهميش.</p>
 
           <p>1- يعتبر التمهيد السابق والقواعد التي تحكم التمويل متناهي الصغر الفردي والموضحة باللائحة الداخلية للجمعية جزءًا لا يتجزأ من هذا العقد. البند الثاني: يقدم الطرف الأول للطرف الثاني مبلغ (${numToArabicWords(amount)}) جنيه فقط بتكلفة تمويل قدرها ${calcResult ? calcResult.interestRate : ''}% سنويًا، بنسبة مصروفات إدارية ${calcResult ? calcResult.adminFeePercent : ''}% بقيمة (${calcResult ? numToArabicWords(calcResult.adminFeeAmount) : ''}) جنيه فقط يتم خصمه من مبلغ التمويل، ويكون إجمالي المبلغ المطلوب سداده (${calcResult ? numToArabicWords(calcResult.totalDue) : ''}) جنيه فقط لاغير، ويكون القسط (${calcResult ? calcResult.installmentAmount.toLocaleString('ar-EG') : ''}) جنيه فقط، على أن يكون السداد للجمعية بإحدى الطرق الإلكترونية.</p>
 

@@ -91,11 +91,56 @@
 
     #printArea { display: none; }
     @media print {
-      body * { visibility: hidden; }
-      #printArea, #printArea * { visibility: visible; }
-      #printArea { display: block; position: absolute; top: 0; right: 0; left: 0; padding: 20px; }
+      @page {
+        size: A4;
+        margin: 12mm 12mm 12mm 12mm;
+      }
+      html, body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      /* إخفاء كل حاجة في الصفحة ما عدا منطقة الطباعة — يمنع الصفحات الفاضية */
+      body > *:not(#printArea) { display: none !important; }
+      #printArea {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        color: #000 !important;
+      }
+      #printArea * { visibility: visible !important; }
+      .print-page {
+        font-size: 12.5px;
+        line-height: 1.75;
+        margin: 0;
+        padding: 0;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+      }
+      /* آخر صفحة: ممنوع page-break بعدها عشان مفيش ورقة فاضية */
+      .print-page:last-child {
+        page-break-after: auto !important;
+        break-after: auto !important;
+      }
+      .print-page h1 { text-align: center; font-size: 15px; margin: 2px 0 10px; }
+      .print-page .signrow {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 22px;
+        font-weight: bold;
+        page-break-inside: avoid;
+      }
+      .print-page table { page-break-inside: avoid; }
+      .print-page p { margin: 4px 0; }
     }
-    .print-page { font-size: 12.5px; line-height: 1.9; page-break-after: always; }
+    /* شاشة عادية */
+    .print-page { font-size: 12.5px; line-height: 1.9; }
     .print-page h1 { text-align: center; font-size: 16px; margin: 4px 0 14px; }
     .print-page .signrow { display: flex; justify-content: space-between; margin-top: 30px; font-weight: bold; }
 
@@ -390,7 +435,7 @@
       projects.filter(p => availableProjectIds.has(p.id)).forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id;
-        opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${getProjectAdminFeePercent(p)}% مصاريف)`;
+        opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${p.admin_fee_percent}% مصاريف)`;
         select.appendChild(opt);
       });
 
@@ -470,7 +515,7 @@
         projects.filter(p => availableProjectIds.has(p.id)).forEach(p => {
           const opt = document.createElement('option');
           opt.value = p.id;
-          opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${getProjectAdminFeePercent(p)}% مصاريف)`;
+          opt.textContent = `${p.name} (${p.interest_rate}% فائدة، ${p.admin_fee_percent}% مصاريف)`;
           select.appendChild(opt);
         });
         select.value = contract.project_id;
@@ -519,12 +564,6 @@
       recalculate();
     }
 
-    function getProjectAdminFeePercent(project) {
-      if (project.admin_fee_percent != null && project.admin_fee_percent !== '') return Number(project.admin_fee_percent);
-      if (project.administrative_cost != null && project.administrative_cost !== '') return Number(project.administrative_cost);
-      return 0;
-    }
-
     function recalculate() {
       const projectId = parseInt(document.getElementById('c_project').value);
       const amount = parseFloat(document.getElementById('c_amount').value);
@@ -533,67 +572,44 @@
 
       const summaryEl = document.getElementById('calcSummary');
 
-      if (!project || !amount || !months || months < 1) {
+      if (!project || !amount || !months) {
         summaryEl.style.display = 'none';
         calcResult = null;
         return;
       }
 
-      const minAmt = project.min_amount ?? project.min_loan;
-      const maxAmt = project.max_amount ?? project.max_loan;
-      if (minAmt && amount < minAmt) {
+      if (project.min_amount && amount < project.min_amount) {
         summaryEl.style.display = 'block';
-        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أقل من الحد الأدنى المسموح للمشروع ده (${Number(minAmt).toLocaleString('ar-EG')} ج.م)</span>`;
+        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أقل من الحد الأدنى المسموح للمشروع ده (${project.min_amount.toLocaleString('ar-EG')} ج.م)</span>`;
         calcResult = null;
         return;
       }
-      if (maxAmt && amount > maxAmt) {
+      if (project.max_amount && amount > project.max_amount) {
         summaryEl.style.display = 'block';
-        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أكبر من الحد الأقصى المسموح للمشروع ده (${Number(maxAmt).toLocaleString('ar-EG')} ج.م)</span>`;
+        summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أكبر من الحد الأقصى المسموح للمشروع ده (${project.max_amount.toLocaleString('ar-EG')} ج.م)</span>`;
         calcResult = null;
         return;
       }
 
-      const interestRatePct = Number(project.interest_rate) || 0;
-      const adminFeePct = getProjectAdminFeePercent(project);
-
-      // الأقساط متساوية + التقريب لأقرب جنيه:
-      // 1) إجمالي نظري من معادلة الفائدة
-      // 2) قسط = Round(النظري / عدد الأقساط) لأقرب جنيه — كل الأقساط بنفس القيمة
-      // 3) الإجمالي النهائي = القسط × العدد  (هنا يظهر فرق التقريب)
-      const theoreticalTotal = Math.round(amount + amount * (interestRatePct / 100) * (months / 12));
-      const installmentAmount = Math.round(theoreticalTotal / months);
-      const totalDue = installmentAmount * months;
-      const totalInterest = totalDue - amount;
-
-      // مصاريف إدارية بحد أقصى 2000 جنيه
-      let adminFeeAmount = amount * (adminFeePct / 100);
-      if (adminFeeAmount > 2000) adminFeeAmount = 2000;
-      adminFeeAmount = Math.round(adminFeeAmount * 100) / 100;
+      const interestRate = project.interest_rate / 100;
+      const totalInterest = amount * interestRate * (months / 12);
+      const totalDue = amount + totalInterest;
+      const installmentAmount = Math.ceil(totalDue / months);
+      const adminFeeAmount = amount * (project.admin_fee_percent / 100);
       const netDisbursed = amount - adminFeeAmount;
 
       calcResult = {
-        interestRate: interestRatePct,
-        adminFeePercent: adminFeePct,
-        adminFeeAmount,
-        totalDue,
-        theoreticalTotal,
-        totalInterest,
-        installmentAmount,
-        netDisbursed
+        interestRate: project.interest_rate,
+        adminFeePercent: project.admin_fee_percent,
+        adminFeeAmount, totalDue, installmentAmount, netDisbursed
       };
-
-      const roundDiffNote = (totalDue !== theoreticalTotal)
-        ? `<div style="color:#64768a; font-size:12px;">فرق التقريب عن الإجمالي النظري (${theoreticalTotal.toLocaleString('ar-EG')}): ${(totalDue - theoreticalTotal) >= 0 ? '+' : ''}${(totalDue - theoreticalTotal).toLocaleString('ar-EG')} ج.م</div>`
-        : '';
 
       summaryEl.style.display = 'block';
       summaryEl.innerHTML = `
-        <div><b>قيمة القسط الشهري (متساوي):</b> ${installmentAmount.toLocaleString('ar-EG')} ج.م × ${months} قسط</div>
-        <div><b>إجمالي المبلغ المطلوب سداده:</b> ${totalDue.toLocaleString('ar-EG')} ج.م</div>
-        <div><b>إجمالي الفائدة:</b> ${totalInterest.toLocaleString('ar-EG')} ج.م</div>
-        ${roundDiffNote}
-        <div><b>المصاريف الإدارية (${adminFeePct}%${(amount * adminFeePct / 100) > 2000 ? ' — بحد أقصى 2000' : ''}):</b> ${Math.round(adminFeeAmount).toLocaleString('ar-EG')} ج.م</div>
+        <div><b>إجمالي الفائدة:</b> ${Math.round(totalInterest).toLocaleString('ar-EG')} ج.م</div>
+        <div><b>إجمالي المبلغ المطلوب سداده:</b> ${Math.round(totalDue).toLocaleString('ar-EG')} ج.م</div>
+        <div><b>قيمة القسط الشهري:</b> ${installmentAmount.toLocaleString('ar-EG')} ج.م × ${months} قسط</div>
+        <div><b>المصاريف الإدارية (${project.admin_fee_percent}%):</b> ${Math.round(adminFeeAmount).toLocaleString('ar-EG')} ج.م</div>
         <div><b>صافي المبلغ المحول للعميل:</b> ${Math.round(netDisbursed).toLocaleString('ar-EG')} ج.م</div>
       `;
     }
@@ -800,15 +816,11 @@
       if (!calcResult || !months || !firstDate) return [];
 
       const schedule = [];
-      const baseDate = new Date(firstDate + 'T12:00:00'); // تجنب انزياح التاريخ بسبب المنطقة الزمنية
+      const baseDate = new Date(firstDate);
       for (let i = 0; i < months; i++) {
         const d = new Date(baseDate);
         d.setMonth(d.getMonth() + i);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        // كل الأقساط متساوية — فرق التقريب في الإجمالي فقط
-        schedule.push({ number: i + 1, amount: calcResult.installmentAmount, date: formatDateDMY(`${yyyy}-${mm}-${dd}`) });
+        schedule.push({ number: i + 1, amount: calcResult.installmentAmount, date: formatDateDMY(d.toISOString().slice(0, 10)) });
       }
       return schedule;
     }

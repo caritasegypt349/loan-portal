@@ -100,6 +100,10 @@
       .print-page h1 { text-align: center; font-size: 14px; margin: 4px 0 8px; }
       .print-page .signrow { display: flex; justify-content: space-between; margin-top: 16px; font-weight: bold; }
       .print-page p { margin: 3px 0; }
+      .print-page table { border-collapse: collapse; width: 100%; }
+      .print-page td, .print-page th { border: 1px solid #333; padding: 3px 5px; vertical-align: middle; }
+      .m1-table td { font-size: 11px; }
+      .m1-header { font-weight: bold; text-align: center; background: #f5f5f5; }
     }
     .print-page { font-size: 12.5px; line-height: 1.9; }
     .print-page h1 { text-align: center; font-size: 16px; margin: 4px 0 14px; }
@@ -179,9 +183,13 @@
         <label>الغرض من التمويل</label>
         <input type="text" id="c_purpose" placeholder="مثال: زيادة حجم المشروع نشاط زراعي">
       </div>
-      <div class="form-group span2">
+      <div class="form-group">
         <label>ممثل الجمعية (طرف أول)</label>
         <input type="text" id="c_representative" placeholder="اسم من يوقع نيابة عن الجمعية">
+      </div>
+      <div class="form-group">
+        <label>مسئول التمويل <span style="color:#e74c3c;">*</span></label>
+        <input type="text" id="c_financing_officer" placeholder="اسم مسئول التمويل (مطلوب)">
       </div>
     </div>
 
@@ -201,6 +209,7 @@
       <h3 style="border:none; margin-bottom:12px;">📑 باقي مستندات العميل (بعد حفظ العقد)</h3>
       <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
         <button class="btn-print" onclick="printConsentForm()">🖨️ التعهد</button>
+        <button class="btn-print" onclick="printFawryForm()">🖨️ عقد فوري</button>
         <button class="btn-print" onclick="printPromissoryNotes()">🖨️ سند لأمر</button>
         <button class="btn-print" onclick="printCommitmentStatement(true)">🖨️ بيان التزام (داخل المكتب)</button>
         <button class="btn-print" onclick="printCommitmentStatement(false)">🖨️ بيان التزام (العميل)</button>
@@ -366,6 +375,7 @@
       document.getElementById('c_branch').value = selectedOp["الفرع"] || '';
       document.getElementById('c_amount').value = selectedOp["المبلغ المطلوب"] || '';
       document.getElementById('c_purpose').value = selectedOp["المشروع"] || '';
+      document.getElementById('c_financing_officer').value = '';
       document.getElementById('c_issuedBy').value = '';
       document.getElementById('c_issueDate').value = '';
       document.getElementById('c_phone').value = '';
@@ -486,6 +496,7 @@
         document.getElementById('c_date').value = contract.contract_date;
         document.getElementById('c_firstInstallment').value = contract.first_installment_date;
         document.getElementById('c_representative').value = contract.association_representative || '';
+        document.getElementById('c_financing_officer').value = contract.financing_officer || '';
         document.getElementById('c_purpose').value = contract.financing_purpose || '';
 
         document.getElementById('guarantorsContainer').innerHTML = '';
@@ -530,47 +541,30 @@
       if (project.administrative_cost != null && project.administrative_cost !== '') return Number(project.administrative_cost);
       return 0;
     }
-
     function collectionFeeForInstallment(installment) {
       const v = Number(installment) || 0;
-      if (v < 201) return 3;
-      if (v < 501) return 6;
-      if (v < 1001) return 8;
-      if (v < 1501) return 10;
-      if (v < 2001) return 20;
-      if (v < 3001) return 25;
-      if (v < 4001) return 35;
-      if (v < 5001) return 45;
-      if (v < 7501) return 75;
-      return 100;
+      if (v < 201) return 3; if (v < 501) return 6; if (v < 1001) return 8;
+      if (v < 1501) return 10; if (v < 2001) return 20; if (v < 3001) return 25;
+      if (v < 4001) return 35; if (v < 5001) return 45; if (v < 7501) return 75; return 100;
     }
-
     function getBranchAddress(branchName) {
       if (!branchName || !branchesCache.length) return '';
       const b = branchesCache.find(x => x.name === branchName || x.name === (branchName || '').trim());
       return (b && b.address) ? b.address : '';
     }
-
     function caritasYears(asOfDate) {
-      const base = 1967;
-      let y = new Date().getFullYear();
-      if (asOfDate) {
-        const d = new Date(asOfDate + 'T12:00:00');
-        if (!isNaN(d.getTime())) y = d.getFullYear();
-      }
+      const base = 1967; let y = new Date().getFullYear();
+      if (asOfDate) { const d = new Date(asOfDate + 'T12:00:00'); if (!isNaN(d.getTime())) y = d.getFullYear(); }
       return Math.max(1, y - base);
     }
-
     function arabicWeekday(dateStr) {
       if (!dateStr) return '';
       const names = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
       return names[new Date(dateStr + 'T12:00:00').getDay()] || '';
     }
-
     function doPrint(html) {
       const area = document.getElementById('printArea');
-      area.innerHTML = html;
-      window.print();
+      area.innerHTML = html; window.print();
       setTimeout(() => { area.innerHTML = ''; }, 500);
     }
 
@@ -580,10 +574,7 @@
       const months = parseInt(document.getElementById('c_installments').value);
       const project = projects.find(p => p.id === projectId);
       const summaryEl = document.getElementById('calcSummary');
-
-      if (!project || !amount || !months || months < 1) {
-        summaryEl.style.display = 'none'; calcResult = null; return;
-      }
+      if (!project || !amount || !months || months < 1) { summaryEl.style.display = 'none'; calcResult = null; return; }
       const minAmt = project.min_amount ?? project.min_loan;
       const maxAmt = project.max_amount ?? project.max_loan;
       if (minAmt && amount < minAmt) {
@@ -596,34 +587,29 @@
         summaryEl.innerHTML = `<span style="color:#e74c3c;">⚠️ المبلغ أكبر من الحد الأقصى (${Number(maxAmt).toLocaleString('ar-EG')} ج.م)</span>`;
         calcResult = null; return;
       }
-
       const interestRatePct = Number(project.interest_rate) || 0;
       const adminFeePct = getProjectAdminFeePercent(project);
-
-      // تقريب لأعلى دائماً (لأقرب جنيه للأعلى) — الأقساط متساوية
-      // مثال 15000 فائدة 20% × 18: قسط 1084، إجمالي 19512
+      // تقريب لأعلى دائماً — أقساط متساوية
       const rawTotal = amount + amount * (interestRatePct / 100) * (months / 12);
       const installmentAmount = Math.ceil(rawTotal / months);
       const totalDue = installmentAmount * months;
       const totalInterest = totalDue - amount;
-
       let adminFeeAmount = amount * (adminFeePct / 100);
       if (adminFeeAmount > 2000) adminFeeAmount = 2000;
       adminFeeAmount = Math.round(adminFeeAmount);
       const netDisbursed = amount - adminFeeAmount;
       const collectionFee = collectionFeeForInstallment(installmentAmount);
       const maxLateFeeMonthly = Math.round(amount * (interestRatePct / 100) / 12);
-
       calcResult = {
         interestRate: interestRatePct, adminFeePercent: adminFeePct, adminFeeAmount,
         totalDue, totalInterest, installmentAmount, netDisbursed, collectionFee, maxLateFeeMonthly
       };
       summaryEl.style.display = 'block';
       summaryEl.innerHTML = `
-        <div><b>قيمة القسط الشهري (متساوي — تقريب لأعلى):</b> ${installmentAmount.toLocaleString('ar-EG')} ج.م × ${months} قسط</div>
-        <div><b>إجمالي المطلوب سداده:</b> ${totalDue.toLocaleString('ar-EG')} ج.م</div>
+        <div><b>قيمة القسط (متساوي — تقريب لأعلى):</b> ${installmentAmount.toLocaleString('ar-EG')} ج.م × ${months}</div>
+        <div><b>إجمالي المطلوب سداده:</b> ${totalDue.toLocaleString('ar-EG')} ج.م <span style="color:#555;font-size:12px;">(${numToArabicWords(totalDue)} جنية)</span></div>
         <div><b>إجمالي الفائدة:</b> ${totalInterest.toLocaleString('ar-EG')} ج.م</div>
-        <div><b>المصاريف الإدارية (${adminFeePct}%):</b> ${adminFeeAmount.toLocaleString('ar-EG')} ج.م</div>
+        <div><b>المصاريف الإدارية (${adminFeePct}%):</b> ${adminFeeAmount.toLocaleString('ar-EG')} ج.م <span style="color:#555;font-size:12px;">(${numToArabicWords(adminFeeAmount)} جنية)</span></div>
         <div><b>مصاريف تحصيل القسط:</b> ${collectionFee.toLocaleString('ar-EG')} ج.م</div>
         <div><b>صافي المحول للعميل:</b> ${netDisbursed.toLocaleString('ar-EG')} ج.م</div>
       `;
@@ -725,6 +711,11 @@
         setStatus('راجع بيانات المبلغ والمشروع - يبدو إن فيه قيمة خارج الحدود المسموحة.', false);
         return false;
       }
+      if (!document.getElementById('c_financing_officer').value.trim()) {
+        setStatus('لازم تكتب اسم مسئول التمويل قبل حفظ العقد.', false);
+        document.getElementById('c_financing_officer').focus();
+        return false;
+      }
 
       const guarantors = collectGuarantors();
       for (const g of guarantors) {
@@ -747,6 +738,7 @@
             total_due: calcResult.totalDue, installment_count: months, installment_amount: calcResult.installmentAmount,
             contract_date: contractDate, first_installment_date: firstInstallmentDate,
             association_representative: document.getElementById('c_representative').value.trim() || null,
+            financing_officer: document.getElementById('c_financing_officer').value.trim() || null,
             financing_purpose: document.getElementById('c_purpose').value.trim() || null,
             updated_at: new Date().toISOString()
           }).eq('id', savedContractId);
@@ -782,6 +774,7 @@
           operation_id: selectedOp.id, branch, branch_contract_number: nextNumber,
           contract_date: contractDate, committee_id: committeeId, project_id: projectId,
           association_representative: document.getElementById('c_representative').value.trim() || null,
+          financing_officer: document.getElementById('c_financing_officer').value.trim() || null,
           financing_purpose: document.getElementById('c_purpose').value.trim() || null,
           loan_amount: amount, interest_rate: calcResult.interestRate, admin_fee_percent: calcResult.adminFeePercent,
           admin_fee_amount: calcResult.adminFeeAmount, total_due: calcResult.totalDue,
@@ -820,8 +813,49 @@
       return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
     }
     function numToArabicWords(n) {
-      // تبسيط: بنعرض الرقم بالأرقام العادية بدل التحويل الكامل لحروف، مع فاصلة الآلاف
-      return Math.round(n).toLocaleString('ar-EG');
+      // تفقيط المبالغ بالعربية (جنيه مصري) — يدعم حتى مئات الملايين
+      n = Math.round(Math.abs(Number(n) || 0));
+      if (n === 0) return 'صفر';
+
+      const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة',
+        'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر', 'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
+      const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+      const hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'];
+
+      function under1000(x) {
+        if (x === 0) return '';
+        if (x < 20) return ones[x];
+        if (x < 100) {
+          const o = x % 10, t = Math.floor(x / 10);
+          return o ? ones[o] + ' و' + tens[t] : tens[t];
+        }
+        const h = Math.floor(x / 100), rest = x % 100;
+        return rest ? hundreds[h] + ' و' + under1000(rest) : hundreds[h];
+      }
+
+      function scaleWord(val, singular, dual, plural, genitive) {
+        if (val === 0) return '';
+        if (val === 1) return singular;
+        if (val === 2) return dual;
+        if (val >= 3 && val <= 10) return under1000(val) + ' ' + plural;
+        return under1000(val) + ' ' + genitive;
+      }
+
+      const parts = [];
+      const millions = Math.floor(n / 1000000);
+      const thousands = Math.floor((n % 1000000) / 1000);
+      const rest = n % 1000;
+
+      if (millions) parts.push(scaleWord(millions, 'مليون', 'مليونان', 'ملايين', 'مليونًا'));
+      if (thousands) {
+        if (thousands === 1) parts.push('ألف');
+        else if (thousands === 2) parts.push('ألفان');
+        else if (thousands >= 3 && thousands <= 10) parts.push(under1000(thousands) + ' آلاف');
+        else parts.push(under1000(thousands) + ' ألفًا');
+      }
+      if (rest) parts.push(under1000(rest));
+
+      return parts.join(' و');
     }
 
     // ========== توليد جدول الأقساط (نفس منطق حاسبة التمويل بالفائدة الثابتة) ==========
@@ -848,37 +882,82 @@
       `;
     }
 
-    // ========== 1) التعهد (الموافقة على الدفع الإلكتروني) ==========
+    // ========== 1) التعهد ==========
     function printConsentForm() {
+      if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
+      const name = document.getElementById('c_name').value;
+      const nid = document.getElementById('c_nid').value;
+      const phone = document.getElementById('c_phone').value || '—';
+      const address = document.getElementById('c_address').value || '—';
+      const workAddress = document.getElementById('c_workAddress').value || '—';
+      const contractDate = document.getElementById('c_date').value;
+      const g = (collectGuarantors()[0]) || {};
+      const html = `
+        <div class="print-page">
+          <h1 style="text-decoration:underline;">بيانات العميل :</h1>
+          <p><b>اسم العميل:</b> ${name}</p>
+          <p><b>العنوان:</b> ${address}</p>
+          <p><b>رقم البطاقة:</b> ${nid}</p>
+          <p><b>رقم التليفون:</b> ${phone}</p>
+          <p><b>عنوان العمل:</b> ${workAddress}</p>
+          <h1 style="text-decoration:underline; margin-top:18px;">بيانات الضامن :</h1>
+          <p><b>أضمن أنا :</b> ${g.guarantor_name || '................................'}</p>
+          <p><b>العنوان :</b> ${g.address || '................................'}</p>
+          <p><b>رقم قومى :</b> ${g.guarantor_national_id || '................................'}</p>
+          <p><b>رقم التليفون:</b> ${g.phone || '................................'}</p>
+          <p><b>عنوان العمل:</b> ${g.work_address || '................................'}</p>
+          <p style="margin-top:10px;">الطرف الثانى فى كل الالتزامات الثابتة فى هذا العقد بما فيها سداد كل القرض أو المتبقى منه .</p>
+          <hr style="margin:16px 0; border:none; border-top:1px solid #333;">
+          <h1 style="text-decoration:underline;">إقرار</h1>
+          <p style="text-align:justify; line-height:1.8;">
+            ارجو التكرم بالموافقة على صرف قرض وفقا للوائح و القواعد التى تعمل بها الجمعية و
+            اوافق على سداد الرسوم المقررة و المصروفات الادارية الخاصة به و اجراء المعاينات
+            اللازمة لاتمام جوانب البحث و الدراسة عن مشروعى من اية جهة و قيام الجمعية بالاستعلام
+            الائتمانى لدى احدى الجهات المرخص لها بذلك واوافق بقيام الجمعية بالتامين لدى احدى
+            الجهات المرخص لها و للجمعية الحق فى عدم الموافقة على القرض بدون ابداء الاسباب و
+            الاحتفاظ بصور المستندات المقدمه منى المرفقة مع الطلب .
+          </p>
+          <div style="margin-top:28px; display:flex; justify-content:space-between;">
+            <div><p>تحريرا في : ${formatDateDMY(contractDate) || '&nbsp;&nbsp;/&nbsp;&nbsp;/&nbsp;&nbsp;'}</p>
+              <p style="margin-top:16px;">توقيع : ........................</p></div>
+            <div style="text-align:left;"><p><b>طالب القرض</b></p></div>
+          </div>
+        </div>`;
+      doPrint(html);
+    }
+
+    // ========== 1-ب) عقد فوري ==========
+    function printFawryForm() {
       if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
       const branch = document.getElementById('c_branch').value;
       const name = document.getElementById('c_name').value;
       const nid = document.getElementById('c_nid').value;
-      const phone = document.getElementById('c_phone').value;
-
+      const phone = document.getElementById('c_phone').value || '....................................';
       const html = `
         <div class="print-page">
-          ${commonPrintHeader(branch)}
-          <h1>الموافقة على استخدام خدمات الدفع الإلكتروني<br>في مجال نشاط التمويل متناهي الصغر</h1>
-          <p>أوافق أنا الموقع أدناه السيد(ة) / ${name}</p>
-          <p>على استخدام خدمات الدفع عليه طرف منافذ (جهة الدفع الإلكتروني) فوري لأغراض:</p>
-          <p>☑ صرف التمويل &nbsp;&nbsp; ☑ سداد أقساط التمويل &nbsp;&nbsp; ☑ سداد أي مستحقات لجهة التمويل وصرف أي مستحقات للعميل</p>
-          <p>والناشئة عن حصولي على تمويل متناهي الصغر من جمعية/ كاريتاس مصر، والتي قامت بإرشادي على كيفية استخدام هذه الخدمات.</p>
-          <p>ويُعد الإيصال المطبوع الذي يتم استلامه عند إجراء عمليات السداد أو الصرف لدى منافذ جهة الدفع الإلكتروني تأكيدًا لإتمام المعاملة المالية المطلوبة.</p>
-          <p>هذا، ويُعد توقيعي على هذا الطلب تأكيدًا على قبولي استخدام الخدمة وبالحقوق والالتزامات الناشئة عنها وطريقة تقديم الشكوى بشأنها (إن وجدت).</p>
-          <p>كما ألتزم بإخطار جهة التمويل عاليه في حالة فقدان الهاتف المحمول الخاص بي أو تغيير الرقم الخاص بي في حينه.</p>
-          <p style="margin-top:30px;">توقيع العميل: ....................................</p>
+          <p style="text-align:center; font-size:11px; margin:0;">جمعية كاريتاس – مصر المشهرة برقم 1150 لسنة 1967<br>
+            ترخيص رقم 1373 من الهيئة العامة للرقابة المالية بموجب القانون رقم 141 لسنة 2014</p>
+          <p style="text-align:center; font-weight:bold; margin:8px 0;">مكتب ${branch}</p>
+          <h1 style="text-decoration:underline; font-size:14px;">الموافقة على استخدام خدمات الدفع الإلكتروني<br>فى مجال نشاط التمويل متناهى الصغر</h1>
+          <p>أوافق أنا الموقع أدناه السيد(ة) / <b>${name}</b></p>
+          <p>على استخدام خدمات الدفع عاليه طرف منافذ ( جهة الدفع الإلكتروني ) <b>فورى</b> لأغراض:</p>
+          <p style="margin-right:20px;">☑ صرف التمويل<br>☑ سداد أقساط التمويل<br>☑ سداد أي مستحقات لجهة التمويل وصرف أي مستحقات للعميل على أن يكون كلاهما مرتبط بالتمويل متناهي الصغر.</p>
+          <p>والناشئة عن حصولي على تمويل متناهي الصغر من جمعية/ كاريتاس مصر . والتي قامت بإرشادي على كيفية استخدام هذه الخدمات .</p>
+          <p style="text-align:justify;">ويعد الإيصال المطبوع الذي يتم استلامه عند اجراء عمليات السداد أو الصرف لدى منافذ جهة الدفع الإلكتروني عاليه تأكيد لإتمام المعاملة المالية المطلوبة. وذلك كله في إطار أحكام التعاقد الموقع بين جمعية/ كاريتاس مصر وجهة الدفع الإلكتروني شركة فورى للبنوك و تكنولوجيا المدفوعات الالكترونية بتاريخ الاثنين ٢٠٢٠/١١/١ الأول من نوفمبر سنة ٢٠٢٠</p>
+          <p style="text-align:justify;">هذا، ويعد توقيعي على هذا الطلب تأكيداً على قبولي استخدام الخدمة وبالحقوق والالتزامات الناشئة عنها وطريقة تقديم الشكوى بشأنها (ان وجدت).</p>
+          <p>كما التزم بإخطار جهة التمويل عاليه في حالة فقدان الهاتف المحمول الخاص بي أو تغيير الرقم الخاص بي في حينه.</p>
+          <p style="margin-top:14px;"><b>تنبيه هام</b></p>
+          <p style="font-size:11px; text-align:justify;">١- ضرورة عدم الإفصاح عن بياناتكم الشخصية أو المالية أو اسم المستخدم أو كلمة المرور (السر) لأي شخص طبيعي أو اعتباري.<br>
+            ٢- ضرورة اخطارنا بأي طلبات تردكم بأى طريقة كانت لمشاركة بياناتكم سالفة الذكر.</p>
+          <p style="margin-top:18px;">توقيع العميل: ....................................</p>
           <p>الرقم القومي: ${nid}</p>
-          <p>رقم الهاتف المحمول للعميل الخاص بخدمة تلقي رسائل الخدمة: ${phone || '....................................'}</p>
-          <p style="margin-top:20px; font-size:11px; border-top:1px solid #ccc; padding-top:10px;">
-            <b>تنبيه هام:</b><br>
-            1- ضرورة عدم الإفصاح عن بياناتكم الشخصية أو المالية أو اسم المستخدم أو كلمة المرور لأي شخص طبيعي أو اعتباري.<br>
-            2- ضرورة إخطارنا بأي طلبات تردكم بأي طريقة كانت لمشاركة بياناتكم سالفة الذكر.
-          </p>
-        </div>
-      `;
-      document.getElementById('printArea').innerHTML = html;
-      window.print();
+          <p>رقم الهاتف المحمول للعميل الخاص بخدمة تلقى رسائل الخدمة : ${phone}</p>
+          <div style="margin-top:20px; display:flex; justify-content:space-between; font-size:11px;">
+            <div><p><b>رقم موافقة الجمعية</b></p><p>رقم (١٤/١٣٧٣) مقدم خدمة بطاقات الدفع</p><p>(٣١/١٣٧٣) شركات دفع الكتروني</p></div>
+            <div style="text-align:left;"><p>ختم الجمعية</p><p>للاستقبال الشكاوى: ٠٢٢٢٠٢٤٥٩٩</p></div>
+          </div>
+        </div>`;
+      doPrint(html);
     }
 
     // ========== 2) سند لأمر (نسخة لكل شخص: العميل + كل ضامن) ==========
@@ -911,8 +990,7 @@
         `;
       });
 
-      document.getElementById('printArea').innerHTML = `<div class="print-page">${commonPrintHeader(branch)}${notesHtml}</div>`;
-      window.print();
+      doPrint(`<div class="print-page">${commonPrintHeader(branch)}${notesHtml}</div>`);
     }
 
     // ========== 3) بيان التزام (نسخة المكتب / نسخة العميل) ==========
@@ -937,7 +1015,7 @@
       const html = `
         <div class="print-page">
           <h1>${title}</h1>
-          <p>كود العميل: ${(selectedOp && (selectedOp["كود_العميل"] || selectedOp["كود العميل"])) || '—'} &nbsp;&nbsp; اسم العميل: ${name}</p>
+          <p>كود العميل: ${(selectedOp && (selectedOp['كود_العميل'] || selectedOp['كود العميل'])) || '—'} &nbsp;&nbsp; اسم العميل: ${name}</p>
           <p>مشروع العميل: ${purpose || '—'} &nbsp;&nbsp; قيمة القرض: ${amount.toLocaleString('ar-EG')}</p>
           ${officeExtra}
           <table style="width:100%; border-collapse:collapse; margin-top:15px;">
@@ -959,60 +1037,68 @@
           ${signLine}
         </div>
       `;
-      document.getElementById('printArea').innerHTML = html;
-      window.print();
+      doPrint(html);
     }
 
-    // ========== 4) مرفق 1 - نموذج الإفصاح الرسمي عن هيكل التسعير ==========
+        // ========== 4) مرفق 1 ==========
     function printDisclosureForm() {
       if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
+      if (!calcResult) { alert('لازم تحسب بيانات التمويل الأول.'); return; }
       const branch = document.getElementById('c_branch').value;
       const name = document.getElementById('c_name').value;
       const contractDate = document.getElementById('c_date').value;
-      const amount = parseFloat(document.getElementById('c_amount').value);
-      if (!calcResult) { alert('لازم تحسب بيانات التمويل الأول.'); return; }
-
-      const totalCost = amount + (amount * calcResult.interestRate / 100 * (parseInt(document.getElementById('c_installments').value) / 12));
-      const maxLateFeeMonthly = Math.round(calcResult.installmentAmount * 0.3); // تقريبي: أقصى غرامة شهرية لا تتجاوز تكلفة التمويل الشهرية
-
+      const amount = parseFloat(document.getElementById('c_amount').value) || 0;
+      const officer = document.getElementById('c_financing_officer').value.trim();
+      if (!officer) { alert('لازم تكتب اسم مسئول التمويل.'); document.getElementById('c_financing_officer').focus(); return; }
+      const z = 'صفر جنية';
+      const fee = Math.round(calcResult.adminFeeAmount || 0);
+      const collect = calcResult.collectionFee != null ? calcResult.collectionFee : collectionFeeForInstallment(calcResult.installmentAmount);
+      const maxLate = calcResult.maxLateFeeMonthly != null ? calcResult.maxLateFeeMonthly : Math.round(amount * (calcResult.interestRate / 100) / 12);
+      const net = Math.round(calcResult.netDisbursed);
       const html = `
         <div class="print-page">
-          ${commonPrintHeader(branch)}
-          <h1>مرفق رقم (1)<br>نموذج الإفصاح الرسمي عن هيكل التسعير المسؤول</h1>
-          <p>اسم العميل: ${name}</p>
-          <p>إسم جهة التمويل: كاريتاس مصر ${branch} &nbsp;&nbsp; رقم ترخيص الهيئة العامة للرقابة المالية: 1373</p>
-          <p>قيمة القرض: ${amount.toLocaleString('ar-EG')} جنيه &nbsp;&nbsp; إجمالي نسبة معدل تكلفة التمويل: ${calcResult.interestRate}%</p>
-          <p>قيمة تكلفة التمويل: ${Math.round(totalCost - amount).toLocaleString('ar-EG')} جنيه</p>
-
-          <h3 style="border:none; margin-top:20px;">ثانيًا: نسبة المصاريف الإدارية (مرة واحدة عند تقديم التمويل) - ${calcResult.adminFeePercent}%</h3>
-          <table style="width:100%; border-collapse:collapse; font-size:12px;">
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف تقديم طلب (إصدار) التمويل</td><td style="border:1px solid #999; padding:6px;">${Math.round(calcResult.adminFeeAmount).toLocaleString('ar-EG')} جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف تجديد التمويل</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف الاستعلام</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف إصدار مخالصة</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف صرف التمويل</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف تحصيل القسط</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف قسط التأمين</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف التأمين الاختياري</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">مصاريف أخرى</td><td style="border:1px solid #999; padding:6px;">صفر جنيه</td></tr>
-            <tr><td style="border:1px solid #999; padding:6px;">صافي المبلغ المحول إلى العميل</td><td style="border:1px solid #999; padding:6px; font-weight:bold;">${Math.round(calcResult.netDisbursed).toLocaleString('ar-EG')} جنيه</td></tr>
+          <h1 style="font-size:14px; margin-bottom:4px;">مرفق رقم (1) نموذج الإفصاح الرسمى عن هيكل التسعير المسؤول*</h1>
+          <p style="text-align:center; font-size:11px; margin:0 0 8px;">نموذج الإفصاح الرسمى عن هيكل التسعير المسؤول – منتج : فردى<br>
+            عن نشاط تمويل المشروعات المتوسطة والصغيرة أو تمويل المشروعات متناهية الصغر</p>
+          <table class="m1-table">
+            <tr><td>إسم جهة التمويل: <b>كاريتاس مصر</b></td><td>اسم الفرع: <b>${branch}</b></td><td>رقم ترخيص الهيئة: <b>1373</b> بتاريخ: <b>2015/11/12</b></td></tr>
+            <tr><td colspan="3">انه فى يوم <b>${arabicWeekday(contractDate)}</b> الموافق: <b>${formatDateDMY(contractDate)}</b></td></tr>
+            <tr><td colspan="2">إجمالى نسبة معدل تكلفة التمويل : <b>${calcResult.interestRate}%</b></td><td>شاملة ما يلى:</td></tr>
+            <tr><td colspan="2">إجمالى نسبة معدل المصاريف الادارية : <b>${calcResult.adminFeePercent}%</b></td><td>شاملة ما يلى:</td></tr>
+            <tr><td colspan="3" class="m1-header">ثانياً: نسبة المصاريف الإدارية (مرة واحدة عند تقديم التمويل) شاملة ما يلى</td></tr>
+            <tr><td colspan="3" class="m1-header">مصاريف الخدمات الأخرى</td></tr>
+            <tr><td colspan="2">- مصاريف تقديم طلب (إصدار) التمويل</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف تجديد التمويل:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف الاستعلام:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف إصدار مخالصة:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف صرف التمويل:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="3" class="m1-header">إجمالى مصاريف خدمات أخرى تدفع مرة واحدة عند الحصول على التمويل</td></tr>
+            <tr><td colspan="2">مصاريف تحصيل القسط:</td><td style="text-align:center;"><b>${collect} جنية</b></td></tr>
+            <tr><td colspan="2">مصاريف قسط التأمين:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف التامين الاختيارى:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="2">مصاريف اخرى:</td><td style="text-align:center;">${z}</td></tr>
+            <tr><td colspan="3" class="m1-header">إجمالى مصاريف خدمات أخرى تدفع كل شهر خلال فترة التمويل</td></tr>
+            <tr><td colspan="2">قيمة غرامة التأخير للقسط (إن حدث) 1% يوميًا بحد أقصى تكلفة التمويل الشهرية:</td><td style="text-align:center;"><b>${maxLate.toLocaleString('ar-EG')} جنية</b></td></tr>
+            <tr><td colspan="2">قيمة القرض:</td><td style="text-align:center;"><b>${amount.toLocaleString('ar-EG')} جنية</b></td></tr>
+            <tr><td colspan="3" class="m1-header">- إجمالى المبالغ المستقطعة من مبلغ التمويل عند الاستلام</td></tr>
+            <tr>
+              <td style="text-align:center;">قسط أول<br><b>${z}</b></td>
+              <td style="text-align:center;">قيمة تكلفة التمويل<br><b>${z}</b></td>
+              <td style="text-align:center;">مصاريف إدارية<br><b>${fee.toLocaleString('ar-EG')} جنية</b></td>
+            </tr>
+            <tr><td colspan="2"><b>- صافى المبلغ المحول الى العميل</b></td><td style="text-align:center;"><b>${net.toLocaleString('ar-EG')} جنية</b></td></tr>
           </table>
-
-          <p style="margin-top:15px; font-size:12px;">قيمة غرامة التأخير للقسط (إن حدث): 1% من قيمة المبلغ المتأخر عن كل يوم تأخير بعد موعد استحقاق القسط، على ألا تتجاوز الغرامة تكلفة التمويل الشهرية، ليكون أقصى مبلغ شهريًا تقريبًا: ${maxLateFeeMonthly.toLocaleString('ar-EG')} جنيه.</p>
-
-          <p style="margin-top:30px;">التاريخ: ${formatDateDMY(contractDate)}</p>
-          <p>مسؤول التمويل: .................................... &nbsp;&nbsp;&nbsp; توقيع مسؤول التمويل: ....................................</p>
-          <p>توقيع العميل: ....................................</p>
-        </div>
-      `;
-      document.getElementById('printArea').innerHTML = html;
-      window.print();
+          <div class="signrow" style="margin-top:20px;">
+            <div>اسم العميل : ${name}<br>توقيع العميل : ........................</div>
+            <div>مسئول التمويل : ${officer}<br>توقيع مسئول التمويل : ........................</div>
+          </div>
+        </div>`;
+      doPrint(html);
     }
 
     function printContract() {
       if (!savedContractId) { alert('احفظ العقد الأول.'); return; }
       if (!calcResult) { alert('لازم تحسب بيانات التمويل الأول.'); return; }
-
       const branch = document.getElementById('c_branch').value;
       const branchAddr = getBranchAddress(branch);
       const hqAddr = '1 شارع محمود صدقى – خلوصى – شبرا';
@@ -1027,27 +1113,20 @@
       const firstInstallmentDate = document.getElementById('c_firstInstallment').value;
       const months = parseInt(document.getElementById('c_installments').value) || 0;
       const amount = parseFloat(document.getElementById('c_amount').value) || 0;
-
       const dayName = arabicWeekday(contractDate);
       const dateFmt = formatDateDMY(contractDate);
       const firstDayName = arabicWeekday(firstInstallmentDate);
       const firstDateFmt = formatDateDMY(firstInstallmentDate);
       const years = caritasYears(contractDate);
-
-      const amtWords = numToArabicWords(amount);
-      const feeWords = numToArabicWords(Math.round(calcResult.adminFeeAmount));
-      const totalWords = numToArabicWords(calcResult.totalDue);
-      const instWords = numToArabicWords(calcResult.installmentAmount);
-
+      const amtW = numToArabicWords(amount);
+      const feeW = numToArabicWords(Math.round(calcResult.adminFeeAmount));
+      const totalW = numToArabicWords(calcResult.totalDue);
+      const instW = numToArabicWords(calcResult.installmentAmount);
       const guarantors = collectGuarantors();
-      let guarantorBlocks = '';
-      let guarantorSigns = '';
-      let guarantorPledge = '';
+      let guarantorBlocks = '', guarantorSigns = '', guarantorPledge = '';
       guarantors.forEach((g, i) => {
         const party = i === 0 ? 'ثالث' : String(i + 3);
-        guarantorBlocks += `
-          <p>${i + 3}- السيد / <b>${g.guarantor_name || ''}</b>
-          &nbsp;&nbsp;&nbsp; بطاقة رقم: <b>${g.guarantor_national_id || ''}</b><br>
+        guarantorBlocks += `<p>${i + 3}- السيد / <b>${g.guarantor_name || ''}</b> &nbsp;&nbsp;&nbsp; بطاقة رقم: <b>${g.guarantor_national_id || ''}</b><br>
           صادرة من: ${g.issued_by || '—'} &nbsp;&nbsp; بتاريخ: ${g.issue_date || '—'}<br>
           والمقيم فى: ${g.address || '—'} ويشار اليه فيما يلى بالضامن طرف ${party}</p>`;
         guarantorSigns += `<div>طرف ${party} (الضامن)<br>...............................</div>`;
@@ -1055,19 +1134,14 @@
       if (guarantors.length) {
         guarantorPledge = `<p style="text-align:justify;">اتعهد بأنني، كضامن للعميل، أتحمل كافة الالتزامات والواجبات التي تقع على العميل. ويحق للجمعية مطالبة الضامن بكامل المديونية المستحقة على العميل في حال عدم التزام العميل بالسداد لأي سبب من الأسباب وفي المواعيد المتفق عليها.</p>`;
       }
-
       const headerBlock = `
-          <p style="text-align:center; font-size:11px; margin:0;">
-            جمعية كاريتاس – مصر المشهرة برقم 1150 لسنة 1967<br>
-            ترخيص رقم 1373 من الهيئة الرقابة المالية<br>
-            بموجب القانون رقم 141 لسنة 2014
-          </p>
+          <p style="text-align:center; font-size:11px; margin:0;">جمعية كاريتاس – مصر المشهرة برقم 1150 لسنة 1967<br>
+            ترخيص رقم 1373 من الهيئة الرقابة المالية<br>بموجب القانون رقم 141 لسنة 2014</p>
           <table style="width:100%; border:none; margin:6px 0;"><tr>
             <td style="border:none; text-align:right; font-weight:bold;">مكتب: ${branch}</td>
             <td style="border:none; text-align:left; font-weight:bold;">رقم العقد: ${savedContractNumber || ''}</td>
           </tr></table>
           <h1>عقد تمويل متناهى الصغر</h1>`;
-
       const signBlock = `
           <div class="signrow" style="margin-top:22px;">
             <div>طرف أول (الجمعية)<br>...............................</div>
@@ -1079,71 +1153,37 @@
       const html = `
         <div class="print-page">
           ${headerBlock}
-
           <p>انه فى يوم <b>${dayName}</b> الموافق <b>${dateFmt}</b> تم ابرام عقد بين كلا من :</p>
-
-          <p>1- جمعية كاريتاس مصر ترخيص مزاولة نشاط التمويل متناهى الصغر رقم 1373 ومقرها الرئيسى
-          <b>${hqAddr}</b><br>
+          <p>1- جمعية كاريتاس مصر ترخيص مزاولة نشاط التمويل متناهى الصغر رقم 1373 ومقرها الرئيسى <b>${hqAddr}</b><br>
           وعنوان المكتب : <b>${branchAddr || branch}</b><br>
-          ويمثلها السيد / رئيس مجلس الادارة او من يمثله او يفوضة فى هذا العقد السيد :
-          <b>${representative}</b> ويشار اليها فيما يلى بالجمعية طرف أول</p>
-
-          <p>2- السيد / <b>${name}</b>
-          &nbsp;&nbsp;&nbsp; بطاقة رقم : <b>${nid}</b><br>
+          ويمثلها السيد / رئيس مجلس الادارة او من يمثله او يفوضة فى هذا العقد السيد : <b>${representative}</b> ويشار اليها فيما يلى بالجمعية طرف أول</p>
+          <p>2- السيد / <b>${name}</b> &nbsp;&nbsp;&nbsp; بطاقة رقم : <b>${nid}</b><br>
           صادرة من : ${issuedBy} &nbsp;&nbsp; بتاريخ: ${issueDate || '—'}<br>
           والمقيم فى : ${address || '—'} ويشار اليه فيما يلى بالمستفيد طرف ثان</p>
-
-          ${guarantorBlocks}
-          ${guarantorPledge}
-
+          ${guarantorBlocks}${guarantorPledge}
           <h1 style="margin-top:12px;">تمهيد</h1>
-          <p style="text-align:justify;">
-            تعمل كاريتاس مصر على مدار <b>${years}</b> عامًا في مجال العمل الأهلي والتنموي والاجتماعي بجمهورية مصر العربية، باعتبارها إحدى أكبر جمعيات العمل الأهلي في مصر. تمتد مشروعاتها من أسوان إلى الإسكندرية، مستهدفة تحسين المستوى الاجتماعي والاقتصادي ورفع الوعي المجتمعي لمختلف فئات المجتمع، وخاصة الأسر والأشخاص في حالات الفقر والتهميش.
-            من أهم الأهداف الاستراتيجية للجمعية العمل على تحسين المستوى المعيشي والاقتصادي، مكافحة الفقر، والحد من البطالة للأسر الفقيرة والأشخاص محدودي الدخل، وزيادة قدرتهم على تلبية احتياجاتهم الأساسية ومواجهة التغيرات الاقتصادية والاجتماعية. يتحقق ذلك من خلال مجموعة من البرامج لتمويل المشروعات المتناهية الصغر وبرامج التمكين الاقتصادي.
-          </p>
-
-          <p style="text-align:justify;">1- يعتبر التمهيد السابق والقواعد التي تحكم التمويل متناهي الصغر الفردي والموضحة باللائحة الداخلية للجمعية جزءًا لا يتجزأ من هذا العقد.
-          البند الثاني: يقدم الطرف الأول للطرف الثاني مبلغ (<b>${amount.toLocaleString('ar-EG')}</b>) <b>${amtWords}</b> جنية فقط
-          بتكلفة تمويل قدرها <b>${calcResult.interestRate}%</b> سنويًا بنسبة مصروفات إدارية <b>${calcResult.adminFeePercent}%</b>
-          بقيمة (<b>${Math.round(calcResult.adminFeeAmount).toLocaleString('ar-EG')}</b>) <b>${feeWords}</b> جنية فقط يتم خصمه من مبلغ التمويل،
-          ويكون إجمالي المبلغ المطلوب سداده (<b>${calcResult.totalDue.toLocaleString('ar-EG')}</b>) <b>${totalWords}</b> جنية فقط لاغير،
-          ويكون القسط (<b>${calcResult.installmentAmount.toLocaleString('ar-EG')}</b>) <b>${instWords}</b> جنية فقط،
-          على أن يكون السداد للجمعية بإحدى الطرق الإلكترونية.</p>
-
-          <p style="text-align:justify;">2- يوافق المستفيد على سداد مبلغ التمويل السابق ذكره مضافًا إليه تكلفة التمويل الخاصة به للجمعية على أقساط شهرية بعدد
-          <b>${months}</b> قسط ويستحق أول قسط دفعة فى يوم <b>${firstDayName}</b> الموافق <b>${firstDateFmt}</b> حتى نهاية المدة المحددة لتسديد الأقساط.</p>
-
+          <p style="text-align:justify;">تعمل كاريتاس مصر على مدار <b>${years}</b> عامًا في مجال العمل الأهلي والتنموي والاجتماعي بجمهورية مصر العربية، باعتبارها إحدى أكبر جمعيات العمل الأهلي في مصر. تمتد مشروعاتها من أسوان إلى الإسكندرية، مستهدفة تحسين المستوى الاجتماعي والاقتصادي ورفع الوعي المجتمعي لمختلف فئات المجتمع، وخاصة الأسر والأشخاص في حالات الفقر والتهميش. من أهم الأهداف الاستراتيجية للجمعية العمل على تحسين المستوى المعيشي والاقتصادي، مكافحة الفقر، والحد من البطالة للأسر الفقيرة والأشخاص محدودي الدخل، وزيادة قدرتهم على تلبية احتياجاتهم الأساسية ومواجهة التغيرات الاقتصادية والاجتماعية. يتحقق ذلك من خلال مجموعة من البرامج لتمويل المشروعات المتناهية الصغر وبرامج التمكين الاقتصادي.</p>
+          <p style="text-align:justify;">1- يعتبر التمهيد السابق والقواعد التي تحكم التمويل متناهي الصغر الفردي والموضحة باللائحة الداخلية للجمعية جزءًا لا يتجزأ من هذا العقد. البند الثاني: يقدم الطرف الأول للطرف الثاني مبلغ (<b>${amount.toLocaleString('ar-EG')}</b>) <b>${amtW}</b> جنية فقط بتكلفة تمويل قدرها <b>${calcResult.interestRate}%</b> سنويًا بنسبة مصروفات إدارية <b>${calcResult.adminFeePercent}%</b> بقيمة (<b>${Math.round(calcResult.adminFeeAmount).toLocaleString('ar-EG')}</b>) <b>${feeW}</b> جنية فقط يتم خصمه من مبلغ التمويل، ويكون إجمالي المبلغ المطلوب سداده (<b>${calcResult.totalDue.toLocaleString('ar-EG')}</b>) <b>${totalW}</b> جنية فقط لاغير، ويكون القسط (<b>${calcResult.installmentAmount.toLocaleString('ar-EG')}</b>) <b>${instW}</b> جنية فقط، على أن يكون السداد للجمعية بإحدى الطرق الإلكترونية.</p>
+          <p style="text-align:justify;">2- يوافق المستفيد على سداد مبلغ التمويل السابق ذكره مضافًا إليه تكلفة التمويل الخاصة به للجمعية على أقساط شهرية بعدد <b>${months}</b> قسط ويستحق أول قسط دفعة فى يوم <b>${firstDayName}</b> الموافق <b>${firstDateFmt}</b> حتى نهاية المدة المحددة لتسديد الأقساط.</p>
           <p style="text-align:justify;">3- يتعهد المستفيد باستخدام قيمة التمويل المقدم له كاملاً فى تمويل مشروع الخاص به والمقدم بشأنه طلب التمويل والمستندات الدالة على النشاط ويعتبر توقيعه على هذا العقد تعهداً منه باستخدام التمويل كاملاً داخل المشروع وفى الغرض المطلوب من أجله وهو <b>${purpose}</b>.</p>
-
           <p>4- بموجب هذا العقد يصبح للطرف الأول (المقرض) حق الامتياز العام على جميع أموال الطرف الثاني (المقترض).</p>
-
           ${signBlock}
         </div>
-
         <div class="print-page">
           ${headerBlock}
-
           <p style="text-align:justify;">5- في حالة تأخر الطرف الثاني عن سداد أي قسط أو جزء منه، يلتزم بسداد غرامة تأخير بمقدار 1% من قيمة المبلغ المتأخر عن كل يوم تأخير بعد موعد استحقاق القسط على ألا تتجاوز الغرامة تكلفة التمويل الشهرية، كما أن إجمالي الغرامات للعملاء المتعثرين لا يتجاوز إجمالي أصل التمويل الفعلي. وفي حالة امتناع الطرف الثاني نهائيًا عن السداد، يحق للطرف الأول الرجوع على الطرف الثاني (المقترض) وعلى الطرف الثالث (الضامن).</p>
-
           <p style="text-align:justify;">6- في حالة إخلال الطرف الثاني بأي من الالتزامات المترتبة عليه بموجب هذا العقد، فإن كافة الأقساط المستحقة عليه للطرف الأول والمتفق عليها تصبح حالة وواجبة الأداء فورًا.</p>
-
           <p style="text-align:justify;">7- للجمعية الحق في استرداد باقي التمويل والمصروفات الإدارية التي لم تُسدد، وأي غرامات تأخير أو مصروفات إدارية أخرى مقررة وفقًا للوائح ونظم الجمعية في حالة تأخر المستفيد عن سداد قسط في موعده المحدد أو إساءة استخدام التمويل أو استخدامه لغير الغرض المطلوب له.</p>
-
           <p style="text-align:justify;">8- تلتزم الجمعية بقبول طلبات عملائها بالسداد المعجل، ويحق للجمعية خصم تكلفة التمويل للشهر الذي تم فيه السداد. ويتم تحصيل عمولة سداد معجل بمقدار 5% من باقي المبلغ المستحق المراد تعجيل الوفاء به.</p>
-
           <p style="text-align:justify;">9- يتعهد الشخص الضامن بالتزامه أمام الطرف الأول بكافة المسؤوليات والواجبات والالتزامات التي تقع على عاتق الطرف الثاني، وبأنه ملتزم أمام الطرف الأول بأنه في حالة إخلال الطرف الثاني بشرط أو بند من هذا العقد، يكون هو مسؤولًا مسؤولية كاملة أمام الطرف الأول بتنفيذ الالتزامات.</p>
-
           <p style="text-align:justify;">10- يقر الطرف الثاني بأنه لم تصدر ضده أي أحكام قضائية تمس وضعه المالي أو العملي، ولم تتخذ ضده أي إجراءات تنفيذ أو حجز على ممتلكاته، وأنه ليس طرفًا في أي دعوى إفلاس، وأنه غير خاضع لأي إجراءات حراسة قضائية أو اتفاقية تتعارض مع أي مما ذكر في هذا العقد. ويتعهد الطرف الثاني بإخطار الطرف الأول فور علمه بإقامة أي دعاوى أو مطالبات يكون من شأنها أن تعرض مصالح الطرف الأول للخطر. كما يتعهد المستفيد بتقديم كافة المعلومات المطلوبة للجمعية والتعاون مع المسؤولين الميدانيين والإداريين خلال فترة تسديد الأقساط، وبذل كافة جهود الشخص الحريص على التمويل موضوع هذا العقد من تاريخ استلامه وحتى سداده بالكامل.</p>
-
           <p>11- يوافق الطرفان على أنه في حالة ظهور أي نزاع، يتم اللجوء إلى المحاكم التي تحددها الجمعية.</p>
           <p>12- يتم تسليم العميل بيان التزام كامل بشروط التمويل، وتسليم العميل نموذج الإفصاح الخاص بالتسعير المسؤول.</p>
           <p style="text-align:justify;">13- طبقًا لأحكام القانون، تلتزم الجمعية بالتأمين الإجباري على جميع عملاء التمويل متناهي الصغر ضد مخاطر حالات الوفاة والعجز الكلي، على أن تتحمل الجمعية كافة المصروفات والرسوم نيابة عن عملائها.</p>
           <p style="text-align:justify;">14- يخضع هذا العقد لأحكام القانون رقم 141 لسنة 2014 وتعديلاته والمعدل بالقانون رقم 155 لسنة 2022 بتنظيم مزاولة نشاط تمويل المشروعات المتوسطة والصغيرة ومتناهية الصغر.</p>
           <p>15- توقيع الطرف الثاني على هذا العقد يمثل استلام مبلغ التمويل وإقرارًا منه بتنفيذ جميع البنود التي وردت به.</p>
-
           ${signBlock}
-        </div>
-      `;
+        </div>`;
       doPrint(html);
     }
 
